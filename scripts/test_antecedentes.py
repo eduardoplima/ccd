@@ -30,6 +30,20 @@ def test_create_doc():
         'evento': '90',
         'responsavel': 'Maria do Socorro dos Anjos Furtado',
         'encaminhamento': 'Gabinete da Conselheira Relatora',
-        'data': '20 de janeiro de 2025',
+        'data': '21 de janeiro de 2025',
     }
-    create_antecedentes_doc(cpf, context, 'antecedentes_teste.docx')
+    create_antecedentes_doc(cpf, context, 'antecedentes_maria.docx')
+
+    cpf = '42164516400'
+    context = {
+        'nome': 'Eduardo Pereira Lima',
+        'cargo': 'Coordenador de Controle de Decisões',
+        'processo': '010354/2016',
+        'assunto': ' CONTAS DO CHEFE DO EXECUTIVO (2015) / PROCESSO',
+        'interessado': 'PREFEITURA MUNICIPAL DE ITAJÁ',
+        'evento': '87',
+        'responsavel': 'Licelio Jackson Guimarães',
+        'encaminhamento': 'Gabinete da Conselheira Relatora',
+        'data': '21 de janeiro de 2025',
+    }
+    create_antecedentes_doc(cpf, context, 'antecedentes_licelio.docx')

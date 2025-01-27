@@ -44,3 +44,4 @@ WHERE IdProcessoOrigem IN (
 		p.ano_processo = ptj.ano_processo 
 	WHERE ptj.Responsavel LIKE '%{cpf}%'
 )
+AND e.IdDebitoAnterior IS NULL
