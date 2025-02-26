@@ -95,7 +95,7 @@ AND year(data_resumo) = 2024
         print(f'{len(rows)} rows returned.')
         json_dicts = []
         for row in rows:
-            text = self.get_docling_pdf_text(row)
+            text = self.get_pdf_text(row)
             row['texto'] = text
             row['data_resumo'] = row['data_resumo'].strftime('%Y-%m-%d')
             json_dicts.append(row)
