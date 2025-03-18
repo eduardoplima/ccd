@@ -26,7 +26,7 @@ def get_processos_transito_by_cpf(cpf):
     with get_connection() as conn:
         return pd.read_sql(query.format(cpf=cpf), conn)
 
-def create_antecedentes_doc(cpf, context, doc_name):
+def create_antecedentes_file(cpf, context, doc_name):
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
     doc = DocxTemplate("templates/antecedentes.docx")
@@ -38,6 +38,17 @@ def create_antecedentes_doc(cpf, context, doc_name):
     context['valores'] = valores
     doc.render(context)
     doc.save(doc_name)
+
+def create_antecedentes_doc(cpf, context):
+    doc = DocxTemplate("templates/antecedentes.docx")
+    df = get_processos_transito_by_cpf(cpf)
+    df['valor_original'] = df['valor_original'].apply(lambda x: locale.currency(x, grouping=True, symbol=False) if x and not math.isnan(x) else '-')
+    df['valor_atualizado'] = df['valor_atualizado'].apply(lambda x: locale.currency(x, grouping=True, symbol=False) if x and not math.isnan(x) else '-')
+    df.fillna('', inplace=True)
+    valores = df.to_dict(orient='records')
+    context['valores'] = valores
+    doc.render(context)
+    return doc
 
 def create_context_processo(numero_processo, ano_processo):
     with open("consultas/processo.sql") as f:
@@ -51,7 +62,7 @@ def create_antecedentes(cpf, json_file, doc_name):
     with open(json_file) as json_f:
         json_txt = json_f.read()
     context = json.loads(json_txt)
-    create_antecedentes_doc(cpf, context, doc_name)
+    create_antecedentes_file(cpf, context, doc_name)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='antecedentes',  description='Cria despacho de antecedentes')
