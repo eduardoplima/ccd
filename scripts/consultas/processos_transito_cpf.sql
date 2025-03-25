@@ -15,11 +15,6 @@ WHERE etd.CodigoTipoDebito = e.CodigoTipoDebito
 e.valorOriginalDebito as valor_original,
 e.ValorAPagar as valor_atualizado,
 CONVERT(NVARCHAR(30), e.dataTransito, 103) as transito_julgado,
-/*(
-SELECT Descricao
-FROM processo.dbo.Exe_SituacaoDebito esd
-WHERE esd.CodigoSituacaoDebito = e.CodigoSituacaoDivida
-) as situacao_divida,*/
 (
 SELECT DescricaoStatusDivida
 FROM processo.dbo.Exe_StatusDivida esd
@@ -42,6 +37,6 @@ WHERE IdProcessoOrigem IN (
 		INNER JOIN processo.dbo.Processo_TransitoJulgado ptj ON 
 		p.numero_processo = ptj.numero_processo AND 
 		p.ano_processo = ptj.ano_processo 
-	WHERE ptj.Responsavel LIKE '%{cpf}%'
+	WHERE lower(ptj.Responsavel) LIKE lower('%{nome}%')
 )
 AND e.IdDebitoAnterior IS NULL
