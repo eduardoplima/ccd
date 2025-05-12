@@ -29,8 +29,11 @@ WHERE esd.CodigoStatusDivida = e.CodigoStatusDivida
 	SELECT DescricaoStatusProcessoPGE
 	FROM processo.dbo.PGE_StatusProcesso psp
 	WHERE psp.IdStatusProcessoPGE = e.Status_PGE
-) as status_pge
-FROM processo.dbo.Exe_Debito e
+) as status_pge,
+gp.Documento as cpf,
+gp.Nome as nome
+FROM processo.dbo.Exe_Debito e INNER JOIN processo.dbo.Exe_DebitoPessoa edp ON e.IdDebito = edp.IDDebito 
+INNER JOIN processo.dbo.GenPessoa gp ON gp.IdPessoa = edp.IDPessoa 
 WHERE IdProcessoOrigem IN (
 	select p.IdProcesso 
 	from processo.dbo.Processos p 
@@ -39,4 +42,5 @@ WHERE IdProcessoOrigem IN (
 		p.ano_processo = ptj.ano_processo 
 	WHERE lower(ptj.Responsavel) LIKE lower('%{nome}%')
 )
+AND lower(gp.Nome) like lower('%{nome}%')
 AND e.IdDebitoAnterior IS NULL
