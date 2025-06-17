@@ -5,7 +5,7 @@ import pypdf
 from dotenv import load_dotenv
 from pathlib import Path
 
-DIR_INFORMACOES = '/media/informacoes_pdf/'
+
 
 def get_connection(db='processo'):
     load_dotenv()
@@ -29,5 +29,6 @@ def extract_text_from_pdf(file_path):
         print(f"Error reading {file_path}: {e}")
         return ''
 
-def get_file_path(row):
+DIR_INFORMACOES = '/media/informacoes_pdf/'
+def get_info_file_path(row):
     return Path(DIR_INFORMACOES) / row['setor'].strip() / row['arquivo']
