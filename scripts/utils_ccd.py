@@ -30,5 +30,5 @@ def extract_text_from_pdf(file_path):
         return ''
 
 DIR_INFORMACOES = '/media/informacoes_pdf/'
-def get_info_file_path(row):
-    return Path(DIR_INFORMACOES) / row['setor'].strip() / row['arquivo']
+def get_info_file_path(row, dir_info=r'\\10.24.0.6\tce$\Informacoes_PDF'):
+    return Path(dir_info) / row['setor'].strip() / row['arquivo']
