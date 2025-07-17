@@ -7,17 +7,25 @@ import pandas as pd
 from dotenv import load_dotenv
 from pathlib import Path
 
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 
 
-def get_connection(db='processo'):
+def get_connection(db: str = 'processo') -> Engine:
     load_dotenv()
-    return pymssql.connect(
-        server=os.getenv("SQL_SERVER_HOST"),
-        user=os.getenv("SQL_SERVER_USER"),
-        password=os.getenv("SQL_SERVER_PASS"),
-        port=os.getenv("SQL_SERVER_PORT"),
-        database=db
-    )
+    
+    server = os.getenv("SQL_SERVER_HOST")
+    user = os.getenv("SQL_SERVER_USER")
+    password = os.getenv("SQL_SERVER_PASS")
+    port = os.getenv("SQL_SERVER_PORT", "1433")  # default MSSQL port
+    database = db
+
+    # Construct connection string for SQLAlchemy using pymssql
+    connection_string = f"mssql+pymssql://{user}:{password}@{server}/{database}"
+
+    # Create and return SQLAlchemy engine
+    engine = create_engine(connection_string)
+    return engine
 
 def extract_text_from_pdf(file_path):
     try:
