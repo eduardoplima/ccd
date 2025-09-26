@@ -178,4 +178,4 @@ cython_debug/
 #*.ppt
 #*.pptx
 
-scripts/saidas/*
+scripts/automacao/saidas/*
