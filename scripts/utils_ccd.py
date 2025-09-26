@@ -1,15 +1,15 @@
-import pymssql
 import os
 import pypdf
+import pymssql
+import win32com.client
+import subprocess
 
 import pandas as pd
 
 from dotenv import load_dotenv
 from pathlib import Path
-
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
-
 
 def get_connection(db: str = 'processo') -> Engine:
     load_dotenv()
@@ -92,13 +92,42 @@ def download_processo(processo, dir_destino, conn=None):
 
     return infos
 
-from pypdf import PdfReader, PdfWriter
 
 def merge_pdfs(pdf_files, output_path):
-    writer = PdfWriter()
+    writer = pypdf.PdfWriter()
     for pdf_file in pdf_files:
-        reader = PdfReader(str(pdf_file))
+        reader = pypdf.PdfReader(str(pdf_file))
         for page in reader.pages:
             writer.add_page(page)
     with open(output_path, "wb") as fout:
         writer.write(fout)
+
+
+def generate_pdf(doc_path, path):
+
+    subprocess.call(['soffice',
+                  '--headless',
+                 '--convert-to',
+                 'pdf',
+                 '--outdir',
+                 path,
+                 doc_path])
+    return doc_path
+
+def generate_pdf_office(doc_path: str, output_dir: str) -> str:
+    # Ensure paths are absolute
+    doc_path = os.path.abspath(doc_path)
+    output_dir = os.path.abspath(output_dir)
+    pdf_path = os.path.join(output_dir, os.path.splitext(os.path.basename(doc_path))[0] + '.pdf')
+
+    word = win32com.client.Dispatch("Word.Application")
+    word.Visible = False
+
+    try:
+        doc = word.Documents.Open(doc_path)
+        doc.SaveAs(pdf_path, FileFormat=17)  # 17 = wdFormatPDF
+        doc.Close()
+    finally:
+        word.Quit()
+
+    return pdf_path
