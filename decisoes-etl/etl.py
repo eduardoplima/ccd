@@ -1,107 +1,86 @@
-import os
-import pymssql
-import pypdf
-import json
-import datetime
+"""Extract decisions + PDF text from the `processo` DB into a JSON dataset.
 
+Uses the unified `ccd.db.get_connection`. The PDF mount path can be overridden
+via the `CCD_INFORMACOES_DIR` env var; default keeps the legacy Linux mount
+(`/mnt/informacoes_pdf`) for this entrypoint.
+"""
+from __future__ import annotations
+
+import json
+import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+import pypdf
+from sqlalchemy import text
 
-from docling.document_converter import DocumentConverter
+from ccd.db import get_connection
+from ccd.pdf import extract_text_from_pdf
 
+DEFAULT_PDF_DIR = "/mnt/informacoes_pdf"
 
-load_dotenv()
+QUERY = """
+SELECT
+    p.numero_processo,
+    p.ano_processo,
+    p.codigo_tipo_processo,
+    p.assunto,
+    inf.setor,
+    inf.resumo,
+    inf.data_resumo,
+    concat(rtrim(inf.setor),'_',inf.numero_processo,'_',inf.ano_processo,'_',RIGHT(concat('0000',inf.ordem),4),'.pdf') as arquivo
+FROM processo.dbo.Ata_Informacao inf
+INNER JOIN Processos p ON inf.numero_processo = p.numero_processo AND inf.ano_processo = p.ano_processo
+WHERE inf.Decisao IS NOT NULL
+  AND p.ano_processo > 2015
+  AND year(inf.data_resumo) = :ano
+"""
+
 
 class ETL:
-    def __init__(self):
-        self.conn = self.get_connection()
-        self.docling_converter = DocumentConverter()
-        
-    def get_connection(self):
-        return pymssql.connect(server='10.24.0.77\\ControleExterno',
-                                    user=os.getenv('SQLSERVER_USER'),
-                                    password=os.getenv('SQLSERVER_PASS'),
-                                    port=59678,
-                                    database='processo',
-                                    charset='WINDOWS-1252')
-    
-    def get_query(self):
-        return '''
-    SELECT 
-    p.numero_processo,
-p.ano_processo,
-p.codigo_tipo_processo,
-p.assunto,
-inf.setor, 
-inf.resumo, 
-inf.data_resumo,  
-concat(rtrim(inf.setor),'_',inf.numero_processo ,'_',inf.ano_processo,'_',RIGHT(concat('0000',inf.ordem),4),'.pdf') as arquivo
+    def __init__(self, ano: int = 2024, pdf_dir: str | Path | None = None):
+        self.engine = get_connection()
+        self.ano = ano
+        self.pdf_dir = Path(pdf_dir or os.getenv("CCD_INFORMACOES_DIR", DEFAULT_PDF_DIR))
+        # Lazy docling import — heavy dependency, not always installed.
+        self._docling = None
 
-FROM processo.dbo.Ata_Informacao inf INNER JOIN Processos p ON inf.numero_processo = p.numero_processo AND inf.ano_processo = p.ano_processo
-WHERE Decisao IS NOT NULL
-AND p.ano_processo > 2015
-AND year(data_resumo) = 2024
---AND p.codigo_tipo_processo IN ('ACO', 'ADS', 'AGE', 'AGF', 'AOP', 'APR', 'AUD', 'BGE', 'BLC',
-  --     'CFM', 'CGE', 'CNV', 'CTR', 'CTV', 'DCD', 'DEN', 'DLC',
-    --   'EXE', 'FIN', 'FUN', 'INA', 'INE', 'INP', 'LIC',
-      -- 'LRF', 'MON', 'PAG', 'PCC', 'PCF', 'PCO', 'PFA', 
-       -- 'REL', 'REP', 'RPG', 'RRE', 'TAD', 'TAG', 'TOM')
-    '''
+    def get_rows(self) -> list[dict]:
+        with self.engine.connect() as conn:
+            result = conn.execute(text(QUERY), {"ano": self.ano})
+            return [dict(row) for row in result.mappings().all()]
 
-    def get_rows(self):
-        cursor = self.conn.cursor(as_dict=True)
-        cursor.execute(self.get_query())
-        rows = cursor.fetchall()
-        cursor.close()
-        return rows
-    
-    def close(self):
-        self.conn.close()
+    def get_file_path(self, row: dict) -> Path:
+        return self.pdf_dir / row["setor"].strip() / row["arquivo"]
 
-    def get_dir_pdf(self):
-        dir_pdf = '/mnt/informacoes_pdf'
-        assert os.path.exists(dir_pdf)
-        return dir_pdf
-    
-    def get_file_path(self, row):
-        return Path(self.get_dir_pdf()) / row['setor'].strip() / row['arquivo']
-
-    def get_pdf_text(self, row):
+    def get_pdf_text(self, row: dict) -> list[str]:
         arquivo = self.get_file_path(row)
-        print(f'File {arquivo} to pypdf text')
+        print(f"File {arquivo} to pypdf text")
         try:
-            pdf = pypdf.PdfReader(arquivo)
-            text = []
-            for page in pdf.pages:
-                text.append(page.extract_text())
-            return text
+            pdf = pypdf.PdfReader(str(arquivo))
+            return [page.extract_text() or "" for page in pdf.pages]
         except FileNotFoundError:
-            print(f'File not found: {arquivo}')
-            return ''
-        
-    def get_docling_pdf_text(self, row):
+            print(f"File not found: {arquivo}")
+            return []
+
+    def get_docling_pdf_text(self, row: dict) -> str:
+        if self._docling is None:
+            from docling.document_converter import DocumentConverter  # noqa: PLC0415
+            self._docling = DocumentConverter()
         arquivo = self.get_file_path(row)
-        print(f'File {arquivo} to docling text')
-        return self.docling_converter.convert(arquivo).document.export_to_text()
-        
-    
-    def save_json(self, json_dicts, filename):
-        with open(filename, 'w') as f:
-            json.dump(json_dicts, f, ensure_ascii=False)
+        print(f"File {arquivo} to docling text")
+        return self._docling.convert(str(arquivo)).document.export_to_text()
 
-    def execute(self):
+    def save_json(self, json_dicts: list[dict], filename: str | Path) -> None:
+        Path(filename).write_text(json.dumps(json_dicts, ensure_ascii=False), encoding="utf-8")
+
+    def execute(self, output_path: str | Path = "output.json") -> None:
         rows = self.get_rows()
-        print(f'{len(rows)} rows returned.')
-        json_dicts = []
+        print(f"{len(rows)} rows returned.")
         for row in rows:
-            text = self.get_pdf_text(row)
-            row['texto'] = text
-            row['data_resumo'] = row['data_resumo'].strftime('%Y-%m-%d')
-            json_dicts.append(row)
-        self.save_json(json_dicts, 'output.json')
+            row["texto"] = self.get_pdf_text(row)
+            row["data_resumo"] = row["data_resumo"].strftime("%Y-%m-%d")
+        self.save_json(rows, output_path)
 
-if __name__ == '__main__':
-    etl = ETL()
-    etl.execute()
-    etl.close()
+
+if __name__ == "__main__":
+    ETL().execute()

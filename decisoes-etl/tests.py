@@ -1,76 +1,54 @@
-import os
-import pymssql
-import pytest
-import pypdf
-import json
+"""Integration smoke tests — require live MSSQL + the PDF share mount."""
+from __future__ import annotations
 
+import json
+import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+import pypdf
+import pytest
+from sqlalchemy import text
 
-load_dotenv()
+from ccd.db import get_connection
 
-@pytest.fixture
-def connection():
-    return pymssql.connect(server='10.24.0.77\\ControleExterno',
-                                    user=os.getenv('SQLSERVER_USER'),
-                                    password=os.getenv('SQLSERVER_PASS'),
-                                    port=59678,
-                                    database='processo',
-                                    charset='WINDOWS-1252')
-
-@pytest.fixture
-def query():
-    return '''
-    SELECT 
-RTRIM(setor) as setor, 
-resumo, 
-data_resumo, 
-Decisao, 
-concat(rtrim(setor),'_',numero_processo ,'_',ano_processo,'_',RIGHT(concat('0000',ordem),4),'.pdf') as arquivo
+QUERY = """
+SELECT
+    RTRIM(setor) as setor,
+    resumo,
+    data_resumo,
+    Decisao,
+    concat(rtrim(setor),'_',numero_processo,'_',ano_processo,'_',RIGHT(concat('0000',ordem),4),'.pdf') as arquivo
 FROM processo.dbo.Ata_Informacao
 WHERE Decisao IS NOT NULL
-AND year(data_resumo) = 2024
-    '''
+  AND year(data_resumo) = :ano
+"""
 
-@pytest.mark.skip
-def test_conn(connection, query):
-    cursor = connection.cursor(as_dict=True)
-    cursor.execute(query)
-    rows = cursor.fetchall()
+
+@pytest.fixture
+def engine():
+    return get_connection()
+
+
+@pytest.mark.skip(reason="integration: needs DB")
+def test_conn(engine):
+    with engine.connect() as conn:
+        rows = conn.execute(text(QUERY), {"ano": 2024}).mappings().all()
     assert len(rows) > 0
-    cursor.close()
-    connection.close()
-    print(f'Test passed! {len(rows)} rows returned.')
 
-@pytest.mark.skip
-def test_pdf(connection, query):
-    dir_pdf = '/mnt/informacoes_pdf'
-    assert os.path.exists(dir_pdf)
 
-    cursor = connection.cursor(as_dict=True)
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    
-    row = rows[2]
+@pytest.mark.skip(reason="integration: needs DB + PDF share")
+def test_pdf(engine, tmp_path: Path):
+    pdf_dir = Path(os.getenv("CCD_INFORMACOES_DIR", "/mnt/informacoes_pdf"))
+    assert pdf_dir.exists()
 
-    arquivo = Path(dir_pdf) / row['setor'].strip() / row['arquivo']
-    print(f'File {arquivo}')
-    text = []
-    json_dicts = []
-    
-    pdf = pypdf.PdfReader(arquivo)
-    for page in pdf.pages:
-        text.append(page.extract_text())
-    row['texto'] = text
-    row['data_resumo'] = row['data_resumo'].strftime('%Y-%m-%d')
-    json_dicts.append(row)
+    with engine.connect() as conn:
+        rows = conn.execute(text(QUERY), {"ano": 2024}).mappings().all()
+    row = dict(rows[2])
 
-    print(f'Resumo: {row["resumo"]}')
+    arquivo = pdf_dir / row["setor"].strip() / row["arquivo"]
+    pdf = pypdf.PdfReader(str(arquivo))
+    row["texto"] = [page.extract_text() or "" for page in pdf.pages]
+    row["data_resumo"] = row["data_resumo"].strftime("%Y-%m-%d")
 
-    print(f'Texto: {row['texto']}')
-
-    with open('output_test_2.json', 'w+', encoding='utf8') as f:
-        json.dump(json_dicts, f, ensure_ascii=False)
-
-    print(f'Test passed! {len(rows)} rows returned.')
+    (tmp_path / "output.json").write_text(json.dumps([row], ensure_ascii=False), encoding="utf-8")
+    assert len(rows) > 0

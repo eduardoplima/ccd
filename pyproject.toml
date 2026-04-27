@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ccd"
+version = "0.1.0"
+description = "Tooling for the Coordenadoria de Controle de Decisões (TCE/RN)"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas",
+    "numpy",
+    "pypdf",
+    "pymssql",
+    "SQLAlchemy",
+    "python-dotenv",
+    "docxtpl",
+    "python-docx",
+    "openpyxl",
+    "pywin32; sys_platform == 'win32'",
+]
+
+[tool.setuptools.packages.find]
+include = ["ccd*"]
+
+[tool.setuptools.package-data]
+ccd = ["sql/*.sql"]
