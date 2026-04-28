@@ -172,10 +172,15 @@ cython_debug/
 
 #*.doc
 #*.docx
-#*.pdf 
+#*.pdf
 #*.xlsx
 #*.xls
 #*.ppt
 #*.pptx
 
-scripts/automacao/saidas/*
+# Office lockfiles (Word/Excel deixam ao abrir o arquivo)
+~$*.docx
+~$*.xlsx
+
+# Artefatos gerados pelos notebooks
+scripts/*/saidas/

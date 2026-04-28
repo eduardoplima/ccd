@@ -6,6 +6,7 @@ no silently-empty env vars when a notebook is launched from the wrong place.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -13,6 +14,14 @@ from dotenv import load_dotenv
 PACKAGE_DIR: Path = Path(__file__).resolve().parent
 REPO_ROOT: Path = PACKAGE_DIR.parent
 SQL_DIR: Path = PACKAGE_DIR / "sql"
+
+# Default share location for Ata_Informacao PDFs. Override per-host with the
+# CCD_INFORMACOES_DIR env var (e.g. /mnt/informacoes_pdf on the Linux box).
+DEFAULT_INFORMACOES_DIR: str = r"\\10.24.0.6\tce$\Informacoes_PDF"
+
+# Default Azure OpenAI deployment name used by ccd.notebook.setup(). Override
+# with AZURE_OPENAI_DEPLOYMENT.
+DEFAULT_AZURE_DEPLOYMENT: str = "gpt-4o"
 
 _ENV_CANDIDATES = (
     REPO_ROOT / ".env",
@@ -43,3 +52,9 @@ def read_sql(name: str) -> str:
     """Read a bundled SQL file from ccd/sql/<name>."""
     path = SQL_DIR / name
     return path.read_text(encoding="utf-8")
+
+
+def informacoes_dir() -> Path:
+    """Resolve the Ata_Informacao PDF share path (env var or default)."""
+    load_env()
+    return Path(os.getenv("CCD_INFORMACOES_DIR", DEFAULT_INFORMACOES_DIR))

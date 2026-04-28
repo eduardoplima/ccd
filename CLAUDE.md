@@ -13,21 +13,22 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
   - `pip install -e .` (makes the `ccd` package importable from anywhere).
 - Runtime config lives in `scripts/.env` (gitignored). `ccd.config.load_env()` finds it from `Path(__file__)`, not the CWD — it works regardless of where Python is launched. Both `<repo>/.env` and `<repo>/scripts/.env` are accepted; the first hit wins. Provided keys:
   - `SQL_SERVER_HOST` / `SQL_SERVER_USER` / `SQL_SERVER_PASS` / `SQL_SERVER_PORT` — MSSQL credentials (legacy `SQLSERVER_*` names are accepted as fallback).
-  - `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` / `OPENAI_API_VERSION` — Azure OpenAI `gpt-4o` deployment used by every LLM notebook.
-  - `CCD_INFORMACOES_DIR` (optional) — overrides the default PDF share path. Defaults to `\\10.24.0.6\tce$\Informacoes_PDF` for `ccd.processo`, and `/mnt/informacoes_pdf` for `decisoes-etl/etl.py`.
+  - `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` / `OPENAI_API_VERSION` — Azure OpenAI credentials used by every LLM notebook.
+  - `AZURE_OPENAI_DEPLOYMENT` (optional) — Azure deployment name. Defaults to `gpt-4o` (`ccd.config.DEFAULT_AZURE_DEPLOYMENT`).
+  - `CCD_INFORMACOES_DIR` (optional) — overrides the default PDF share path. Defaults to `\\10.24.0.6\tce$\Informacoes_PDF` (`ccd.config.DEFAULT_INFORMACOES_DIR`); resolve at runtime with `ccd.config.informacoes_dir()`.
 
 ## Running things
 
-- **Notebooks** (the primary surface): launch from anywhere. New notebooks should `from ccd.db import get_connection` etc. The legacy preamble (`sys.path.append("..")` + `from utils_ccd import ...`) still works because `scripts/utils_ccd.py` is a thin shim that re-exports the new package.
+- **Notebooks** (the primary surface): launch from anywhere. New notebooks should use `from ccd.notebook import setup; ctx = setup()` to get an `engine` + `llm` ready to go (replaces the boilerplate `sys.path` + `load_dotenv` + `AzureChatOpenAI(...)` block). Or, for finer control, import from the submodules directly: `from ccd.db import get_connection`, `from ccd.config import informacoes_dir`. The legacy preamble (`sys.path.append("..")` + `from utils_ccd import ...`) still works because `scripts/utils_ccd.py` is a thin shim that re-exports the new package.
 - **Antecedentes CLI**: `python -m scripts.automacao.antecedentes --nome "<nome LIKE pattern>" --json <context.json> --doc_name <out.docx>`. Note the parameter is `--nome`, not `--cpf` — the underlying SQL filters by responsável name.
-- **Decisões ETL**: `python decisoes-etl/etl.py` — pulls `Ata_Informacao` rows for the configured year, extracts PDF text via `pypdf`, writes `output.json`.
-- **Tests**: `pytest decisoes-etl/tests.py`. All marked `@pytest.mark.skip` (integration: need DB + PDF share); unskip selectively when running on a machine with both.
+- **CI**: GitHub Actions runs `ruff check` + `mypy ccd` on push/PR (see `.github/workflows/ci.yml`). No test suite at the moment.
 
 ## Architecture
 
 ### `ccd/` — the package (importable from anywhere after `pip install -e .`)
 
-- `ccd.config` — `PACKAGE_DIR`, `REPO_ROOT`, `SQL_DIR`, `load_env()`, `read_sql(name)`. All paths are resolved from `Path(__file__)`, killing the CWD trap.
+- `ccd.config` — `PACKAGE_DIR`, `REPO_ROOT`, `SQL_DIR`, `DEFAULT_INFORMACOES_DIR`, `DEFAULT_AZURE_DEPLOYMENT`, `load_env()`, `read_sql(name)`, `informacoes_dir()`. All paths are resolved from `Path(__file__)`, killing the CWD trap. Single source of truth for env-var-overridable infra paths/names.
+- `ccd.notebook` — `setup(db='processo', llm=True) -> NotebookContext` with `engine` and (optionally) `llm`. Replaces the per-notebook prelude. Requires the `notebooks` extra (`pip install -e ".[notebooks]"`) for the LLM path.
 - `ccd.db` — `get_connection(db='processo') -> Engine`, plus `run_query(sql, **params)` and `run_query_df(sql, **params)`. Always use **named parameters** (`:foo`) and pass values as kwargs — never `.format()` SQL with user input.
 - `ccd.pdf` — `extract_text_from_pdf(path)`, `merge_pdfs(paths, out)`.
 - `ccd.processo` — `get_info_file_path`, `get_pdf_files_processo`, `get_informacoes_processo`, `download_processo`. The processo SQL (a single parameterized query) lives inline in this module; the share path is overridable via `CCD_INFORMACOES_DIR`.
@@ -44,13 +45,9 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 - `scripts/db/`, `scripts/docs/` — input spreadsheets/pickles.
 - `scripts/erros/`, `scripts/json_antecedentes/` — auxiliary.
 
-### `decisoes-etl/`
-
-Standalone year-based extraction over `Ata_Informacao` joined with `Processos`. Now uses `ccd.db.get_connection` and parameterized SQL; the docling text path is lazy-imported (heavy dep). Output goes to `output.json` in the CWD.
-
 ## Conventions worth preserving
 
 - New SQL must use named parameters (`:foo`) with `ccd.db.run_query_df(sql, **params)`. Don't extend the legacy `.format()` pattern in `scripts/consultas/`; if you touch one of those queries, migrate it to `ccd/sql/` and parameters at the same time.
 - All user-facing strings (template variable names, LLM prompts, generated text) are in **Portuguese (pt-BR)**.
 - `templates/~$*.docx` are Word lockfiles — never commit them. `scripts/<area>/saidas/` directories accumulate generated artifacts; check `git status` before staging.
-- The PDF share path is the only "infra" address still hardcoded as a default (`\\10.24.0.6\tce$\Informacoes_PDF`). Override per-host via `CCD_INFORMACOES_DIR` rather than editing the source.
+- The PDF share path and Azure deployment name live in `ccd/config.py` as `DEFAULT_INFORMACOES_DIR` / `DEFAULT_AZURE_DEPLOYMENT`. Override per-host via `CCD_INFORMACOES_DIR` / `AZURE_OPENAI_DEPLOYMENT` env vars rather than editing the source.

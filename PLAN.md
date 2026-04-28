@@ -43,9 +43,8 @@ Extrair o "prelude" repetido (`sys.path`, `load_dotenv`,
 iniciais.
 
 ## 7. Destino de `decisoes-etl/`
-Decidir: ou se funde ao pacote `ccd/` (compartilhando conexão e extração de
-PDF), ou ganha um README explicando por que continua isolado. Hoje é uma
-terceira convenção paralela.
+Resolvido — diretório removido do repo (lógica migrada para um repositório
+separado).
 
 ## 8. Higiene de repo
 Adicionar `~$*.docx`, `*/saidas/`, `*.xlsx` de saída ao `.gitignore`; rodar

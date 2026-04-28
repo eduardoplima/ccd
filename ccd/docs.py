@@ -6,11 +6,10 @@ needs `soffice` on PATH) and Microsoft Word via COM (Windows only). Use
 """
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
 
 from docxtpl import DocxTemplate
 
