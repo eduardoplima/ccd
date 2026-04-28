@@ -7,7 +7,6 @@ TCE/RN Windows UNC share.
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -15,19 +14,22 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from ccd.config import DEFAULT_INFORMACOES_DIR, informacoes_dir
 from ccd.db import get_connection
 from ccd.pdf import extract_text_from_pdf
 
-DEFAULT_INFORMACOES_DIR = r"\\10.24.0.6\tce$\Informacoes_PDF"
-
-
-def _informacoes_dir() -> Path:
-    return Path(os.getenv("CCD_INFORMACOES_DIR", DEFAULT_INFORMACOES_DIR))
+__all__ = [
+    "DEFAULT_INFORMACOES_DIR",  # re-exported for utils_ccd.DIR_INFORMACOES
+    "download_processo",
+    "get_info_file_path",
+    "get_informacoes_processo",
+    "get_pdf_files_processo",
+]
 
 
 def get_info_file_path(row: pd.Series | dict, dir_info: str | Path | None = None) -> Path:
     """Build the absolute path to an `Ata_Informacao` PDF on the share."""
-    base = Path(dir_info) if dir_info is not None else _informacoes_dir()
+    base = Path(dir_info) if dir_info is not None else informacoes_dir()
     setor = row["setor"].strip()
     return base / setor / row["arquivo"]
 
@@ -48,7 +50,7 @@ def _query_informacoes(processo: str, conn: Engine | Any | None) -> pd.DataFrame
     if conn is None:
         conn = get_connection()
     df = pd.read_sql(text(_SQL_INFORMACOES_PROCESSO), conn, params={"processo": processo})
-    df["caminho_arquivo"] = df.apply(get_info_file_path, axis=1)
+    df["caminho_arquivo"] = df.apply(lambda row: get_info_file_path(row), axis=1)  # type: ignore[call-overload]
     return df
 
 

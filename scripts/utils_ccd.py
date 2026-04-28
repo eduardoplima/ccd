@@ -5,17 +5,21 @@ after `sys.path.append("..")`. After `pip install -e .` at the repo root, you
 can drop both lines and import from `ccd` directly.
 """
 from ccd.db import get_connection
+from ccd.docs import (
+    docx_to_pdf_libreoffice as generate_pdf,
+)
+from ccd.docs import (
+    docx_to_pdf_word as generate_pdf_office,
+)
 from ccd.pdf import extract_text_from_pdf, merge_pdfs
 from ccd.processo import (
     DEFAULT_INFORMACOES_DIR as DIR_INFORMACOES,
+)
+from ccd.processo import (
     download_processo,
     get_info_file_path,
     get_informacoes_processo,
     get_pdf_files_processo,
-)
-from ccd.docs import (
-    docx_to_pdf_libreoffice as generate_pdf,
-    docx_to_pdf_word as generate_pdf_office,
 )
 
 __all__ = [

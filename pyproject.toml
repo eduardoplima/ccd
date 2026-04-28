@@ -20,8 +20,41 @@ dependencies = [
     "pywin32; sys_platform == 'win32'",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "pandas-stubs",
+]
+notebooks = [
+    "langchain-openai",
+    "langchain",
+]
+
 [tool.setuptools.packages.find]
 include = ["ccd*"]
 
 [tool.setuptools.package-data]
 ccd = ["sql/*.sql"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    "*.ipynb",
+    "scripts/consultas",
+    "scripts/erros",
+    "scripts/json_antecedentes",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]  # line length handled by formatter, avoid noisy notebook-style strings
+
+[tool.mypy]
+python_version = "3.12"
+files = ["ccd"]
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true

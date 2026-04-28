@@ -11,11 +11,11 @@ from __future__ import annotations
 
 import os
 from typing import Any
-from urllib.parse import quote_plus
 
 import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.url import URL
 
 from ccd.config import load_env
 
@@ -37,27 +37,35 @@ def get_connection(db: str = "processo") -> Engine:
     password = _env("SQL_SERVER_PASS", "SQLSERVER_PASS")
     port = _env("SQL_SERVER_PORT", "SQLSERVER_PORT", default="1433")
 
-    missing = [
-        name for name, value in (
-            ("SQL_SERVER_HOST", server),
-            ("SQL_SERVER_USER", user),
-            ("SQL_SERVER_PASS", password),
-        ) if not value
-    ]
-    if missing:
+    if not server or not user or not password:
+        missing = [
+            name for name, value in (
+                ("SQL_SERVER_HOST", server),
+                ("SQL_SERVER_USER", user),
+                ("SQL_SERVER_PASS", password),
+            ) if not value
+        ]
         raise RuntimeError(
             f"Missing env vars: {', '.join(missing)}. "
             f"Check the .env at the repo root or scripts/.env."
         )
 
-    # Server may contain a backslash for named instances (e.g. HOST\Instance);
-    # quote_plus keeps the URL parser happy.
-    user_q = quote_plus(user)
-    password_q = quote_plus(password)
-    server_q = quote_plus(server)
-
-    url = f"mssql+pymssql://{user_q}:{password_q}@{server_q}:{port}/{db}"
-    return create_engine(url)
+    # URL.create() preserves backslashes in named-instance hosts
+    # (e.g. HOST\Instance) instead of percent-encoding them. The pymssql
+    # dialect concatenates host:port into a single string when port is in
+    # the URL — that breaks named-instance + static-port setups because
+    # FreeTDS sees the backslash and tries SQL Browser (UDP 1434) instead
+    # of using the static port. Passing `port` via connect_args keeps it
+    # as a separate kwarg.
+    url = URL.create(
+        "mssql+pymssql",
+        username=user,
+        password=password,
+        host=server,
+        database=db,
+    )
+    port_int = int(port) if port else 1433
+    return create_engine(url, connect_args={"port": port_int})
 
 
 def run_query(sql: str, conn: Engine | Any | None = None, **params) -> Any:
