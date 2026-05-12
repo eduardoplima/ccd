@@ -51,3 +51,4 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 - All user-facing strings (template variable names, LLM prompts, generated text) are in **Portuguese (pt-BR)**.
 - `templates/~$*.docx` are Word lockfiles — never commit them. `scripts/<area>/saidas/` directories accumulate generated artifacts; check `git status` before staging.
 - The PDF share path and Azure deployment name live in `ccd/config.py` as `DEFAULT_INFORMACOES_DIR` / `DEFAULT_AZURE_DEPLOYMENT`. Override per-host via `CCD_INFORMACOES_DIR` / `AZURE_OPENAI_DEPLOYMENT` env vars rather than editing the source.
+- Commits: use **mensagens curtas** (uma linha, estilo dos commits recentes) e **sem `Co-Authored-By: Claude`** no rodapé.
