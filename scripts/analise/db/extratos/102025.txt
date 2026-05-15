@@ -1,0 +1,100 @@
+================================================================================================================================================================
+Extrato conta corrente                                                                                                                       G338271057716429016
+                                                                                                                                             27/03/2026 11:02:52
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Cliente - Cliente atual
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Agência                       3795-8
+Conta corrente                700000-6 TCE RN FRAP OUTRAS FONTES
+Período do extrato            10/2025
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Lançamentos
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Dt. movimento  Dt. balancete    Ag. origem        Lote     Histórico                                    Documento         Valor R$            Saldo
+   30/09/2025                       0000          00000     Saldo Anterior                                                                    0,00 C
+   01/10/2025                       0000          14134     Recebimentos Diversos                          250.000       2.134,94 C                 
+                              00.394.544/0127-87 MINISTERIO DA SAUDE
+   01/10/2025                       0000          14134     Recebimentos Diversos                          264.350       1.891,22 C                 
+                              24.370.371/0001-23 INSTITUTO FEDERAL D
+   01/10/2025                       0000          14175     TED-Depósito Judicial                      396.337.577         766,45 C       4.792,61 C
+                              237 5882 08357667000158 TENENTE ANANIA
+   02/10/2025                       1445          99015     Transferência recebida             551.445.000.018.916       4.155,57 C                 
+                              02/10 14:23 REC TRIBUTOS MUNICIPAIS
+   02/10/2025                       0000          14134     Recebimentos Diversos                           27.802          57,68 C       9.005,86 C
+                              NATAL TRIBUNAL DE CONTAS DO ESTADO
+   07/10/2025                       0000          14138     Ordem Bancária                     202.510.060.003.162         600,28 C       9.606,14 C
+                              ESTADO DO RIO GRANDE D
+   09/10/2025                       0701          99015     Transferência recebida             550.701.000.005.095       2.521,43 C                 
+                              09/10 12:37 PREF MUN LAJES PINT FPM
+   09/10/2025                       0000          00000      BB RF Sim SD Diferenciad                          942      12.127,57 D           0,00 C
+                              BB RF Simples SD Diferenciado
+   10/10/2025                       1042          99015     Transferência recebida             551.042.000.002.054         302,88 C                 
+                              10/10 14:50 PREF MUN MAXARANGUAPE FP
+   10/10/2025                       2640          99015     Transferência recebida             552.640.000.013.602       4.636,08 C                 
+                              10/10 15:19 FOPAG PM MONTE GAMELEIRA
+   10/10/2025                       0000          14138     Ordem Bancária                     202.510.090.040.087       5.298,84 C                 
+                              ESTADO DO RIO GRANDE D
+   10/10/2025                       0000          00000      BB RF Sim SD Diferenciad                          942      10.237,80 D           0,00 C
+                              BB RF Simples SD Diferenciado
+   13/10/2025                       5769          99012     Transferência recebida             525.769.000.500.438           5,00 C                 
+                              13/10 12:11 SANJIA MEDEIROS BEZERRA
+   13/10/2025                       3293          99020     Transferência recebida             603.293.000.978.242           5,00 C          10,00 C
+                              13/10 21:14 JOAO ORLANDO MOURA LIMA
+   14/10/2025                       8637          99020     Transferência recebida             608.637.000.140.719          10,00 C                 
+                              14/10 06:16 KATIA REGINA DOS SANTOS
+   14/10/2025                       0000          14138     Ordem Bancária                     202.510.130.066.178         571,60 C         591,60 C
+                              ESTADO DO RIO GRANDE D
+   15/10/2025                       3795          99015     Transferência recebida             553.795.000.011.695       1.422,03 C                 
+                              15/10 13:28 ALRN APOSENTADOS
+   15/10/2025                       3795          99015     Transferência recebida             553.795.000.011.695       2.388,73 C                 
+                              15/10 13:28 ALRN APOSENTADOS
+   15/10/2025                       0000          14138     Ordem Bancária                     202.510.140.032.020         630,47 C                 
+                              ESTADO DO RIO GRANDE D
+   15/10/2025                       0000          14138     Ordem Bancária                     202.510.140.032.021         495,43 C                 
+                              ESTADO DO RIO GRANDE D
+   15/10/2025                       0000          14138     Ordem Bancária                     202.510.140.032.022         266,35 C                 
+                              ESTADO DO RIO GRANDE D
+   15/10/2025                       0000          14138     Ordem Bancária                     202.510.140.032.023       4.606,50 C                 
+                              ESTADO DO RIO GRANDE D
+   15/10/2025                       0000          14138     Ordem Bancária                     202.510.140.032.024         653,95 C                 
+                              ESTADO DO RIO GRANDE D
+   15/10/2025                       0000          00000      BB RF Sim SD Diferenciad                          942      11.055,06 D           0,00 C
+                              BB RF Simples SD Diferenciado
+   17/10/2025                       8637          99020     Transferência recebida             608.637.000.041.280          10,00 C          10,00 C
+                              17/10 08:56 ERICA KALINEA B S BRITO
+   20/10/2025                       1365          99015     Transferência recebida             551.365.000.017.185         480,58 C                 
+                              20/10 11:18 CAM MUN DE FRUTUOSO GOME
+   20/10/2025                       2623          99015     Transferência recebida             552.623.000.300.000         416,10 C                 
+                              20/10 12:56 SME EXTREMOZ FEB
+   20/10/2025                       0000          14105     Transferência recebida             110.900.000.034.345       4.423,44 C       5.330,12 C
+                              20/10 12:32 FRANCISCO JULIO ARAUJO
+   24/10/2025                       0000          14138     Ordem Bancária                     202.510.230.012.519         561,38 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   24/10/2025                       0000          14138     Ordem Bancária                     202.510.230.012.520         904,11 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   24/10/2025                       0000          14138     Ordem Bancária                     202.510.230.012.523         227,66 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   24/10/2025                       0000          14138     Ordem Bancária                     202.510.230.012.529         444,01 C       7.467,28 C
+                              ASSEMBLEIA LEGISLATIVA
+   27/10/2025                       0000          14138     Ordem Bancária                     202.510.240.088.352       1.295,64 C       8.762,92 C
+                              ESTADO DO RIO GRANDE D
+   30/10/2025                       0214          99015     Transferência recebida             550.214.000.067.210         148,99 C                 
+                              30/10 15:19 SME DE PARAU FUNDEB
+   30/10/2025                       0000          14138     Ordem Bancária                     202.510.290.012.674         121,81 C                 
+                              ESTADO DO RIO GRANDE D
+   30/10/2025                       0000          14138     Ordem Bancária                     202.510.290.012.675         637,56 C                 
+                              ESTADO DO RIO GRANDE D
+   30/10/2025                       0000          14138     Ordem Bancária                     202.510.290.012.676         637,56 C                 
+                              ESTADO DO RIO GRANDE D
+   30/10/2025                       0000          00000      BB RF Sim SD Diferenciad                          942      10.308,84 D           0,00 C
+                              BB RF Simples SD Diferenciado
+   31/10/2025                       0000          14175     TED-Depósito Judicial                      399.692.921         766,45 C                 
+                              237 5882 08357667000158 TENENTE ANANIA
+   31/10/2025                       0000          00000     S A L D O                                                      766,45 C         766,45 C
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+               ------------------------------------------------
+               
+               
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Transação efetuada com sucesso por: JJ605910 EDUARDO PEREIRA LIMA

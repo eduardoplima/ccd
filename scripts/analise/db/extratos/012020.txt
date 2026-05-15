@@ -1,0 +1,104 @@
+================================================================================================================================================================
+Extrato conta corrente                                                                                                                       G332271112782961033
+                                                                                                                                             27/03/2026 11:28:54
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Cliente - Cliente atual
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Agência                       3795-8
+Conta corrente                700000-6 TCE RN FRAP OUTRAS FONTES
+Período do extrato            02/2026
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Lançamentos
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Dt. movimento  Dt. balancete    Ag. origem        Lote     Histórico                                    Documento         Valor R$            Saldo
+   30/01/2026                       0000          00000     Saldo Anterior                                                                1.171,51 C
+   02/02/2026                       0000          14134     Recebimentos Diversos                          250.000       2.144,65 C       3.316,16 C
+                              00.394.544/0127-87 MINISTERIO DA SAUDE
+   04/02/2026                       0000          14134     Recebimentos Diversos                           24.650          57,68 C                 
+                              TRIBUNAL DE CONTAS DO ESTADO DO RIO GR
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.807         630,47 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.808         495,43 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.811       1.295,64 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.814         121,81 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.815         200,26 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.816         124,91 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.819         282,27 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.820         745,60 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.821         943,63 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.823         403,95 C                 
+                              ESTADO DO RIO GRANDE D
+   04/02/2026                       0000          14138     Ordem Bancária                     202.602.030.004.934         751,43 C       9.369,24 C
+                              ESTADO DO RIO GRANDE D
+   09/02/2026                       3795          99015     Transferência recebida             553.795.000.011.695       1.422,03 C                 
+                              09/02 17:05 ALRN APOSENTADOS
+   09/02/2026                       0000          00000      BB RF Sim SD Diferenciad                          942      10.791,27 D           0,00 C
+                              BB RF Simples SD Diferenciado
+   10/02/2026                       0214          99015     Transferência recebida             550.214.000.007.657       1.448,84 C                 
+                              10/02 12:26 CAMARA MUNICIPAL DO ASSU
+   10/02/2026                       0984          99015     Transferência recebida             550.984.000.003.902         188,46 C       1.637,30 C
+                              10/02 13:33 P M SANTA MARIA FPM
+   11/02/2026                       1132          99015     Transferência recebida             551.132.000.010.001         695,83 C                 
+                              11/02 10:03 PREF MUN BODO CTA FPM
+   11/02/2026                       1132          99015     Transferência recebida             551.132.000.010.001         695,83 C                 
+                              11/02 10:03 PREF MUN BODO CTA FPM
+   11/02/2026                       1132          99015     Transferência recebida             551.132.000.010.001         695,83 C                 
+                              11/02 10:03 PREF MUN BODO CTA FPM
+   11/02/2026                       0000          14138     Ordem Bancária                     202.602.100.022.238         202,43 C       3.927,22 C
+                              MUNICIPIO DE NATAL
+   12/02/2026                       0000          14138     Ordem Bancária                     202.602.110.003.397       6.445,89 C                 
+                              ESTADO DO RIO GRANDE D
+   12/02/2026                       0000          00000      BB RF Sim SD Diferenciad                          942      10.373,11 D           0,00 C
+                              BB RF Simples SD Diferenciado
+   13/02/2026                       0214          99015     Transferência recebida             550.214.000.007.657       1.448,84 C       1.448,84 C
+                              13/02 09:40 CAMARA MUNICIPAL DO ASSU
+   19/02/2026                       2318          99015     Transferência recebida             552.318.000.114.519         292,09 C       1.740,93 C
+                              19/02 17:20 PM L SALGADA FPM
+   20/02/2026                       1365          99015     Transferência recebida             551.365.000.017.185         480,58 C                 
+                              20/02 11:05 CAM MUN DE FRUTUOSO GOME
+   20/02/2026                       2703          99015     Transferência recebida             552.703.000.013.409       1.650,00 C       3.871,51 C
+                              20/02 14:26 CAMARA MUNICIPAL DE SERR
+   23/02/2026                       0000          14138     Ordem Bancária                     202.602.200.026.677         637,56 C                 
+                              ESTADO DO RIO GRANDE D
+   23/02/2026                       0000          14138     Ordem Bancária                     202.602.200.026.678         637,56 C                 
+                              ESTADO DO RIO GRANDE D
+   23/02/2026                       0000          14138     Ordem Bancária                     202.602.200.026.679         637,56 C       5.784,19 C
+                              ESTADO DO RIO GRANDE D
+   24/02/2026                       1533          99020     Transferência recebida             601.533.000.047.007           5,00 C                 
+                              24/02 12:31 RUTH L ROCHA DINIZ NUNES
+   24/02/2026                       0879          99021     Transferência recebida             610.879.000.024.257         203,56 C                 
+                              24/02 10:59 IPSSM ODB D ADMINISTRATI
+   24/02/2026                       0000          14175     TED-Crédito em Conta                       100.185.184         648,01 C       6.640,76 C
+                              104 0806 08457640000137 SAO TOME CAMAR
+   27/02/2026                       0214          99015     Transferência recebida             550.214.000.067.210         148,99 C                 
+                              27/02 09:17 SME DE PARAU FUNDEB
+   27/02/2026                       0000          14138     Ordem Bancária                     202.602.260.009.649       1.535,13 C                 
+                              ESTADO DO RIO GRANDE D
+   27/02/2026                       0000          14138     Ordem Bancária                     202.602.260.009.650       1.535,13 C                 
+                              ESTADO DO RIO GRANDE D
+   27/02/2026                       0000          14138     Ordem Bancária                     202.602.260.045.814         561,38 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   27/02/2026                       0000          14138     Ordem Bancária                     202.602.260.045.815         904,11 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   27/02/2026                       0000          14138     Ordem Bancária                     202.602.260.045.826         227,66 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   27/02/2026                       0000          14138     Ordem Bancária                     202.602.260.045.828         444,01 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   27/02/2026                       0000          00000      BB RF Sim SD Diferenciad                          942      11.997,17 D           0,00 C
+                              BB RF Simples SD Diferenciado
+   28/02/2026                       0000          00000     S A L D O                                                        0,00 C           0,00 C
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+               ------------------------------------------------
+               
+               
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Transação efetuada com sucesso por: JJ605910 EDUARDO PEREIRA LIMA

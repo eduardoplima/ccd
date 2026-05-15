@@ -1,0 +1,82 @@
+================================================================================================================================================================
+Extrato conta corrente                                                                                                                       G332271112782961035
+                                                                                                                                             27/03/2026 11:29:55
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Cliente - Cliente atual
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Agência                       3795-8
+Conta corrente                700000-6 TCE RN FRAP OUTRAS FONTES
+Período do extrato            01/2026
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Lançamentos
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Dt. movimento  Dt. balancete    Ag. origem        Lote     Histórico                                    Documento         Valor R$            Saldo
+   30/12/2025                       0000          00000     Saldo Anterior                                                                  775,63 C
+   02/01/2026                       0000          14134     Recebimentos Diversos                          250.000       2.134,94 C       2.910,57 C
+                              00.394.544/0127-87 MINISTERIO DA SAUDE
+   07/01/2026                       0000          14175     TED-Depósito Judicial                      100.107.216         766,45 C       3.677,02 C
+                              237 5882 08357667000158 TENENTE ANANIA
+   09/01/2026                       0984          99015     Transferência recebida             550.984.000.003.902         188,46 C                 
+                              09/01 11:55 P M SANTA MARIA FPM
+   09/01/2026                       3795          99015     Transferência recebida             553.795.000.011.695       1.422,03 C       5.287,51 C
+                              09/01 14:01 ALRN APOSENTADOS
+   12/01/2026                       1042          99015     Transferência recebida             551.042.000.002.054         302,88 C                 
+                              12/01 12:20 PREF MUN MAXARANGUAPE FP
+   12/01/2026                       1042          99015     Transferência recebida             551.042.000.004.704         309,53 C                 
+                              12/01 15:18 PREF.MUNI.CEARA-MIRIM FP
+   12/01/2026                       1042          99015     Transferência recebida             551.042.000.004.704         214,56 C                 
+                              12/01 15:19 PREF.MUNI.CEARA-MIRIM FP
+   12/01/2026                       1042          99015     Transferência recebida             551.042.000.004.704         187,60 C                 
+                              12/01 15:20 PREF.MUNI.CEARA-MIRIM FP
+   12/01/2026                       1013          99020     Transferência recebida             601.013.000.013.915           5,00 C       6.307,08 C
+                              12/01 09:32 MONIQUE FERREIRA DA SILV
+   13/01/2026                       0000          14138     Ordem Bancária                     202.601.120.083.980         202,43 C       6.509,51 C
+                              MUNICIPIO DE NATAL
+   15/01/2026                       0879          99015     Transferência recebida             550.879.000.024.257         203,56 C                 
+                              15/01 14:18 IPSSM ODB D ADMINISTRATI
+   15/01/2026                       0879          99015     Transferência recebida             550.879.000.024.257         203,56 C                 
+                              15/01 14:18 IPSSM ODB D ADMINISTRATI
+   15/01/2026                       0879          99015     Transferência recebida             550.879.000.024.257         203,56 C                 
+                              15/01 14:18 IPSSM ODB D ADMINISTRATI
+   15/01/2026                       0879          99015     Transferência recebida             550.879.000.024.257         203,56 C                 
+                              15/01 14:18 IPSSM ODB D ADMINISTRATI
+   15/01/2026                       1668          99020     Transferência recebida             601.668.000.015.552          10,00 C       7.333,75 C
+                              15/01 08:55 IANA SILVA GOMES
+   20/01/2026                       1365          99015     Transferência recebida             551.365.000.017.185         480,58 C                 
+                              20/01 11:03 CAM MUN DE FRUTUOSO GOME
+   20/01/2026                       2703          99015     Transferência recebida             552.703.000.013.409       1.650,00 C                 
+                              20/01 16:08 CAMARA MUNICIPAL DE SERR
+   20/01/2026                       0000          14175     TED-Crédito em Conta                       100.126.167         624,12 C                 
+                              104 0806 08457640000137 SAO TOME CAMAR
+   20/01/2026                       0000          00000      BB RF Sim SD Diferenciad                          942      10.088,45 D           0,00 C
+                              BB RF Simples SD Diferenciado
+   22/01/2026                       1246          99012     Transferência recebida             521.246.000.033.907          10,00 C          10,00 C
+                              22/01 12:20 FERNANDO ANTONIO T LEAO
+   23/01/2026                       0000          14138     Ordem Bancária                     202.601.220.025.703         561,38 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   23/01/2026                       0000          14138     Ordem Bancária                     202.601.220.025.704         904,11 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   23/01/2026                       0000          14138     Ordem Bancária                     202.601.220.025.711         227,66 C                 
+                              ASSEMBLEIA LEGISLATIVA
+   23/01/2026                       0000          14138     Ordem Bancária                     202.601.220.025.714         444,01 C       2.147,16 C
+                              ASSEMBLEIA LEGISLATIVA
+   27/01/2026                       0000          14138     Ordem Bancária                     202.601.260.041.855       1.535,13 C                 
+                              ESTADO DO RIO GRANDE D
+   27/01/2026                       0000          14138     Ordem Bancária                     202.601.260.045.897       6.445,89 C                 
+                              ESTADO DO RIO GRANDE D
+   27/01/2026                       0000          00000      BB RF Sim SD Diferenciad                          942      10.128,18 D           0,00 C
+                              BB RF Simples SD Diferenciado
+   30/01/2026                       0214          99015     Transferência recebida             550.214.000.067.210         148,99 C                 
+                              30/01 11:49 SME DE PARAU FUNDEB
+   30/01/2026                       0000          14138     Ordem Bancária                     202.601.290.224.713         571,60 C                 
+                              ESTADO DO RIO GRANDE D
+   30/01/2026                       0000          14138     Ordem Bancária                     202.601.290.224.714         450,92 C       1.171,51 C
+                              ESTADO DO RIO GRANDE D
+   31/01/2026                       0000          00000     S A L D O                                                    1.171,51 C       1.171,51 C
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+               ------------------------------------------------
+               
+               
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Transação efetuada com sucesso por: JJ605910 EDUARDO PEREIRA LIMA
