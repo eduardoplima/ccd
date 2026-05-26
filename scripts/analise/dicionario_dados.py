@@ -12,6 +12,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -257,6 +258,30 @@ def render_index(rendered: dict[str, tuple[int, int]]) -> str:
     return "\n".join(out) + "\n"
 
 
+def _load_existing_index(out_dir: Path) -> dict[str, tuple[int, int]]:
+    """Lê contadores (objetos, colunas) dos .md já gerados no diretório."""
+    result: dict[str, tuple[int, int]] = {}
+    for md_file in sorted(out_dir.glob("*.md")):
+        if md_file.name == "INDEX.md":
+            continue
+        db_name = md_file.stem
+        # Primeira linha: "# Dicionário de dados — <db>"
+        # Segunda linha não vazia: "Gerado em ... X objetos · Y colunas."
+        try:
+            text = md_file.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        n_obj = n_col = 0
+        for line in text.splitlines():
+            # "Gerado em 2026-05-21. 490 objetos · 3802 colunas."
+            m = re.search(r"(\d+)\s+objetos\s+·\s+(\d+)\s+colunas", line)
+            if m:
+                n_obj, n_col = int(m.group(1)), int(m.group(2))
+                break
+        result[db_name] = (n_obj, n_col)
+    return result
+
+
 def dump_db(db: str, out_dir: Path) -> tuple[int, int]:
     print(f"[{db}] consultando metadados…")
     engine = get_connection(db)
@@ -301,8 +326,11 @@ def main(argv: Iterable[str] | None = None) -> None:
             print(f"[{db}] FALHOU: {exc}")
 
     if summary:
+        # Preserva entradas de rodadas anteriores que já têm .md no diretório.
+        merged: dict[str, tuple[int, int]] = _load_existing_index(args.out)
+        merged.update(summary)  # rodada atual sobrepõe entradas antigas do mesmo banco
         index_path = args.out / "INDEX.md"
-        index_path.write_text(render_index(summary), encoding="utf-8")
+        index_path.write_text(render_index(merged), encoding="utf-8")
         print(f"Index → {index_path}")
 
 

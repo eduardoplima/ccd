@@ -1,6 +1,6 @@
 # Dicionário de dados — BdSIAI
 
-Gerado em 2026-05-13. 490 objetos · 3802 colunas.
+Gerado em 2026-05-21. 490 objetos · 3802 colunas.
 
 ## dbo._column_details_extended_property
 
@@ -39,7 +39,7 @@ Tabela · ~0 linhas
 
 ## dbo._database_smells
 
-Tabela · ~3.815 linhas
+Tabela · ~3.808 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -53,7 +53,7 @@ Tabela · ~3.815 linhas
 
 ## dbo._flyway_schema_history
 
-Tabela · ~1.001 linhas
+Tabela · ~1.004 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -205,7 +205,7 @@ Tabela · ~36 linhas
 
 ## dbo.Anexo01_DespesaMovimento
 
-Tabela · ~14.996.632 linhas
+Tabela · ~15.007.364 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -231,7 +231,7 @@ Tabela · ~14.996.632 linhas
 
 ## dbo.Anexo01_DespesaReservaRPPS
 
-Tabela · ~8.529 linhas
+Tabela · ~8.542 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -255,7 +255,7 @@ Tabela · ~3 linhas
 
 ## dbo.Anexo01_Fontes
 
-Tabela · ~4.457.466 linhas
+Tabela · ~4.458.846 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -410,7 +410,7 @@ Tabela · ~3 linhas
 
 ## dbo.Anexo01_InstrumentoProgramacao
 
-Tabela · ~11.893.221 linhas
+Tabela · ~11.893.933 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -424,7 +424,7 @@ Tabela · ~11.893.221 linhas
 
 ## dbo.Anexo01_Programa
 
-Tabela · ~1.897.595 linhas
+Tabela · ~1.897.734 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -470,7 +470,7 @@ Tabela · ~17 linhas
 
 ## dbo.Anexo01_ReceitaMovimento
 
-Tabela · ~1.594.542 linhas
+Tabela · ~1.596.110 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -501,7 +501,7 @@ Tabela · ~17 linhas
 
 ## dbo.Anexo01_ReceitaSuperavitFinanceiro
 
-Tabela · ~7.779 linhas
+Tabela · ~7.792 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -531,7 +531,7 @@ Tabela · ~7 linhas
 
 ## dbo.Anexo01_UnidadeInstitucional
 
-Tabela · ~879.433 linhas
+Tabela · ~879.467 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -564,7 +564,7 @@ Tabela · ~124 linhas
 
 ## dbo.Anexo03_Movimento
 
-Tabela · ~282.965 linhas
+Tabela · ~283.105 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -586,7 +586,7 @@ Tabela · ~282.965 linhas
 
 ## dbo.Anexo04_AportesRecursosRPPS
 
-Tabela · ~53.219 linhas
+Tabela · ~53.243 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -597,7 +597,7 @@ Tabela · ~53.219 linhas
 
 ## dbo.Anexo04_BensDireitosRPPS
 
-Tabela · ~47.158 linhas
+Tabela · ~47.194 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -637,7 +637,7 @@ Tabela · ~620 linhas
 
 ## dbo.Anexo04_Despesas
 
-Tabela · ~238.013 linhas
+Tabela · ~238.121 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -691,7 +691,7 @@ Tabela · ~1.552 linhas
 
 ## dbo.Anexo04_Receitas
 
-Tabela · ~481.000 linhas
+Tabela · ~481.200 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -733,7 +733,7 @@ Tabela · ~8.148 linhas
 
 ## dbo.Anexo04_ReservaOrcamentariaRPPS
 
-Tabela · ~16.952 linhas
+Tabela · ~16.960 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -822,7 +822,7 @@ Tabela · ~914 linhas
 
 ## dbo.Anexo06_AjusteMetodologico
 
-Tabela · ~56.972 linhas
+Tabela · ~56.996 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -832,7 +832,7 @@ Tabela · ~56.972 linhas
 
 ## dbo.Anexo06_CalculoResultadoNominal
 
-Tabela · ~69.137 linhas
+Tabela · ~69.181 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -878,7 +878,7 @@ Tabela · ~304 linhas
 
 ## dbo.Anexo06_DespesasPrimarias
 
-Tabela · ~162.979 linhas
+Tabela · ~163.075 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -899,7 +899,7 @@ Tabela · ~162.979 linhas
 
 ## dbo.Anexo06_DiscriminacaoMetaFiscal
 
-Tabela · ~16.171 linhas
+Tabela · ~16.179 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -909,7 +909,7 @@ Tabela · ~16.171 linhas
 
 ## dbo.Anexo06_InformacoesAdicionais
 
-Tabela · ~30.366 linhas
+Tabela · ~30.382 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -919,7 +919,7 @@ Tabela · ~30.366 linhas
 
 ## dbo.Anexo06_JurosNominais
 
-Tabela · ~20.294 linhas
+Tabela · ~20.302 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -929,7 +929,7 @@ Tabela · ~20.294 linhas
 
 ## dbo.Anexo06_ReceitasPrimarias
 
-Tabela · ~328.247 linhas
+Tabela · ~328.419 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -941,7 +941,7 @@ Tabela · ~328.247 linhas
 
 ## dbo.Anexo07_Movimento
 
-Tabela · ~54.141 linhas
+Tabela · ~54.174 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -988,7 +988,7 @@ Tabela · ~15 linhas
 
 ## dbo.Anexo08_Despesas
 
-Tabela · ~13.663 linhas
+Tabela · ~13.671 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1001,7 +1001,7 @@ Tabela · ~13.663 linhas
 
 ## dbo.Anexo08_Receitas
 
-Tabela · ~2.037 linhas
+Tabela · ~2.038 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1062,7 +1062,7 @@ Tabela · ~38 linhas
 
 ## dbo.Anexo10_Despesas
 
-Tabela · ~14.843 linhas
+Tabela · ~14.850 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1078,7 +1078,7 @@ Tabela · ~14.843 linhas
 
 ## dbo.Anexo10_Receitas
 
-Tabela · ~9.017 linhas
+Tabela · ~9.022 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1109,7 +1109,7 @@ Tabela · ~3 linhas
 
 ## dbo.Anexo11_ApuracaoDoLimiteMinimoConstitucional
 
-Tabela · ~5.879 linhas
+Tabela · ~5.889 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1196,7 +1196,7 @@ Tabela · ~31.848 linhas
 
 ## dbo.Anexo11_Despesas
 
-Tabela · ~293.206 linhas
+Tabela · ~293.746 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1256,7 +1256,7 @@ Tabela · ~100 linhas
 
 ## dbo.Anexo11_DespesasPrecatorios
 
-Tabela · ~2.590 linhas
+Tabela · ~2.604 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1271,7 +1271,7 @@ Tabela · ~2.590 linhas
 
 ## dbo.Anexo11_FluxoFinanceiroRecursosFUNDEB
 
-Tabela · ~96.266 linhas
+Tabela · ~96.336 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1282,7 +1282,7 @@ Tabela · ~96.266 linhas
 
 ## dbo.Anexo11_IndicadoresAplicacaoSuperavitExercicioAnterior
 
-Tabela · ~18.131 linhas
+Tabela · ~18.155 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1298,7 +1298,7 @@ Tabela · ~18.131 linhas
 
 ## dbo.Anexo11_IndicadoresConstituicaoFederal
 
-Tabela · ~18.510 linhas
+Tabela · ~18.540 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1322,7 +1322,7 @@ Tabela · ~18.212 linhas
 
 ## dbo.Anexo11_IndicadoresMaximoDeSuperavit
 
-Tabela · ~5.931 linhas
+Tabela · ~5.941 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1371,7 +1371,7 @@ Tabela · ~42.003 linhas
 
 ## dbo.Anexo11_Receitas
 
-Tabela · ~270.366 linhas
+Tabela · ~270.839 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1406,7 +1406,7 @@ Tabela · ~235.418 linhas
 
 ## dbo.Anexo11_ReceitasPrecatorios
 
-Tabela · ~1.480 linhas
+Tabela · ~1.488 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1417,7 +1417,7 @@ Tabela · ~1.480 linhas
 
 ## dbo.Anexo11_RecursosRecebidosExerciciosAnterioresNaoUtilizados
 
-Tabela · ~50.147 linhas
+Tabela · ~50.257 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1427,7 +1427,7 @@ Tabela · ~50.147 linhas
 
 ## dbo.Anexo11_RestosAPagarInscritosRecursosImpostosVinculadosAoEnsino
 
-Tabela · ~38.090 linhas
+Tabela · ~38.130 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1487,7 +1487,7 @@ Tabela · ~26 linhas
 
 ## dbo.Anexo12_ControleExecucaoRestosAPagar
 
-Tabela · ~58.208 linhas
+Tabela · ~58.296 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1511,7 +1511,7 @@ Tabela · ~58.208 linhas
 
 ## dbo.Anexo12_Controles
 
-Tabela · ~125.439 linhas
+Tabela · ~125.527 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1537,7 +1537,7 @@ Tabela · ~4.415 linhas
 
 ## dbo.Anexo12_Despesas
 
-Tabela · ~590.686 linhas
+Tabela · ~591.346 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1569,7 +1569,7 @@ Tabela · ~26 linhas
 
 ## dbo.Anexo12_DespesaValorExecutadoLimiteMinimo
 
-Tabela · ~12.961 linhas
+Tabela · ~12.983 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1604,7 +1604,7 @@ Tabela · ~22 linhas
 
 ## dbo.Anexo12_Receitas
 
-Tabela · ~307.750 linhas
+Tabela · ~307.970 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1616,7 +1616,7 @@ Tabela · ~307.750 linhas
 
 ## dbo.Anexo13_Aditivos
 
-Tabela · ~90.375 linhas
+Tabela · ~90.613 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1655,7 +1655,7 @@ Tabela · ~134 linhas
 
 ## dbo.Anexo13_ContratoFestividade
 
-Tabela · ~11.872 linhas
+Tabela · ~12.038 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1681,7 +1681,7 @@ Tabela · ~11.872 linhas
 
 ## dbo.Anexo13_Contratos
 
-Tabela · ~207.327 linhas
+Tabela · ~207.924 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1718,7 +1718,7 @@ Tabela · ~207.327 linhas
 
 ## dbo.Anexo13_FiscalContrato
 
-Tabela · ~54.750 linhas
+Tabela · ~54.989 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1737,7 +1737,7 @@ Tabela · ~54.750 linhas
 
 ## dbo.Anexo13_LoteLicitacaoPublicaContrato
 
-Tabela · ~94.500 linhas
+Tabela · ~94.535 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1749,7 +1749,7 @@ Tabela · ~94.500 linhas
 
 ## dbo.Anexo13_OrdemServico
 
-Tabela · ~2.000 linhas
+Tabela · ~2.009 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1770,7 +1770,7 @@ Tabela · ~2.000 linhas
 
 ## dbo.Anexo13_ProcessoDespesa
 
-Tabela · ~132.153 linhas
+Tabela · ~132.632 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1787,7 +1787,7 @@ Tabela · ~132.153 linhas
 
 ## dbo.Anexo13_ProrrogacoesContratuais
 
-Tabela · ~1.279 linhas
+Tabela · ~1.290 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1813,7 +1813,7 @@ Tabela · ~6 linhas
 
 ## dbo.Anexo13_TipoAditamentoAditivo
 
-Tabela · ~60.700 linhas
+Tabela · ~60.978 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1851,7 +1851,7 @@ Tabela · ~5 linhas
 
 ## dbo.Anexo14_AnulacaoEmpenho
 
-Tabela · ~1.132.577 linhas
+Tabela · ~1.132.854 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1866,7 +1866,7 @@ Tabela · ~1.132.577 linhas
 
 ## dbo.Anexo14_AnulacaoLiquidacao
 
-Tabela · ~518.420 linhas
+Tabela · ~518.662 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1881,7 +1881,7 @@ Tabela · ~518.420 linhas
 
 ## dbo.Anexo14_AnulacaoPagamento
 
-Tabela · ~67.559 linhas
+Tabela · ~67.605 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1896,7 +1896,7 @@ Tabela · ~67.559 linhas
 
 ## dbo.Anexo14_AnulacaoRetencao
 
-Tabela · ~27.243 linhas
+Tabela · ~27.300 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1919,7 +1919,7 @@ Tabela · ~6 linhas
 
 ## dbo.Anexo14_Empenho
 
-Tabela · ~15.060.712 linhas
+Tabela · ~15.065.318 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1958,7 +1958,7 @@ Tabela · ~15.060.712 linhas
 
 ## dbo.Anexo14_EmpenhoReforco
 
-Tabela · ~237.326 linhas
+Tabela · ~237.511 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -1985,7 +1985,7 @@ Tabela · ~3 linhas
 
 ## dbo.Anexo14_Liquidacao
 
-Tabela · ~26.114.698 linhas
+Tabela · ~26.125.460 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2013,7 +2013,7 @@ Tabela · ~26.114.698 linhas
 
 ## dbo.Anexo14_LiquidacaoNotaFiscal
 
-Tabela · ~27.432.801 linhas
+Tabela · ~27.444.437 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2032,7 +2032,7 @@ Tabela · ~27.432.801 linhas
 
 ## dbo.Anexo14_Pagamento
 
-Tabela · ~30.953.437 linhas
+Tabela · ~30.972.825 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2056,7 +2056,7 @@ Tabela · ~30.953.437 linhas
 
 ## dbo.Anexo14_Retencao
 
-Tabela · ~10.341.814 linhas
+Tabela · ~10.352.779 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2249,7 +2249,7 @@ Tabela · ~64 linhas
 
 ## dbo.Anexo15_CumprimentoLimiteLegal
 
-Tabela · ~87.400 linhas
+Tabela · ~87.440 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2350,7 +2350,7 @@ Tabela · ~610 linhas
 
 ## dbo.Anexo15_MovimentoEnteFederacao
 
-Tabela · ~166.555 linhas
+Tabela · ~166.627 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2435,7 +2435,7 @@ Tabela · ~3 linhas
 
 ## dbo.Anexo16_Movimento
 
-Tabela · ~207.973 linhas
+Tabela · ~208.133 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2482,7 +2482,7 @@ Tabela · ~3 linhas
 
 ## dbo.Anexo17_MedidaCorretiva
 
-Tabela · ~2.568 linhas
+Tabela · ~2.570 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2492,7 +2492,7 @@ Tabela · ~2.568 linhas
 
 ## dbo.Anexo17_Movimento
 
-Tabela · ~135.186 linhas
+Tabela · ~135.298 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2539,7 +2539,7 @@ Tabela · ~3 linhas
 
 ## dbo.Anexo18_Movimento
 
-Tabela · ~162.180 linhas
+Tabela · ~162.308 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -2579,7 +2579,7 @@ Tabela · ~226 linhas
 
 ## dbo.Anexo19_Movimento
 
-Tabela · ~61.445 linhas
+Tabela · ~61.472 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -3102,7 +3102,7 @@ Tabela · ~114 linhas
 
 ## dbo.Anexo26_ContaBancaria
 
-Tabela · ~405.185 linhas
+Tabela · ~405.218 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -3792,7 +3792,7 @@ Tabela · ~25 linhas
 
 ## dbo.Anexo38_Edital
 
-Tabela · ~398.954 linhas
+Tabela · ~399.714 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -3810,7 +3810,7 @@ Tabela · ~398.954 linhas
 
 ## dbo.Anexo38_EditalAnexo
 
-Tabela · ~1.130.905 linhas
+Tabela · ~1.133.769 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -3830,7 +3830,7 @@ Tabela · ~1.130.905 linhas
 
 ## dbo.Anexo38_EditalJustificativa
 
-Tabela · ~66.441 linhas
+Tabela · ~66.549 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -3848,7 +3848,7 @@ Tabela · ~66.441 linhas
 
 ## dbo.Anexo38_EditalLicitacaoDispensada
 
-Tabela · ~290.572 linhas
+Tabela · ~291.102 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -3878,7 +3878,7 @@ Tabela · ~290.572 linhas
 
 ## dbo.Anexo38_EditalLicitacaoInaplicabilidade
 
-Tabela · ~73 linhas
+Tabela · ~74 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -3904,7 +3904,7 @@ Tabela · ~73 linhas
 
 ## dbo.Anexo38_EditalLicitacaoPublica
 
-Tabela · ~94.860 linhas
+Tabela · ~95.035 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -3957,7 +3957,7 @@ Tabela · ~94.860 linhas
 
 ## dbo.Anexo38_EditalLicitacaoRegimeEstatal
 
-Tabela · ~1.122 linhas
+Tabela · ~1.130 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -3992,7 +3992,7 @@ Tabela · ~1.122 linhas
 
 ## dbo.Anexo38_EditalSRP
 
-Tabela · ~16.290 linhas
+Tabela · ~16.344 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4104,7 +4104,7 @@ Tabela · ~105 linhas
 
 ## dbo.Anexo38_ResponsavelLicitacaoPublica
 
-Tabela · ~139.816 linhas
+Tabela · ~140.007 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4141,7 +4141,7 @@ Tabela · ~6 linhas
 
 ## dbo.Anexo38_ResultadoLicitacaoPublica
 
-Tabela · ~75.717 linhas
+Tabela · ~75.857 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4156,7 +4156,7 @@ Tabela · ~75.717 linhas
 
 ## dbo.Anexo38_ResultadoLicitacaoPublicaAnexo
 
-Tabela · ~249.298 linhas
+Tabela · ~249.770 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4172,7 +4172,7 @@ Tabela · ~249.298 linhas
 
 ## dbo.Anexo38_ResultadoLicitacaoPublicaLoteParticipante
 
-Tabela · ~1.325.871 linhas
+Tabela · ~1.328.820 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4191,7 +4191,7 @@ Tabela · ~1.325.871 linhas
 
 ## dbo.Anexo38_ResultadoLicitacaoPublicaParticipante
 
-Tabela · ~2.642.011 linhas
+Tabela · ~2.648.962 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4314,7 +4314,7 @@ Tabela · ~69 linhas
 
 ## dbo.Anexo39_ImpactoContratacao
 
-Tabela · ~30.984 linhas
+Tabela · ~31.016 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4326,7 +4326,7 @@ Tabela · ~30.984 linhas
 
 ## dbo.Anexo39_Movimento
 
-Tabela · ~7.139 linhas
+Tabela · ~7.145 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4403,7 +4403,7 @@ Tabela · ~759 linhas
 
 ## dbo.Anexo40_PessoaUCCI
 
-Tabela · ~2.145 linhas
+Tabela · ~2.146 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4538,7 +4538,7 @@ Tabela · ~2 linhas
 
 ## dbo.Anexo42_Responsavel
 
-Tabela · ~4.127 linhas
+Tabela · ~4.128 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4558,7 +4558,7 @@ Tabela · ~4.127 linhas
 
 ## dbo.Anexo42_ResponsavelUnidade
 
-Tabela · ~9.005 linhas
+Tabela · ~9.008 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4600,7 +4600,7 @@ Tabela · ~2 linhas
 
 ## dbo.Anexo42_UnidadeJurisdicionada
 
-Tabela · ~3.485 linhas
+Tabela · ~3.486 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4630,7 +4630,7 @@ Tabela · ~3.485 linhas
 
 ## dbo.Anexo42_UnidadeOrcamentaria
 
-Tabela · ~9.404 linhas
+Tabela · ~9.405 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4645,7 +4645,7 @@ Tabela · ~9.404 linhas
 
 ## dbo.ContasAnuais
 
-Tabela · ~45.647 linhas
+Tabela · ~45.730 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4671,7 +4671,7 @@ Tabela · ~55 linhas
 
 ## dbo.ContasAnuais_Atributo
 
-Tabela · ~4.133.866 linhas
+Tabela · ~4.133.993 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4701,7 +4701,7 @@ Tabela · ~2.067.193 linhas
 
 ## dbo.ContasAnuais_AtributoMovimentoLongo
 
-Tabela · ~6.785.339 linhas
+Tabela · ~6.788.766 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4712,7 +4712,7 @@ Tabela · ~6.785.339 linhas
 
 ## dbo.ContasAnuais_AtributoMovimentoNumero
 
-Tabela · ~22.562.881 linhas
+Tabela · ~22.566.404 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4723,7 +4723,7 @@ Tabela · ~22.562.881 linhas
 
 ## dbo.ContasAnuais_AtributoMovimentoTexto
 
-Tabela · ~11.306.374 linhas
+Tabela · ~11.308.432 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4734,7 +4734,7 @@ Tabela · ~11.306.374 linhas
 
 ## dbo.ContasAnuais_Campo
 
-Tabela · ~1.364.024 linhas
+Tabela · ~1.364.051 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4804,7 +4804,7 @@ Tabela · ~138 linhas
 
 ## dbo.ContasAnuais_TabelaCampo
 
-Tabela · ~19.944.950 linhas
+Tabela · ~19.948.112 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4836,7 +4836,7 @@ Tabela · ~8 linhas
 
 ## dbo.Demonstrativo_Anexo01Movimento
 
-Tabela · ~233.122 linhas
+Tabela · ~235.756 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4847,7 +4847,7 @@ Tabela · ~233.122 linhas
 
 ## dbo.Demonstrativo_Anexo02Movimento
 
-Tabela · ~763.224 linhas
+Tabela · ~771.848 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -4935,7 +4935,7 @@ Tabela · ~0 linhas
 
 ## dbo.Demonstrativo_Anexo15Movimento
 
-Tabela · ~0 linhas
+Tabela · ~333 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5001,7 +5001,7 @@ Tabela · ~14.422 linhas
 
 ## dbo.Demonstrativo_Anexo22Movimento
 
-Tabela · ~0 linhas
+Tabela · ~12 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5061,7 +5061,7 @@ Tabela · ~815 linhas
 
 ## dbo.Demonstrativo_ImportacaoArquivoSTN
 
-Tabela · ~2.644 linhas
+Tabela · ~2.646 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5140,7 +5140,7 @@ Tabela · ~2 linhas
 
 ## dbo.Documento_AnexoContasDeGestao
 
-Tabela · ~146.696 linhas
+Tabela · ~146.723 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5158,7 +5158,7 @@ Tabela · ~146.696 linhas
 
 ## dbo.Documento_AnexoContasDeGoverno
 
-Tabela · ~72.974 linhas
+Tabela · ~73.060 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5177,7 +5177,7 @@ Tabela · ~72.974 linhas
 
 ## dbo.Documento_AssinadorAnexoContasDeGoverno
 
-Tabela · ~136.597 linhas
+Tabela · ~136.759 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5222,7 +5222,7 @@ Tabela · ~2 linhas
 
 ## dbo.Documento_ComprovacaoPublicacao
 
-Tabela · ~22.213 linhas
+Tabela · ~22.224 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5266,7 +5266,7 @@ Tabela · ~5.951 linhas
 
 ## dbo.Documento_ContasDeGoverno
 
-Tabela · ~1.902 linhas
+Tabela · ~1.904 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5355,7 +5355,7 @@ Tabela · ~1.536 linhas
 
 ## dbo.Documento_DeclaracaoContasDeGestao
 
-Tabela · ~51.103 linhas
+Tabela · ~51.108 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5373,7 +5373,7 @@ Tabela · ~51.103 linhas
 
 ## dbo.Documento_DeclaracaoContasDeGoverno
 
-Tabela · ~126 linhas
+Tabela · ~121 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5391,7 +5391,7 @@ Tabela · ~126 linhas
 
 ## dbo.Documento_DiarioOficial
 
-Tabela · ~787.411 linhas
+Tabela · ~788.396 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5444,7 +5444,7 @@ Tabela · ~593 linhas
 
 ## dbo.Documento_DocumentacaoDiversa
 
-Tabela · ~15.102 linhas
+Tabela · ~15.103 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5549,7 +5549,7 @@ Tabela · ~0 linhas
 
 ## dbo.Documento_NormaOrcamentaria
 
-Tabela · ~46.441 linhas
+Tabela · ~46.522 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5771,7 +5771,7 @@ Tabela · ~2 linhas
 
 ## dbo.EmendaParlamentar_AnaliseEnvio
 
-Tabela · ~162 linhas
+Tabela · ~169 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5789,7 +5789,7 @@ Tabela · ~162 linhas
 
 ## dbo.EmendaParlamentar_AnaliseEnvioResposta
 
-Tabela · ~1.581 linhas
+Tabela · ~1.683 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5804,13 +5804,13 @@ Tabela · ~1.581 linhas
 
 ## dbo.EmendaParlamentar_Envio
 
-Tabela · ~174 linhas
+Tabela · ~176 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
 | 1 | IdEnvio | int | N | PK, FK → dbo.EmendaParlamentar_Envio(IdEnvio), IDENT | — | — |
 | 2 | IdUnidadeJurisdicionada | int | N | — | — | — |
-| 3 | IdTipoSituacao | tinyint | N | — | — | — |
+| 3 | IdTipoSituacao | tinyint | N | FK → dbo.EmendaParlamentar_TipoSituacao(IdTipoSituacao) | — | — |
 | 4 | PossuiEmendaParlamentar | bit | N | — | — | — |
 | 5 | IdPessoaGestor | int | N | FK → dbo.Anexo42_Responsavel(IdResponsavel) | — | — |
 | 6 | IdPessoaControlador | int | N | FK → dbo.Anexo40_PessoaUCCI(IdPessoaUCCI) | — | — |
@@ -5829,7 +5829,7 @@ Tabela · ~174 linhas
 
 ## dbo.EmendaParlamentar_EnvioResposta
 
-Tabela · ~1.632 linhas
+Tabela · ~1.615 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5845,7 +5845,7 @@ Tabela · ~1.632 linhas
 
 ## dbo.EmendaParlamentar_EnvioRespostaAnexo
 
-Tabela · ~1.498 linhas
+Tabela · ~1.489 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5968,7 +5968,7 @@ Tabela · ~51 linhas
 
 ## dbo.Envio_ArquivoLRF
 
-Tabela · ~44.290 linhas
+Tabela · ~44.299 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -5998,7 +5998,7 @@ Tabela · ~44.290 linhas
 
 ## dbo.Envio_ArquivoXML
 
-Tabela · ~225.557 linhas
+Tabela · ~226.127 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -6022,7 +6022,7 @@ Tabela · ~225.557 linhas
 
 ## dbo.Envio_AssinadorImportacaoAnexoLRF
 
-Tabela · ~73.902 linhas
+Tabela · ~74.088 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -6081,7 +6081,7 @@ Tabela · ~2.348.611 linhas
 
 ## dbo.Envio_CriticaArquivoXML
 
-Tabela · ~2.550.566 linhas
+Tabela · ~2.550.781 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -6093,7 +6093,7 @@ Tabela · ~2.550.566 linhas
 
 ## dbo.Envio_CriticaImportacaoAnexoLRF
 
-Tabela · ~542.773 linhas
+Tabela · ~555.844 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -6105,7 +6105,7 @@ Tabela · ~542.773 linhas
 
 ## dbo.Envio_DadosComplementaresArquivoXML
 
-Tabela · ~104.607 linhas
+Tabela · ~104.742 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -6116,7 +6116,7 @@ Tabela · ~104.607 linhas
 
 ## dbo.Envio_ImportacaoAnexoLRF
 
-Tabela · ~61.162 linhas
+Tabela · ~61.305 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -6149,7 +6149,7 @@ Tabela · ~171 linhas
 
 ## dbo.Envio_MensagemPendenciaEnvio
 
-Tabela · ~80.723 linhas
+Tabela · ~88.136 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -6185,7 +6185,7 @@ Tabela · ~25.048 linhas
 
 ## dbo.Envio_OpcionalidadeRGF
 
-Tabela · ~1.990 linhas
+Tabela · ~1.994 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -6233,7 +6233,7 @@ Tabela · ~27 linhas
 
 ## dbo.Envio_PortalTransparencia
 
-Tabela · ~31.633 linhas
+Tabela · ~31.646 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
@@ -6276,7 +6276,7 @@ Tabela · ~24 linhas
 
 ## dbo.Envio_ResponsavelContabilidade
 
-Tabela · ~31.815 linhas
+Tabela · ~31.828 linhas
 
 | # | Coluna | Tipo | Null | Chave | Default | Descrição |
 |---|--------|------|------|-------|---------|-----------|
