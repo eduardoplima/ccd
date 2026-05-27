@@ -184,3 +184,12 @@ cython_debug/
 
 # Artefatos gerados pelos notebooks
 scripts/*/saidas/
+
+# Cofre Obsidian (vault/): versionar SÓ a wiki em markdown (vault/wiki/ + schema na raiz).
+# raw/ = fontes internas do TCE (sensível — não vai para o GitHub).
+# obsidian-mind/ = clone upstream com .git próprio (embedded repo).
+# .obsidian/ = configuração local do Obsidian.
+vault/raw/
+vault/obsidian-mind/
+vault/.obsidian/
+vault/.trash/
