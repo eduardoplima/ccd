@@ -1,0 +1,33 @@
+[project]
+name = "tools"
+version = "0.1.0"
+description = "Biblioteca compartilhada de domínio FRAP (parsing de extratos, conciliação, persistência)."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pandas>=2.2",
+    "pyarrow>=16",
+    "sqlalchemy>=2.0",
+    "pyodbc>=5.1",
+    "oracledb>=2.0",
+    "python-dotenv>=1.0",
+    "click>=8.1",
+    "openpyxl>=3.1",
+    "pypdf>=5.0",
+]
+
+[project.optional-dependencies]
+llm = [
+    "langchain-openai>=0.2",
+    "langchain-core>=0.3",
+]
+
+[project.scripts]
+frap = "frap.cli:cli"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["frap*"]

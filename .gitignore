@@ -193,3 +193,6 @@ vault/raw/
 vault/obsidian-mind/
 vault/.obsidian/
 vault/.trash/
+
+# repos/ = clones de referência (frap-controle, decicontas.app) com .git próprio.
+repos/

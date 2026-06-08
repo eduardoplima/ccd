@@ -1,0 +1,20 @@
+[project]
+name = "ccd-web-workspace"
+version = "0.1.0"
+description = "Webapp Coordenadoria de Controle de Decisões (CCD) — backend FastAPI + frontend Next.js + libs de domínio (FRAP/CGAD). Módulos: CCD, CGAD, FRAP."
+requires-python = ">=3.12,<3.13"
+
+[tool.uv.workspace]
+members = ["backend", "tools/frap", "tools/cgad"]
+
+[tool.uv.sources]
+tools = { workspace = true }
+cgad = { workspace = true }
+"ccd-web-backend" = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+extend-select = ["I"]
