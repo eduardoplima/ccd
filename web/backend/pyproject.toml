@@ -1,0 +1,58 @@
+[project]
+name = "ccd-web-backend"
+version = "0.1.0"
+description = "FastAPI service for the CCD webapp (módulos CCD/CGAD/FRAP)."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "python-jose[cryptography]>=3.3",
+    "bcrypt>=4.2",
+    "arq>=0.26",
+    "redis>=5.0",
+    "pydantic-settings>=2.6",
+    "pydantic[email]>=2.6",
+    "httpx>=0.28",
+    "pyodbc>=5.1",
+    "tools",
+    "cgad[llm]",
+    "python-multipart>=0.0.27",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "pytest-mock>=3.12",
+    "freezegun>=1.5",
+    "ruff>=0.15.12",
+]
+
+[tool.uv.sources]
+tools = { workspace = true }
+cgad = { workspace = true }
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: tests that hit real DB / Redis / external services (skipped by default)",
+    "slow: tests that take more than a couple of seconds",
+]
+addopts = "-ra --strict-markers --cov=tools --cov=app --cov-report=term-missing -m \"not integration\""
