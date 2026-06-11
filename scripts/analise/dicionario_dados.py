@@ -14,9 +14,9 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
-from typing import Iterable
 
 import pandas as pd
 

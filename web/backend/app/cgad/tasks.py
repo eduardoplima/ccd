@@ -23,7 +23,6 @@ from typing import Any
 
 from sqlalchemy import update
 
-from app.config import get_settings
 
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from frap.extratos import classifica as _classifica, extrator_pessoa, parser
+from frap.extratos import classifica as _classifica
+from frap.extratos import extrator_pessoa, parser
 
 _PERIODO_PATTERN = re.compile(r"^(\d{6})\.txt$")
 

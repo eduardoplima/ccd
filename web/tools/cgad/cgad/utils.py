@@ -1,47 +1,33 @@
-import os
-import unicodedata
-import asyncio
 import json
 import logging
+import os
+import unicodedata
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
-
-from dataclasses import dataclass
-from datetime import datetime, date
-from typing import List, Dict, Any, Optional, Callable
+from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
-from rapidfuzz import process, fuzz
-
-from sqlalchemy import (
-    create_engine,
-    select
-)
-from sqlalchemy.orm import sessionmaker, Session
+from rapidfuzz import fuzz, process
+from sqlalchemy import create_engine, select
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
 
-from cgad.prompt import generate_few_shot_ner_prompts
 from cgad.models import (
-    ObrigacaoORM,
-    RecomendacaoORM,
     NERDecisaoORM,
     NERMultaORM,
     NERObrigacaoORM,
     NERRecomendacaoORM,
     NERRessarcimentoORM,
+    ObrigacaoORM,
     ProcessedObrigacaoORM,
-    ProcessedRecomendacaoORM
+    ProcessedRecomendacaoORM,
+    RecomendacaoORM,
 )
-from cgad.schema import (
-    NERDecisao,
-    Obrigacao,
-    Recomendacao,
-    CitationChoice,
-    ResponsibleChoice
-)
-
-from pathlib import Path
-
-from dotenv import load_dotenv
+from cgad.prompt import generate_few_shot_ner_prompts
+from cgad.schema import CitationChoice, NERDecisao, Obrigacao, Recomendacao, ResponsibleChoice
 
 # web/.env (parents: cgad-pkg -> tools/cgad -> tools -> web). Carrega sem
 # sobrescrever vars já presentes no ambiente (ex.: worker/backend que já leram).
@@ -122,7 +108,7 @@ def get_id_pessoa_multa_cominatoria(row, result_obrigacao) -> List[int]:
     if result_obrigacao.documento_responsavel_multa_cominatoria:
         try:
             return [p['id_pessoa'] for p in row['responsaveis'] if p['documento_responsavel'] == result_obrigacao.documento_responsavel_multa_cominatoria][0]
-        except:
+        except Exception:
             return None
     return None
 

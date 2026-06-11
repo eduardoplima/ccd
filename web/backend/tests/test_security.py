@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 
 import pytest
 from freezegun import freeze_time
 from jose import jwt
 
-from app.auth import security
 from app.auth.security import (
     BCRYPT_MAX_BYTES,
     InvalidTokenError,

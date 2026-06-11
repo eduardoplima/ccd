@@ -18,7 +18,6 @@ from pydantic import BaseModel, Field
 from .fewshot import TOOL_USE_EXAMPLES, get_formatted_messages_from_examples
 from .prompt import FEW_SHOT_NER_PROMPT
 
-
 # ============================================================================
 # TECHNIQUE PROMPTS
 # ============================================================================
@@ -131,7 +130,6 @@ decorrente de dano comprovado. Contém: (a) valor do débito, (b) responsável(i
 ])
 
 # --- T6: Two-Stage Pipeline ---
-from pydantic import BaseModel, Field
 
 class DocumentClassification(BaseModel):
     tem_multa: bool = Field(description="O documento contém aplicação de multa?")

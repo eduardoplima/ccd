@@ -1,6 +1,7 @@
-from typing import Literal, List, Optional
-from pydantic import BaseModel, Field, field_validator
 from datetime import date
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 # ====================
 # Modelos de Entidades Nomeada
