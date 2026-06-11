@@ -1,0 +1,35 @@
+name: Build base image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/backend/Dockerfile.base"
+      - ".github/workflows/build-base.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: build-base
+  cancel-in-progress: false
+
+jobs:
+  build-base:
+    name: Build ccd-backend-base
+    runs-on: [self-hosted, linux]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Limpar espaço antes do build pesado
+        run: |
+          docker builder prune -af
+          docker container prune -f
+          docker image prune -f
+
+      - name: Build imagem base
+        working-directory: web/backend
+        run: docker build -f Dockerfile.base -t ccd-backend-base:latest .
+
+      - name: Confirmar tamanho
+        run: docker image inspect ccd-backend-base:latest --format '{{.Size}}' | awk '{printf "Tamanho: %.0f MB\n", $1/1024/1024}'

@@ -51,8 +51,11 @@ jobs:
           ENVEOF
           chmod 600 .env
 
-      - name: Limpar Docker (imagens, cache e containers parados)
-        run: docker system prune -af
+      - name: Limpar Docker (cache e containers parados; preserva imagens tagueadas)
+        run: |
+          docker builder prune -af
+          docker container prune -f
+          docker image prune -f
 
       - name: Build e subir serviços
         working-directory: web
