@@ -1,0 +1,69 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: [self-hosted, linux]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Escrever .env de produção
+        working-directory: web
+        run: |
+          cat > .env << 'ENVEOF'
+          SQL_SERVER_HOST=${{ secrets.SQL_SERVER_HOST }}
+          SQL_SERVER_PORT=${{ secrets.SQL_SERVER_PORT }}
+          SQL_SERVER_USER=${{ secrets.SQL_SERVER_USER }}
+          SQL_SERVER_PASS=${{ secrets.SQL_SERVER_PASS }}
+          SQL_SERVER_DATABASE=BdDIP
+          SQL_SERVER_DRIVER=ODBC Driver 18 for SQL Server
+          SQL_SERVER_DB_PROCESSOS=processo
+          SQL_SERVER_DB_DECISOES=BdDIP
+          SQL_SERVER_DB_SIAI=BdSIAI
+          JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+          JWT_ALGORITHM=HS256
+          JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+          JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+          CORS_ALLOWED_ORIGINS=http://10.24.0.197
+          REDIS_URL=redis://redis:6379
+          AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          OPENAI_API_VERSION=${{ secrets.OPENAI_API_VERSION }}
+          AZURE_OPENAI_DEPLOYMENT=${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          CCD_INFORMACOES_DIR=/mnt/tce/Informacoes_PDF
+          SHARE_USER=${{ secrets.SHARE_USER }}
+          SHARE_PASS=${{ secrets.SHARE_PASS }}
+          SHARE_DOMAIN=${{ secrets.SHARE_DOMAIN }}
+          ENVEOF
+          chmod 600 .env
+
+      - name: Build e subir serviços
+        working-directory: web
+        run: |
+          docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+
+      - name: Verificar saúde
+        working-directory: web
+        run: |
+          echo "Aguardando containers iniciarem..."
+          for i in $(seq 1 12); do
+            curl -fsS http://localhost/api/v1/health && echo "OK" && break
+            echo "Tentativa $i/12, aguardando 5s..."
+            sleep 5
+          done
+          echo "--- docker compose ps ---"
+          docker compose -f docker-compose.prod.yml ps

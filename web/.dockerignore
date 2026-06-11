@@ -1,0 +1,25 @@
+# Contexto de build = raiz do workspace web/ (compartilhado por backend e frontend).
+**/.git
+**/.gitignore
+**/node_modules
+**/.next
+**/.venv
+.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.tsbuildinfo
+# dados e artefatos locais (recriados em runtime via volumes)
+data/
+docs/extratos_frap/
+docs/*.xlsx
+**/*.parquet
+backend/.artifacts/
+# segredos e ambiente local — o .env de produção é criado no host à parte
+.env
+**/.env.local
+# notebooks/saídas de análise
+scripts/analise/
+**/*.ipynb

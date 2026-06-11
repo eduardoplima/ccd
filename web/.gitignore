@@ -23,3 +23,11 @@ next-env.d.ts
 
 # misc
 .DS_Store
+
+# Artefatos gerados (PDFs/ZIPs de despachos do módulo CCD)
+backend/.artifacts/
+
+# O .gitignore da raiz tem um `lib/` amplo que captura o src/lib/ do frontend
+# Next.js. Reincluímos a árvore (precisa negar o diretório antes dos arquivos).
+!frontend/src/lib/
+!frontend/src/lib/**
