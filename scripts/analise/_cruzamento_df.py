@@ -8,8 +8,10 @@ Candidato = pessoa fisica que
       Tribunal de Contas nesse mes.
 """
 import time
+
 import pandas as pd
 from sqlalchemy import text
+
 from ccd.db import get_connection
 
 ANO, MES = 2026, 4

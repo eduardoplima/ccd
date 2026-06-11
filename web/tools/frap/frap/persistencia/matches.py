@@ -10,7 +10,6 @@ from sqlalchemy import Engine, text
 
 from frap.persistencia.lookups import get_id_conta, get_id_status_match
 
-
 _SQL_MAPA_LANC = """
 SELECT IdLancamento, OrdemNoArquivo
 FROM dbo.FRAPLancamento

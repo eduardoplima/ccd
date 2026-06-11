@@ -15,7 +15,6 @@ from sqlalchemy import Engine, text
 
 from frap.persistencia.lookups import get_id_categoria, get_id_conta
 
-
 _SQL_UPSERT_ARQUIVO = """
 MERGE dbo.FRAPExtratoArquivo AS tgt
 USING (SELECT :id_conta AS IdConta, :periodo AS Periodo) AS src

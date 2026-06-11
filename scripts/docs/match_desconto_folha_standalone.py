@@ -57,7 +57,6 @@ from enum import StrEnum
 import pandas as pd
 from sqlalchemy import Engine, bindparam, create_engine, text
 
-
 # ============================================================================
 # Config + engine
 # ============================================================================
@@ -725,7 +724,7 @@ def match_desconto_folha(
                     & (fr_b_linha["DtMovimento"] <= limite)
                     & (fr_b_linha["valor_cent"] == valor_cent)
                     & (~fr_b_linha["IdLancamento"].isin(consumidos))
-                    & (fr_b_linha["__orgaos_inf"].map(lambda s: id_org_int in s))
+                    & (fr_b_linha["__orgaos_inf"].map(lambda s, x=id_org_int: x in s))
                 ].sort_values("DtMovimento")
                 if cand.empty:
                     continue

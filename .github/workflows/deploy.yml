@@ -51,6 +51,9 @@ jobs:
           ENVEOF
           chmod 600 .env
 
+      - name: Limpar cache Docker
+        run: docker builder prune -af
+
       - name: Build e subir serviços
         working-directory: web
         run: |

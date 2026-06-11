@@ -1,5 +1,6 @@
 import uuid
 from typing import Dict, List, Tuple, TypedDict
+
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -7,13 +8,13 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from pydantic import BaseModel
+
 from .schema import (
     NERDecisao,
     NERMulta,
     NERObrigacao,
     NERRecomendacao,
     NERRessarcimento,
-    Obrigacao,
 )
 
 FEWSHOT_DATASET_IDS = [6, 782, 790, 817, 852]
