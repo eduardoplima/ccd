@@ -3,6 +3,9 @@
 FROM node:20-bookworm-slim AS build
 WORKDIR /app
 RUN npm install -g pnpm@9
+# Não baixar navegadores do Playwright (devDep só p/ e2e): poupa ~400MB no /var pequeno do host.
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    HUSKY=0
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./

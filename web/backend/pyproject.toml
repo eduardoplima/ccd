@@ -19,6 +19,9 @@ dependencies = [
     "tools",
     "cgad[llm]",
     "python-multipart>=0.0.27",
+    "docxtpl>=0.18",
+    "docx2pdf>=0.1.8",
+    "num2words>=0.5.13",
 ]
 
 [dependency-groups]

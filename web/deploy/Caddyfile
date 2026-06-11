@@ -1,0 +1,15 @@
+# Porta única (:80). Frontend em / e backend em /api na mesma origem (sem CORS).
+:80 {
+	encode gzip
+
+	# API → backend FastAPI (serve em /api/v1/...).
+	@api path /api/*
+	handle @api {
+		reverse_proxy backend:8000
+	}
+
+	# Demais rotas → frontend Next.js.
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

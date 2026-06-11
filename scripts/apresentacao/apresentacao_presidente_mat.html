@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acompanhamento de Decisões e Arrecadação — CCD · TCE/RN</title>
+
+    <!-- Tema Mat: Bricolage Grotesque (display) + DM Sans (corpo) + DM Mono (rótulos). Nunca fontes de sistema. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===========================================
+           VARIÁVEIS DO TEMA (MAT)
+           Mude estas para mudar todo o visual.
+           Cores: campo verde-floresta, tinta creme, único acento laranja.
+           Tipos autorados no palco fixo 1920×1080 (em px).
+           =========================================== */
+        :root {
+            /* Paleta Mat */
+            --bg-dark: #232E26;
+            --bg-dark-alt: #2E3D30;
+            --bg-cream: #EDE6D0;
+            --bg-cream-alt: #E4DAC4;
+            --ink-cream: #F0E8D2;
+            --ink-cream-2: rgba(240, 232, 210, 0.58);
+            --ink-cream-3: rgba(240, 232, 210, 0.30);
+            --ink-dark: #1E2820;
+            --ink-dark-2: rgba(30, 40, 32, 0.60);
+            --ink-dark-3: rgba(30, 40, 32, 0.30);
+            --accent: #C07030;            /* laranja queimado — único acento, só inline */
+            --border-on-dark: rgba(240, 232, 210, 0.12);
+            --border-on-cream: rgba(30, 40, 32, 0.14);
+
+            /* Tipografia (vw→px no palco 1920×1080) */
+            --font-display: 'Bricolage Grotesque', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+            --font-mono: 'DM Mono', monospace;
+            --t-display: 230px;   /* capa */
+            --t-h1: 134px;        /* abertura/fechamento de capítulo */
+            --t-h2: 77px;         /* título de slide de conteúdo */
+            --t-h3: 46px;         /* sub-título / região */
+            --t-stat: 106px;      /* numeral de destaque */
+            --t-lead: 29px;       /* parágrafo de apoio */
+            --t-body: 20px;       /* corpo */
+            --t-caption: 16px;    /* legenda / nota */
+            --t-label: 14px;      /* rótulo mono */
+
+            /* Espaçamento (vw/vh→px no palco) */
+            --pad-x: 106px;
+            --pad-y: 60px;
+            --gap-lg: 49px;
+            --gap-md: 30px;
+            --gap-sm: 16px;
+
+            --stage-bg: #1a221c;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* --- viewport-base.css (incluído INTEGRALMENTE, conforme exigido) --- */
+        html, body {
+            width: 100%; height: 100%; margin: 0;
+            overflow: hidden;
+            background: var(--stage-bg, #000);
+        }
+        .deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+        .deck-stage {
+            position: absolute; left: 0; top: 0;
+            width: 1920px; height: 1080px;
+            overflow: hidden; transform-origin: 0 0;
+            background: var(--slide-bg, #fff);
+        }
+        .slide {
+            position: absolute; inset: 0;
+            width: 1920px; height: 1080px;
+            overflow: hidden; display: block;
+            visibility: hidden; opacity: 0; pointer-events: none;
+            background: var(--slide-bg, #fff);
+        }
+        .slide.active, .slide.visible {
+            visibility: visible; opacity: 1; pointer-events: auto; z-index: 1;
+        }
+        img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+        .deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+        @media print {
+            @page { size: 1920px 1080px; margin: 0; }
+            html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+            .deck-viewport { position: static; overflow: visible; background: #fff; }
+            .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+            .slide {
+                position: relative; display: block !important;
+                visibility: visible !important; opacity: 1 !important; pointer-events: auto !important;
+                width: 1920px; height: 1080px;
+                break-after: page; page-break-after: always;
+                /* garante que os reveals apareçam impressos */
+                --print-show: 1;
+            }
+            .slide .reveal { opacity: 1 !important; transform: none !important; }
+            .slide:last-child { break-after: auto; page-break-after: auto; }
+            .deck-controls, .nav-dots, .counter, .edit-toggle, .edit-hotzone { display: none !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.2s !important;
+            }
+        }
+        /* --- fim do viewport-base.css --- */
+
+        /* ===========================================
+           SUPERFÍCIE MAT
+           Campo verde-floresta + brilho atmosférico cor-de-madeira no canto inf. direito.
+           =========================================== */
+        .slide {
+            --slide-bg: var(--bg-dark);
+            background: var(--bg-dark);
+            color: var(--ink-cream);
+            font-family: var(--font-body);
+            padding: var(--pad-y) var(--pad-x);
+            display: flex; flex-direction: column;
+        }
+        /* Brilho atmosférico cor-de-madeira — obrigatório em todo slide escuro. */
+        .slide.dark::before {
+            content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(ellipse at 70% 80%,
+                rgba(122, 78, 36, 0.28) 0%,
+                rgba(80, 50, 20, 0.14) 40%,
+                transparent 70%);
+        }
+        .slide > * { position: relative; z-index: 1; }
+
+        /* Variante creme — quebra tonal usada uma vez no deck. Sem brilho. */
+        .slide.cream {
+            --slide-bg: var(--bg-cream);
+            background: var(--bg-cream);
+            color: var(--ink-dark);
+        }
+
+        /* ===========================================
+           TIPOGRAFIA MAT
+           Display sempre em caixa mista; rótulos mono em CAIXA ALTA.
+           =========================================== */
+        .display {
+            font-family: var(--font-display); font-weight: 800;
+            font-size: var(--t-display); line-height: 0.88; letter-spacing: -0.03em;
+        }
+        h1.chapter {
+            font-family: var(--font-display); font-weight: 800;
+            font-size: var(--t-h1); line-height: 0.92; letter-spacing: -0.025em;
+        }
+        h2 {
+            font-family: var(--font-display); font-weight: 700;
+            font-size: var(--t-h2); line-height: 1.0; letter-spacing: -0.02em;
+        }
+        h3 {
+            font-family: var(--font-display); font-weight: 600;
+            font-size: var(--t-h3); line-height: 1.1; letter-spacing: -0.01em;
+        }
+        .lead { font-size: var(--t-lead); line-height: 1.55; color: var(--ink-cream); max-width: 1100px; }
+        .body { font-size: var(--t-body); line-height: 1.65; color: var(--ink-cream-2); max-width: 1000px; }
+        .muted { color: var(--ink-cream-2); }
+        .cream .lead { color: var(--ink-dark); }
+        .cream .body, .cream .muted { color: var(--ink-dark-2); }
+
+        /* Rótulo mono (kicker, chrome, rodapé, metadados) — CAIXA ALTA, tracking positivo */
+        .label {
+            font-family: var(--font-mono); font-weight: 400;
+            font-size: var(--t-label); letter-spacing: 0.12em; text-transform: uppercase;
+        }
+        .kicker { color: var(--accent); }   /* o kicker é sempre laranja */
+
+        /* <em> = ênfase laranja inline, vertical (sem itálico) */
+        em { color: var(--accent); font-style: normal; }
+
+        /* Régua decorativa de 32px em laranja */
+        .rule { width: 32px; height: 1px; background: var(--accent); margin: var(--gap-sm) 0; }
+
+        /* ===========================================
+           CHROME (faixa superior + rodapé) — par de rótulos mono sobre hairline
+           =========================================== */
+        .chrome {
+            display: flex; justify-content: space-between; align-items: baseline;
+            border-bottom: 1px solid var(--border-on-dark);
+            padding-bottom: var(--gap-sm);
+            color: var(--ink-cream-2);
+        }
+        .foot {
+            display: flex; justify-content: space-between; align-items: baseline;
+            border-top: 1px solid var(--border-on-dark);
+            padding-top: var(--gap-sm); margin-top: auto;
+            color: var(--ink-cream-3);
+        }
+        .cream .chrome { border-color: var(--border-on-cream); color: var(--ink-dark-2); }
+        .cream .foot { border-color: var(--border-on-cream); color: var(--ink-dark-3); }
+
+        /* Corpo central entre chrome e rodapé */
+        .stack { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: var(--gap-md); }
+        .stack.top { justify-content: flex-start; padding-top: var(--gap-lg); }
+
+        /* ===========================================
+           LISTAS — marcador em travessão (—) mono, laranja
+           =========================================== */
+        ul.dash { list-style: none; display: flex; flex-direction: column; gap: var(--gap-md); }
+        ul.dash li {
+            display: grid; grid-template-columns: 2em 1fr; align-items: baseline;
+            font-size: var(--t-lead); line-height: 1.45; color: var(--ink-cream);
+        }
+        ul.dash li::before {
+            content: "—"; color: var(--accent);
+            font-family: var(--font-mono); font-size: var(--t-body);
+        }
+        .cream ul.dash li { color: var(--ink-dark); }
+
+        /* ===========================================
+           STAT CELLS — célula com numeral grande + rótulo, dividida por hairline
+           =========================================== */
+        .stats { display: flex; align-items: stretch; }
+        .stat-cell {
+            flex: 1; padding: var(--gap-md) var(--pad-x) var(--gap-md) 0;
+            border-right: 1px solid var(--border-on-dark);
+        }
+        .stat-cell:last-child { border-right: 0; padding-right: 0; }
+        .stat-value {
+            font-family: var(--font-display); font-weight: 800;
+            font-size: var(--t-stat); line-height: 1.0; letter-spacing: -0.025em;
+            color: var(--ink-cream);
+        }
+        .stat-value .unit { font-size: 0.42em; }
+        .stat-label { font-size: var(--t-body); color: var(--ink-cream-2); margin-top: var(--gap-sm); }
+
+        /* ===========================================
+           INFO-CARD — papel creme inset no campo verde (componente-assinatura)
+           Sem borda, sem sombra, sem cantos arredondados.
+           =========================================== */
+        .info-card {
+            background: var(--bg-cream); color: var(--ink-dark);
+            padding: var(--gap-md) calc(var(--pad-x) * 0.55);
+            max-width: 720px;
+        }
+        .info-card h3 { color: var(--ink-dark); margin-bottom: var(--gap-sm); }
+        .info-card .body { color: var(--ink-dark-2); }
+        .info-card em { color: var(--accent); }
+
+        /* ===========================================
+           GRÁFICO DE BARRAS — barras verticais creme, baseline hairline.
+           A barra destacada recebe o acento laranja.
+           =========================================== */
+        .barchart { display: flex; align-items: flex-end; gap: 56px; height: 430px;
+            border-bottom: 1px solid var(--border-on-dark); padding-bottom: 2px; }
+        .bar-col { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; flex: 1; height: 100%; }
+        .bar-val { font-family: var(--font-display); font-weight: 800; font-size: 40px;
+            color: var(--ink-cream); margin-bottom: 12px; letter-spacing: -0.02em; }
+        .bar-fill { width: 100%; background: var(--ink-cream-3); }
+        .bar-fill.accent { background: var(--accent); }
+        .bar-name { font-family: var(--font-mono); font-size: var(--t-label); letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--ink-cream-2); margin-top: var(--gap-sm); line-height: 1.35; }
+
+        /* Agenda — índice mono laranja + item display */
+        .agenda-item { display: grid; grid-template-columns: 120px 1fr; align-items: baseline; gap: var(--gap-md);
+            padding: var(--gap-md) 0; border-bottom: 1px solid var(--border-on-dark); }
+        .agenda-item:last-child { border-bottom: 0; }
+        .agenda-num { font-family: var(--font-mono); font-size: 34px; color: var(--accent); }
+        .agenda-text { font-family: var(--font-display); font-weight: 700; font-size: 52px; letter-spacing: -0.02em; line-height: 1.0; }
+        .agenda-sub { font-size: var(--t-body); color: var(--ink-cream-2); margin-top: 6px; font-family: var(--font-body); }
+
+        /* ===========================================
+           CONTEXTO — dois mini-gráficos lado a lado (multa×PGE | desconto folha)
+           =========================================== */
+        .charts-2up { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; flex: 1; align-items: stretch; }
+        .chart-panel { display: flex; flex-direction: column; min-width: 0; }
+        .chart-title { font-family: var(--font-display); font-weight: 700; font-size: 32px;
+            letter-spacing: -0.02em; line-height: 1.05; color: var(--ink-cream); }
+        .chart-sub { font-family: var(--font-mono); font-size: var(--t-label); letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--ink-cream-2); margin-top: 6px; }
+        .legend { display: flex; gap: var(--gap-md); margin: var(--gap-md) 0 var(--gap-sm); }
+        .legend span { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono);
+            font-size: var(--t-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-cream-2); }
+        .legend i { width: 14px; height: 14px; display: inline-block; }
+        .legend i.k-multa { background: var(--ink-cream-3); }
+        .legend i.k-pge { background: var(--accent); }
+        .legend i.k-solo { background: var(--ink-cream-3); }
+        .mini-bars { display: flex; align-items: flex-end; gap: 26px; height: 380px;
+            border-bottom: 1px solid var(--border-on-dark); padding-bottom: 2px; margin-top: auto; }
+        .mini-col { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;
+            flex: 1; height: 100%; }
+        .mini-top { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--ink-cream);
+            text-align: center; margin-bottom: 8px; letter-spacing: -0.02em; }
+        .seg { width: 100%; display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-mono); font-size: 13px; }
+        .seg.k-multa { background: var(--ink-cream-3); color: var(--ink-cream); }
+        .seg.k-pge { background: var(--accent); color: var(--ink-cream); }
+        .seg.k-solo { background: var(--ink-cream-3); color: var(--ink-cream); }
+        .mini-name { font-family: var(--font-mono); font-size: var(--t-label); letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--ink-cream-2); margin-top: var(--gap-sm); text-align: center; }
+        .chart-foot { font-size: var(--t-caption); color: var(--ink-cream-2); margin-top: var(--gap-md); }
+
+        /* Screenshot do sistema — moldura creme sutil, contida no palco */
+        .shot { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+            margin-top: var(--gap-md); }
+        .shot img { max-width: 100%; max-height: 100%; object-fit: contain;
+            border: 1px solid var(--border-on-dark); background: var(--bg-cream); }
+
+        /* Fluxo / pipeline — etapas conectadas por seta laranja */
+        .flow { display: flex; align-items: stretch; gap: var(--gap-sm); margin-top: var(--gap-md); }
+        .flow-step { flex: 1; background: var(--bg-dark-alt); border: 1px solid var(--border-on-dark);
+            padding: var(--gap-md); display: flex; flex-direction: column; gap: 10px; }
+        .flow-step.accent { border-color: var(--accent); }
+        .flow-step .n { font-family: var(--font-mono); font-size: var(--t-label); letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--accent); }
+        .flow-step .t { font-family: var(--font-display); font-weight: 700; font-size: 30px;
+            letter-spacing: -0.01em; color: var(--ink-cream); }
+        .flow-step .d { font-size: var(--t-body); color: var(--ink-cream-2); line-height: 1.4; }
+        .flow-arrow { display: flex; align-items: center; color: var(--accent);
+            font-family: var(--font-mono); font-size: 30px; }
+
+        /* ===========================================
+           ANIMAÇÃO — reveal escalonado disparado por .visible
+           =========================================== */
+        .reveal { opacity: 0; transform: translateY(28px);
+            transition: opacity 0.6s cubic-bezier(0.16,1,0.3,1), transform 0.6s cubic-bezier(0.16,1,0.3,1); }
+        .slide.visible .reveal { opacity: 1; transform: translateY(0); }
+        .slide.visible .reveal:nth-child(1) { transition-delay: 0.05s; }
+        .slide.visible .reveal:nth-child(2) { transition-delay: 0.13s; }
+        .slide.visible .reveal:nth-child(3) { transition-delay: 0.21s; }
+        .slide.visible .reveal:nth-child(4) { transition-delay: 0.29s; }
+        .slide.visible .reveal:nth-child(5) { transition-delay: 0.37s; }
+        .slide.visible .bar-fill { transition: height 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s; }
+
+        /* Chrome de navegação (fora do sistema de design) */
+        .nav-dots { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+            display: flex; gap: 10px; z-index: 1000; }
+        .nav-dots .dot { width: 6px; height: 6px; border-radius: 50%;
+            background: rgba(240,232,210,0.22); cursor: pointer; transition: background 0.3s, transform 0.3s; }
+        .nav-dots .dot.active { background: var(--accent); transform: scale(1.35); }
+        .counter { position: fixed; right: 28px; bottom: 22px; z-index: 1000;
+            font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em;
+            color: rgba(240,232,210,0.30); }
+
+        /* Edição inline */
+        .edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+        .edit-toggle { position: fixed; top: 18px; left: 18px; z-index: 10001;
+            background: var(--bg-cream); color: var(--ink-dark); border: 0; padding: 8px 12px;
+            font-family: var(--font-mono); font-size: 13px; cursor: pointer;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+        .edit-toggle.active { background: var(--accent); color: var(--ink-cream); }
+        [contenteditable="true"] { outline: 1px dashed var(--accent); outline-offset: 4px; }
+    </style>
+</head>
+<body>
+    <div class="deck-viewport">
+        <main class="deck-stage" id="deckStage">
+
+            <!-- 01 · CAPA (cromeless) -->
+            <section class="slide dark active">
+                <div class="stack">
+                    <span class="label kicker reveal">TCE/RN · Junho de 2026</span>
+                    <h1 class="display reveal" style="margin-top:var(--gap-md)">Acompanhamento<br>de Decisões<br>&amp; Arrecadação</h1>
+                    <div class="rule reveal"></div>
+                    <p class="label muted reveal" style="margin-top:var(--gap-md)">Coordenadoria de Controle de Decisões — CCD</p>
+                </div>
+            </section>
+
+            <!-- 02 · AGENDA -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Coordenadoria de Controle de Decisões</span><span class="label">02 / 24</span></div>
+                <div class="stack">
+                    <span class="label kicker reveal">Agenda</span>
+                    <div class="reveal">
+                        <div class="agenda-item">
+                            <span class="agenda-num">01</span>
+                            <div><div class="agenda-text">Contexto</div>
+                            <div class="agenda-sub">Arrecadação de 2026 — multa, repasse da PGE e desconto em folha</div></div>
+                        </div>
+                        <div class="agenda-item">
+                            <span class="agenda-num">02</span>
+                            <div><div class="agenda-text">Instrução de processos de Desconto em Folha</div>
+                            <div class="agenda-sub">Servidores, órgãos e o caso Nereu (IPERN)</div></div>
+                        </div>
+                        <div class="agenda-item">
+                            <span class="agenda-num">03</span>
+                            <div><div class="agenda-text">Controle do FRAP</div>
+                            <div class="agenda-sub">Resultado do fundo e o novo canal Pix / Cartão</div></div>
+                        </div>
+                        <div class="agenda-item">
+                            <span class="agenda-num">04</span>
+                            <div><div class="agenda-text">Cadastro Geral de Acompanhamento de Decisões</div>
+                            <div class="agenda-sub">Obrigações e recomendações em acompanhamento</div></div>
+                        </div>
+                        <div class="agenda-item">
+                            <span class="agenda-num">05</span>
+                            <div><div class="agenda-text">Conclusão</div>
+                            <div class="agenda-sub">Síntese e próximos passos</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="foot"><span class="label">Fonte: bancos processo e BdDIP</span><span class="label">Extração 02/06/2026</span></div>
+            </section>
+
+            <!-- 03 · CONTEXTO (dois gráficos) -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Contexto</span><span class="label">03 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Contexto · arrecadação de 2026</span>
+                    <h2 class="reveal">De onde vem o dinheiro — janeiro a maio</h2>
+                    <div class="charts-2up reveal" style="margin-top:var(--gap-md)">
+                        <!-- Gráfico 1: multa × repasse PGE (barras empilhadas) -->
+                        <div class="chart-panel">
+                            <div class="chart-title">Arrecadação por origem</div>
+                            <div class="chart-sub">R$ mil · multa × repasse da PGE</div>
+                            <div class="legend">
+                                <span><i class="k-multa"></i> Multa (pagamento direto)</span>
+                                <span><i class="k-pge"></i> Repasse da PGE (dívida ativa)</span>
+                            </div>
+                            <div class="mini-bars">
+                                <div class="mini-col"><div class="mini-top">158</div><div class="seg k-pge" style="height:145px">85</div><div class="seg k-multa" style="height:124px">73</div><div class="mini-name">Jan</div></div>
+                                <div class="mini-col"><div class="mini-top">133</div><div class="seg k-pge" style="height:122px">72</div><div class="seg k-multa" style="height:105px">62</div><div class="mini-name">Fev</div></div>
+                                <div class="mini-col"><div class="mini-top">173</div><div class="seg k-pge" style="height:195px">114</div><div class="seg k-multa" style="height:100px">59</div><div class="mini-name">Mar</div></div>
+                                <div class="mini-col"><div class="mini-top">135</div><div class="seg k-pge" style="height:121px">71</div><div class="seg k-multa" style="height:109px">64</div><div class="mini-name">Abr</div></div>
+                                <div class="mini-col"><div class="mini-top">176</div><div class="seg k-pge" style="height:182px">107</div><div class="seg k-multa" style="height:118px">69</div><div class="mini-name">Mai</div></div>
+                            </div>
+                            <p class="chart-foot">Total no período: <em>R$ 776,4 mil</em> — R$ 326,6 mil em multa e R$ 449,8 mil repassados pela PGE.</p>
+                        </div>
+                        <!-- Painel 2: novo canal Pix / Cartão de crédito (arrecadação 0) -->
+                        <div class="chart-panel">
+                            <div class="chart-title">Pix / Cartão de crédito</div>
+                            <div class="chart-sub">Novo canal digital · arrecadação 2026</div>
+                            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:var(--gap-md)">
+                                <div>
+                                    <div class="stat-value" style="font-size:96px;line-height:1">R$ 1.481,87</div>
+                                    <div class="stat-label">pago via Pix — 1 pagamento (15/04/2026)</div>
+                                </div>
+                                <p class="body">Ainda <em>nenhum pagamento por cartão de crédito</em>. O canal está em piloto, com <em>40 solicitações</em> no total (R$ 467 mil, em 21 débitos) aguardando conciliação.</p>
+                            </div>
+                            <p class="chart-foot">Arrecadado pelo novo canal digital em 2026: <em>R$ 1.481,87</em>, todo por Pix.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="foot"><span class="label">Multa: Exe_* · PGE: PGE_Pagamento · banco processo</span><span class="label">Banco processo · 03 / 24</span></div>
+            </section>
+
+            <!-- 04 · DIVISOR 1 — Desconto em folha (cromeless) -->
+            <section class="slide dark">
+                <div class="stack">
+                    <span class="label kicker reveal">Seção 02</span>
+                    <h1 class="chapter reveal">Desconto<br>em folha</h1>
+                    <div class="rule reveal"></div>
+                    <h3 class="reveal muted">Cobrança da decisão direto no contracheque</h3>
+                </div>
+            </section>
+
+            <!-- 05 · DESCONTO EM FOLHA — COMO FUNCIONA -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Desconto em Folha</span><span class="label">05 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Como funciona</span>
+                    <h2 class="reveal">Da decisão à cobrança efetiva</h2>
+                    <ul class="dash reveal">
+                        <li><span>Notificação ao <strong>órgão pagador</strong> → desconto mensal no contracheque → repasse ao FRAP</span></li>
+                        <li><span>Conciliação mensal: <em>contracheque (folha) × crédito no FRAP</em></span></li>
+                    </ul>
+                    <div class="barchart reveal" style="height:300px;margin-top:var(--gap-sm)">
+                        <div class="bar-col"><div class="bar-val">52</div><div class="bar-fill" style="height:61%"></div><div class="bar-name">Jan</div></div>
+                        <div class="bar-col"><div class="bar-val">45</div><div class="bar-fill" style="height:53%"></div><div class="bar-name">Fev</div></div>
+                        <div class="bar-col"><div class="bar-val">85</div><div class="bar-fill accent" style="height:100%"></div><div class="bar-name">Mar</div></div>
+                        <div class="bar-col"><div class="bar-val">18</div><div class="bar-fill" style="height:21%"></div><div class="bar-name">Abr</div></div>
+                    </div>
+                    <p class="body reveal">Desconto em folha em 2026 — <em>R$ 199,3 mil</em> descontados (jan–abr); maio ainda sem desconto confirmado. <span class="muted">Valor em R$ mil por mês, conciliado com o FRAP.</span></p>
+                </div>
+                <div class="foot"><span class="label">match_desconto_folha — conciliação automática</span><span class="label">05 / 24</span></div>
+            </section>
+
+            <!-- 06 · DESCONTO EM FOLHA — POTENCIAL DE EXPANSÃO -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Desconto em Folha</span><span class="label">06 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Potencial · base de abril/2026</span>
+                    <h2 class="reveal">1.165 devedores ainda podem entrar em folha</h2>
+                    <div class="stats reveal" style="margin-top:var(--gap-md)">
+                        <div class="stat-cell">
+                            <div class="stat-value">2.685</div>
+                            <div class="stat-label">Devedores pessoa física com dívida ainda devida</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-value">1.215</div>
+                            <div class="stat-label">Destes, recebendo na folha de abr/2026</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-value" style="color:var(--accent)">1.165</div>
+                            <div class="stat-label">Candidatos: na folha e ainda sem desconto</div>
+                        </div>
+                    </div>
+                    <ul class="dash reveal" style="margin-top:var(--gap-md)">
+                        <li><span>Cruzamento <em>Exe_Debito × folha (SIAI Pessoal)</em>: quem deve, está no contracheque e <strong>ainda não tem rubrica TCE/FRAP</strong></span></li>
+                        <li><span>Só <strong>50</strong> dos que estão na folha já sofrem desconto — os outros <strong>1.165</strong> são oportunidade imediata de cobrança</span></li>
+                    </ul>
+                    <p class="body reveal muted">Universo potencial por dado; cada caso ainda exige conferência de cabimento (trânsito em julgado, citação, suspensão).</p>
+                </div>
+                <div class="foot"><span class="label">Exe_Debito (status Em Aberto/Parcial) × SiaiDp · sem rubrica TCE/FRAP</span><span class="label">06 / 24</span></div>
+            </section>
+
+            <!-- 07 · CARD DE TRANSIÇÃO — Caso Nereu (cromeless) -->
+            <section class="slide dark">
+                <div class="stack">
+                    <span class="label kicker reveal">Caso em destaque</span>
+                    <h1 class="chapter reveal">Caso Nereu</h1>
+                    <div class="rule reveal"></div>
+                    <h3 class="reveal muted">Presidente do IPERN — débitos, desconto em folha e prescrição</h3>
+                </div>
+            </section>
+
+            <!-- 07 · CASO NEREU — PANORAMA (stat cells) -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Desconto em Folha · Caso Nereu</span><span class="label">08 / 24</span></div>
+                <div class="stack">
+                    <span class="label kicker reveal">Caso em destaque · Nereu (IPERN)</span>
+                    <h2 class="reveal">594 débitos imputados</h2>
+                    <div class="stats reveal" style="margin-top:var(--gap-md)">
+                        <div class="stat-cell">
+                            <div class="stat-value">R$ 4,9<span class="unit"> mi</span></div>
+                            <div class="stat-label">Valor atualizado em aberto</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-value">39</div>
+                            <div class="stat-label">Notificados p/ desconto (R$ 415 mil)</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-value">10</div>
+                            <div class="stat-label">Parcelas pagas via FRAP (R$ 12,4 mil)</div>
+                        </div>
+                    </div>
+                    <p class="body reveal">591 processos (origem × execução); composição: <em>451 multas</em> e <em>143 multas cominatórias</em>.</p>
+                </div>
+                <div class="foot"><span class="label">debitos_nereu_planilha_final.xlsx</span><span class="label">IPERN · raiz CNPJ 08242034 · 08 / 24</span></div>
+            </section>
+
+            <!-- 09 · CASO NEREU — CONTRACHEQUE ABRIL/2026 -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Desconto em Folha · Caso Nereu</span><span class="label">09 / 24</span></div>
+                <div class="stack">
+                    <span class="label kicker reveal">Contracheque · abril/2026</span>
+                    <h2 class="reveal">Dois vínculos, líquido de R$ 22,4 mil</h2>
+                    <div class="charts-2up reveal" style="margin-top:var(--gap-sm)">
+                        <!-- PGE -->
+                        <div class="chart-panel">
+                            <div class="chart-title">Procuradoria Geral do Estado</div>
+                            <div class="chart-sub">matrícula …892 · órgão 331</div>
+                            <div style="font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;color:var(--ink-cream-2);margin:14px 0 2px">VANTAGENS</div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px"><span>Subsídio ativo</span><span style="font-family:var(--font-mono);white-space:nowrap">17.837,58</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px"><span>Abono permanência (EC 41/2003)</span><span style="font-family:var(--font-mono);white-space:nowrap">3.241,33</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px"><span>Vantagem pessoal — VPNI (LCE 518/14)</span><span style="font-family:var(--font-mono);white-space:nowrap">5.164,55</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;font-size:20px;font-weight:600"><span>Subtotal vantagens</span><span style="font-family:var(--font-mono);white-space:nowrap">26.243,46</span></div>
+                            <div style="font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;color:var(--ink-cream-2);margin:14px 0 2px">DESCONTOS</div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px"><span>IRRF</span><span style="font-family:var(--font-mono);white-space:nowrap">5.364,71</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px"><span>Previdência estadual (LC 308/05)</span><span style="font-family:var(--font-mono);white-space:nowrap">3.241,33</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px"><span>Sindicato (SINSP-RN)</span><span style="font-family:var(--font-mono);white-space:nowrap">178,37</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px;color:var(--accent)"><span>FRAP TC</span><span style="font-family:var(--font-mono);white-space:nowrap">1.117,83</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px"><span>Associação Serv. IPE</span><span style="font-family:var(--font-mono);white-space:nowrap">133,78</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;font-size:20px;font-weight:600"><span>Subtotal descontos</span><span style="font-family:var(--font-mono);white-space:nowrap">10.036,02</span></div>
+                            <p class="chart-foot" style="font-weight:600;color:var(--ink-cream)">Líquido — R$ 16.207,44</p>
+                            <p class="chart-foot" style="color:var(--accent)">A rubrica FRAP TC só aparece na <em>retificação de 26/05/2026</em> e <strong>ainda sem repasse/conciliação no FRAP</strong>.</p>
+                        </div>
+                        <!-- IPERN -->
+                        <div class="chart-panel">
+                            <div class="chart-title">Presidência do IPERN</div>
+                            <div class="chart-sub">matrícula …893 · órgão 308</div>
+                            <div style="font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;color:var(--ink-cream-2);margin:14px 0 2px">VANTAGENS</div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px"><span>Representação do cargo comissionado</span><span style="font-family:var(--font-mono);white-space:nowrap">7.040,05</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;font-size:20px;font-weight:600"><span>Subtotal vantagens</span><span style="font-family:var(--font-mono);white-space:nowrap">7.040,05</span></div>
+                            <div style="font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;color:var(--ink-cream-2);margin:14px 0 2px">DESCONTOS</div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;border-bottom:1px solid var(--border-on-dark);font-size:20px"><span>IRRF</span><span style="font-family:var(--font-mono);white-space:nowrap">819,03</span></div>
+                            <div style="display:flex;justify-content:space-between;gap:24px;padding:5px 0;font-size:20px;font-weight:600"><span>Subtotal descontos</span><span style="font-family:var(--font-mono);white-space:nowrap">819,03</span></div>
+                            <p class="chart-foot" style="font-weight:600;color:var(--ink-cream)">Líquido — R$ 6.221,02</p>
+                            <p class="body" style="margin-top:var(--gap-md)">Sem desconto FRAP/TCE neste vínculo — o desconto atual recai apenas na folha da PGE.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="foot"><span class="label">SiaiDp_ContraCheque · folha Normal 04/2026</span><span class="label">Bruto R$ 33.283,51 · Líquido R$ 22.428,46 · 09 / 24</span></div>
+            </section>
+
+            <!-- 10 · CASO NEREU — MARGEM CONSIGNÁVEL -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Desconto em Folha · Caso Nereu</span><span class="label">10 / 24</span></div>
+                <div class="stack">
+                    <span class="label kicker reveal">Margem consignável · folha de abril/2026</span>
+                    <h2 class="reveal">Com a margem livre, os R$ 415 mil levam ~6 anos</h2>
+                    <div class="stats reveal" style="margin-top:var(--gap-md)">
+                        <div class="stat-cell">
+                            <div class="stat-value">R$ 6,7<span class="unit"> mil</span></div>
+                            <div class="stat-label">Margem de 30% do líquido (R$ 22,4 mil)</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-value">− R$ 1,1<span class="unit"> mil</span></div>
+                            <div class="stat-label">FRAP TC já descontado hoje</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-value" style="color:var(--accent)">R$ 5,6<span class="unit"> mil</span></div>
+                            <div class="stat-label">Margem livre para novos descontos</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-value">~6<span class="unit"> anos</span></div>
+                            <div class="stat-label">Para descontar os R$ 415 mil em fila</div>
+                        </div>
+                    </div>
+                    <p class="body reveal">A margem de 30% (<em>R$ 6.728/mês</em>) já tem <em>R$ 1.117,83</em> ocupados pelo FRAP TC atual. Sobram <em>R$ 5.610/mês</em> livres → os R$ 415 mil levam <em>~74 parcelas (6 anos e 2 meses)</em>, sem contar a correção do saldo. <span class="muted">Há ainda sindicato (R$ 178) e associação (R$ 134) na folha.</span></p>
+                </div>
+                <div class="foot"><span class="label">SiaiDp · contracheque 04/2026 · margem 30% do líquido</span><span class="label">10 / 24</span></div>
+            </section>
+
+            <!-- 10 · CASO NEREU — PRESCRIÇÃO (barras) -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Desconto em Folha · Caso Nereu</span><span class="label">11 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Risco de prescrição</span>
+                    <h2 class="reveal">140 processos a menos de 1 ano do prazo</h2>
+                    <p class="lead reveal" style="margin-top:var(--gap-md)">Dos 591 processos do caso, <em>140 estão em risco</em> (a menos de 1 ano do prazo) e <em>448 em prazo seguro</em>.</p>
+                    <p class="body reveal" style="margin-top:var(--gap-sm)">A prescrição corre em <em>5 anos a partir da decisão</em> que constituiu o débito. <em>Risco &lt; 1 ano</em>: o prazo vence em menos de 12 meses (4 a 5 anos desde a decisão) — são a prioridade para acelerar notificação e desconto. <em>Prazo seguro</em>: mais de 1 ano de margem.</p>
+                </div>
+                <div class="foot"><span class="label">Distribuição dos 591 processos por situação</span><span class="label">11 / 24</span></div>
+            </section>
+
+            <!-- 09 · DIVISOR 2 — Controle do FRAP (cromeless) -->
+            <section class="slide dark">
+                <div class="stack">
+                    <span class="label kicker reveal">Seção 03</span>
+                    <h1 class="chapter reveal">Controle<br>do FRAP</h1>
+                    <div class="rule reveal"></div>
+                    <h3 class="reveal muted">Fundo de Reaparelhamento e Aperfeiçoamento</h3>
+                </div>
+            </section>
+
+            <!-- 10 · SISTEMA FRAP DE CONCILIAÇÃO — visão e valor -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Controle do FRAP</span><span class="label">13 / 24</span></div>
+                <div class="stack">
+                    <span class="label kicker reveal">Sistema FRAP de Conciliação</span>
+                    <ul class="dash reveal">
+                        <li><span><strong>O problema</strong> — conferir, depósito a depósito, quem pagou, quem ainda deve e o que ficou em aberto era trabalho manual, lento e sujeito a erro</span></li>
+                        <li><span><strong>A solução</strong> — um sistema web que consolida tudo, com painéis <em>por pessoa</em> e <em>por órgão</em> e a régua Totais → Notificado → Enviado → Agendado/Pago</span></li>
+                        <li><span><strong>O valor</strong> — transparência do saldo em aberto, controle gerencial mês a mês e rastreabilidade de toda conciliação (inclusive ajustes manuais, com autoria)</span></li>
+                    </ul>
+                    <div class="info-card reveal">
+                        <h3>Base oficial</h3>
+                        <p class="body">Roda sobre os dados do próprio TCE — sistemas de <em>processos</em> e de <em>folha de pagamento</em> — dentro da rede interna, sem planilhas paralelas.</p>
+                    </div>
+                </div>
+                <div class="foot"><span class="label">Visão e valor do sistema</span><span class="label">13 / 24</span></div>
+            </section>
+
+            <!-- 11 · SISTEMA FRAP DE CONCILIAÇÃO — o que faz -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Controle do FRAP</span><span class="label">14 / 24</span></div>
+                <div class="stack">
+                    <span class="label kicker reveal">Sistema FRAP de Conciliação</span>
+                    <h2 class="reveal">O que o sistema faz</h2>
+                    <ul class="dash reveal">
+                        <li><span><strong>Conciliação automática</strong> — cruza os extratos bancários com 4 fontes: desconto em folha, ordem bancária (SIGEF), guia e pessoa</span></li>
+                        <li><span><strong>Investigação rápida</strong> — busca por pessoa (nome/CPF) e por processo (origem/execução), com débitos e vínculos em segundos</span></li>
+                        <li><span><strong>Detecção de anomalias</strong> — parcela duplicada, <em>atraso sistemático</em>, CPF sem registro na folha e repasses fora do padrão viram pauta de fiscalização</span></li>
+                        <li><span><strong>Operação e segurança</strong> — ingestão e conciliação mensal/anual automatizadas</span></li>
+                    </ul>
+                </div>
+                <div class="foot"><span class="label">Ingere · concilia · sinaliza · registra</span><span class="label">14 / 24</span></div>
+            </section>
+
+            <!-- 12 · SISTEMA FRAP — SCREENSHOT EXTRATOS -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Controle do FRAP · Sistema</span><span class="label">15 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Sistema FRAP de Conciliação</span>
+                    <h2 class="reveal">Ingestão e conciliação de extratos</h2>
+                    <div class="shot reveal"><img src="assets/frap_sistema_extratos.png" alt="Tela de conciliação de extratos bancários do sistema FRAP"></div>
+                </div>
+                <div class="foot"><span class="label">Tela — conciliação de extratos bancários</span><span class="label">15 / 24</span></div>
+            </section>
+
+            <!-- 13 · SISTEMA FRAP — SCREENSHOT NEREU -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Controle do FRAP · Sistema</span><span class="label">16 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Sistema FRAP de Conciliação</span>
+                    <h2 class="reveal">Acompanhamento por responsável — caso Nereu</h2>
+                    <div class="shot reveal"><img src="assets/frap_sistema_nereu.png" alt="Tela do sistema FRAP com o acompanhamento do responsável Nereu"></div>
+                </div>
+                <div class="foot"><span class="label">Tela — visão por responsável (Nereu)</span><span class="label">16 / 24</span></div>
+            </section>
+
+            <!-- 14 · SISTEMA FRAP — SCREENSHOT DESCONTO EM FOLHA -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Controle do FRAP · Sistema</span><span class="label">17 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Sistema FRAP de Conciliação</span>
+                    <h2 class="reveal">Acompanhamento do desconto em folha</h2>
+                    <div class="shot reveal"><img src="assets/frap_sistema_desconto_folha.png" alt="Tela de acompanhamento do desconto em folha por pessoa e órgão"></div>
+                </div>
+                <div class="foot"><span class="label">Tela — desconto em folha por pessoa / órgão</span><span class="label">17 / 24</span></div>
+            </section>
+
+            <!-- 15 · DIVISOR 3 — CGAD (cromeless) -->
+            <section class="slide dark">
+                <div class="stack">
+                    <span class="label kicker reveal">Seção 04</span>
+                    <h1 class="chapter reveal">Sistema<br>do CGAD</h1>
+                    <div class="rule reveal"></div>
+                    <h3 class="reveal muted">Cadastro Geral de Acompanhamento de Decisões</h3>
+                </div>
+            </section>
+
+            <!-- 16 · CGAD — VISÃO E VALOR -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">CGAD · Sistema</span><span class="label">19 / 24</span></div>
+                <div class="stack">
+                    <span class="label kicker reveal">Sistema do CGAD</span>
+                    <h2 class="reveal">Do texto livre do acórdão ao dado auditável</h2>
+                    <p class="lead reveal muted">Com IA na extração e o servidor no controle.</p>
+                    <ul class="dash reveal">
+                        <li><span><strong>O problema</strong> — as decisões do TCE/RN registram multas, obrigações, ressarcimentos e recomendações em <em>texto livre</em> (texto_acordao); localizar, padronizar e acompanhar manualmente é lento e sujeito a erro</span></li>
+                        <li><span><strong>A solução</strong> — uma aplicação lê o acórdão, usa IA para extrair os itens em <em>registros estruturados</em> e os entrega a um app web onde o servidor <em>aprova, edita ou rejeita</em> cada extração — preservando o original da IA e gravando a decisão do revisor como trilha de auditoria</span></li>
+                    </ul>
+                </div>
+                <div class="foot"><span class="label">Do acórdão ao dado auditável</span><span class="label">19 / 24</span></div>
+            </section>
+
+            <!-- 17 · CGAD — COMO FUNCIONA (fluxo) -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">CGAD · Sistema</span><span class="label">20 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Como funciona</span>
+                    <h2 class="reveal">Duas etapas de IA e a revisão humana</h2>
+                    <div class="flow reveal">
+                        <div class="flow-step"><div class="n">Entrada</div><div class="t">Acórdão</div><div class="d">Texto livre da decisão (texto_acordao)</div></div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-step"><div class="n">① NER por LLM</div><div class="t">Identificação</div><div class="d">Multas, obrigações, ressarcimentos e recomendações</div></div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-step"><div class="n">② Estruturação</div><div class="t">Enriquecimento</div><div class="d">Responsável, prazo, unidade — gravados nas tabelas finais</div></div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-step accent"><div class="n">Revisão humana</div><div class="t">Servidor</div><div class="d">Aprova, edita ou rejeita → registro auditável (MSSQL)</div></div>
+                    </div>
+                    <p class="body reveal">O <em>original da IA é preservado</em> e a decisão do revisor é gravada como <em>trilha de auditoria</em>.</p>
+                </div>
+                <div class="foot"><span class="label">Pipeline: extração por IA + validação humana</span><span class="label">20 / 24</span></div>
+            </section>
+
+            <!-- 18 · CGAD — SCREENSHOT ITENS EXTRAÍDOS -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">CGAD · Sistema</span><span class="label">21 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Sistema do CGAD</span>
+                    <h2 class="reveal">Itens extraídos do acórdão</h2>
+                    <div class="shot reveal"><img src="assets/itens_cgad.png" alt="Tela de itens extraídos do acórdão pela IA no sistema do CGAD"></div>
+                </div>
+                <div class="foot"><span class="label">Tela — itens extraídos pela IA</span><span class="label">21 / 24</span></div>
+            </section>
+
+            <!-- 19 · CGAD — SCREENSHOT REVISÃO -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">CGAD · Sistema</span><span class="label">22 / 24</span></div>
+                <div class="stack top">
+                    <span class="label kicker reveal">Sistema do CGAD</span>
+                    <h2 class="reveal">Revisão do servidor</h2>
+                    <div class="shot reveal"><img src="assets/revisao_cgad.png" alt="Tela de revisão onde o servidor aprova, edita ou rejeita cada extração"></div>
+                </div>
+                <div class="foot"><span class="label">Tela — servidor aprova / edita / rejeita</span><span class="label">22 / 24</span></div>
+            </section>
+
+            <!-- 20 · CONCLUSÃO (slide escuro) -->
+            <section class="slide dark">
+                <div class="chrome"><span class="label">Conclusão</span><span class="label">23 / 24</span></div>
+                <div class="stack">
+                    <h1 class="chapter reveal">Conclusão</h1>
+                    <ul class="dash reveal" style="--t-lead:42px;margin-top:var(--gap-md)">
+                        <li><span><strong>Desconto em folha</strong> — 161 servidores em 76 órgãos; <em>R$ 199,3 mil</em> descontados em 2026. Caso Nereu: 140 processos em risco de prescrição</span></li>
+                        <li><span><strong>FRAP</strong> — R$ 938,8 mil arrecadados em 2026; novo canal Pix/Cartão em piloto</span></li>
+                        <li><span><strong>CGAD</strong> — sistema com IA extrai e estrutura os itens do acórdão; o servidor valida cada extração, com <em>trilha auditável</em></span></li>
+                    </ul>
+                </div>
+                <div class="foot"><span class="label">Coordenadoria de Controle de Decisões</span><span class="label">23 / 24</span></div>
+            </section>
+
+            <!-- 21 · OBRIGADO (cromeless) -->
+            <section class="slide dark">
+                <div class="stack">
+                    <span class="label kicker reveal">TCE/RN · Junho de 2026</span>
+                    <h1 class="chapter reveal" style="margin-top:var(--gap-md)">Obrigado.</h1>
+                    <div class="rule reveal"></div>
+                    <p class="lead reveal">Coordenadoria de Controle de Decisões — CCD</p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Chrome de navegação (fora do palco de design) -->
+    <nav class="nav-dots" id="navDots" aria-label="Navegação de slides"></nav>
+    <div class="counter" id="counter">01 / 24</div>
+
+    <!-- Edição inline -->
+    <div class="edit-hotzone" aria-hidden="true"></div>
+    <button class="edit-toggle" id="editToggle" title="Modo edição (E)">✏️ editar</button>
+
+    <script>
+        /* ===========================================
+           CONTROLADOR DA APRESENTAÇÃO
+           Palco fixo 1920×1080 escalado por uma única transform.
+           =========================================== */
+        class SlidePresentation {
+            constructor() {
+                this.slides = Array.from(document.querySelectorAll('.slide'));
+                this.current = 0;
+                this.stage = document.getElementById('deckStage');
+                this.counter = document.getElementById('counter');
+                this.wheelLock = false;
+                this.buildDots();
+                this.setupStageScale();
+                this.setupKeyboardNav();
+                this.setupTouchNav();
+                this.setupWheelNav();
+                this.show(0);
+            }
+            // Escala o palco inteiro mantendo 16:9; letterbox/pillarbox conforme a janela.
+            setupStageScale() {
+                const scale = () => {
+                    const f = Math.min(window.innerWidth / 2120, window.innerHeight / 1080);
+                    const x = (window.innerWidth - 1920 * f) / 2;
+                    const y = (window.innerHeight - 1080 * f) / 2;
+                    this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+                };
+                scale();
+                window.addEventListener('resize', scale);
+            }
+            buildDots() {
+                const nav = document.getElementById('navDots');
+                this.slides.forEach((_, i) => {
+                    const d = document.createElement('span');
+                    d.className = 'dot';
+                    d.addEventListener('click', () => this.show(i));
+                    nav.appendChild(d);
+                });
+                this.dots = Array.from(nav.children);
+            }
+            setupKeyboardNav() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.getAttribute('contenteditable')) return;
+                    if (['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)) { e.preventDefault(); this.next(); }
+                    else if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); this.prev(); }
+                    else if (e.key === 'Home') this.show(0);
+                    else if (e.key === 'End') this.show(this.slides.length - 1);
+                });
+            }
+            setupTouchNav() {
+                let x0 = null;
+                window.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, {passive:true});
+                window.addEventListener('touchend', (e) => {
+                    if (x0 === null) return;
+                    const dx = e.changedTouches[0].clientX - x0;
+                    if (Math.abs(dx) > 50) (dx < 0 ? this.next() : this.prev());
+                    x0 = null;
+                });
+            }
+            // Roda do mouse com debounce de 1000ms (evita pular vários slides).
+            setupWheelNav() {
+                window.addEventListener('wheel', (e) => {
+                    if (this.wheelLock) return;
+                    if (Math.abs(e.deltaY) < 20) return;
+                    this.wheelLock = true;
+                    (e.deltaY > 0 ? this.next() : this.prev());
+                    setTimeout(() => { this.wheelLock = false; }, 1000);
+                }, {passive:true});
+            }
+            next() { this.show(this.current + 1); }
+            prev() { this.show(this.current - 1); }
+            show(i) {
+                this.current = Math.max(0, Math.min(i, this.slides.length - 1));
+                this.slides.forEach((s, k) => {
+                    s.classList.toggle('active', k === this.current);
+                    s.classList.toggle('visible', k === this.current);
+                });
+                this.dots.forEach((d, k) => d.classList.toggle('active', k === this.current));
+                const n = String(this.current + 1).padStart(2, '0');
+                const t = String(this.slides.length).padStart(2, '0');
+                this.counter.textContent = `${n} / ${t}`;
+            }
+        }
+
+        /* ===========================================
+           EDIÇÃO INLINE — tecla E ou botão; salva em localStorage.
+           =========================================== */
+        class InlineEditor {
+            constructor(deck) {
+                this.deck = deck; this.isActive = false;
+                this.btn = document.getElementById('editToggle');
+                this.editable = '.display,h1,h2,h3,.lead,.body,.stat-value,.stat-label,.bar-val,.bar-name,.agenda-text,.agenda-sub,ul.dash li span,.info-card p,.label';
+                this.restore();
+                this.btn.addEventListener('click', () => this.toggle());
+                this.setupHotzone();
+                document.addEventListener('keydown', (e) => {
+                    if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) this.toggle();
+                });
+            }
+            setupHotzone() {
+                const hz = document.querySelector('.edit-hotzone');
+                let t = null;
+                const show = () => { clearTimeout(t); this.btn.classList.add('show'); };
+                const hide = () => { t = setTimeout(() => { if (!this.isActive) this.btn.classList.remove('show'); }, 400); };
+                hz.addEventListener('mouseenter', show);
+                hz.addEventListener('mouseleave', hide);
+                this.btn.addEventListener('mouseenter', () => clearTimeout(t));
+                this.btn.addEventListener('mouseleave', hide);
+                hz.addEventListener('click', () => this.toggle());
+            }
+            toggle() {
+                this.isActive = !this.isActive;
+                this.btn.classList.toggle('active', this.isActive);
+                this.btn.classList.toggle('show', this.isActive);
+                this.btn.textContent = this.isActive ? '✓ salvar' : '✏️ editar';
+                document.querySelectorAll(this.editable).forEach(el => {
+                    el.setAttribute('contenteditable', this.isActive ? 'true' : 'false');
+                });
+                if (!this.isActive) this.save();
+            }
+            save() {
+                const data = {};
+                document.querySelectorAll(this.editable).forEach((el, i) => { data[i] = el.innerHTML; });
+                try { localStorage.setItem('mat-deck-ccd', JSON.stringify(data)); } catch (e) {}
+            }
+            restore() {
+                try {
+                    const raw = localStorage.getItem('mat-deck-ccd');
+                    if (!raw) return;
+                    const data = JSON.parse(raw);
+                    document.querySelectorAll(this.editable).forEach((el, i) => {
+                        if (data[i] !== undefined) el.innerHTML = data[i];
+                    });
+                } catch (e) {}
+            }
+        }
+
+        const deck = new SlidePresentation();
+        new InlineEditor(deck);
+    </script>
+</body>
+</html>

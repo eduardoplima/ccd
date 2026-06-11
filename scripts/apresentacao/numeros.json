@@ -1,0 +1,95 @@
+{
+  "frap": {
+    "total_periodo": 8556457.7,
+    "total_periodo_fmt": "R$ 8.556.457,70",
+    "ano_inicio": 2021,
+    "ano_fim": 2026,
+    "por_ano": {
+      "2021": 737940.33,
+      "2022": 1459310.0,
+      "2023": 1217322.02,
+      "2024": 1573355.26,
+      "2025": 2796771.08,
+      "2026": 771759.01
+    },
+    "por_categoria": {
+      "Boleto / Guia": 3335186.11,
+      "Ordem Bancária (SIGEF)": 4701664.66,
+      "TED / PIX / transf.": 519606.93
+    }
+  },
+  "pix_cartao": {
+    "qtd_solicitacoes": 40,
+    "debitos_distintos": 21,
+    "valor_solicitado": 467012.27,
+    "valor_solicitado_fmt": "R$ 467.012,27",
+    "confirmados": 1,
+    "valor_confirmado": 1481.87,
+    "valor_confirmado_fmt": "R$ 1.481,87",
+    "confirmados_por_tipo": {
+      "Pix": {
+        "qtd": 1,
+        "valor": 1481.87
+      }
+    },
+    "por_tipo": {
+      "Cartão de crédito": {
+        "qtd": 19,
+        "valor": 231063.35
+      },
+      "Pix": {
+        "qtd": 21,
+        "valor": 235948.92
+      }
+    },
+    "periodo": [
+      "2026-02-12",
+      "2026-04-28"
+    ]
+  },
+  "nereu": {
+    "qtd_debitos": 594,
+    "valor_total_fmt": "R$ 4.871.938,09",
+    "qtd_notificados": 41,
+    "valor_notificado_fmt": "R$ 415.405,29",
+    "qtd_processos": 591,
+    "prescricao": {
+      "Prazo seguro": 392,
+      "Risco (< 1 ano)": 161,
+      "Prescrito": 36,
+      "Sem dado": 2
+    },
+    "tipos_debito": {
+      "Multa": 451,
+      "Multa Cominatória": 143
+    },
+    "frap_parcelas": 10,
+    "frap_pago": 12435.15,
+    "frap_pago_fmt": "R$ 12.435,15"
+  },
+  "cgad": {
+    "obrigacoes": 1333,
+    "obrigacoes_com_prazo": 684,
+    "obrigacoes_prazo_vencido": 679,
+    "obrigacoes_prazo_vincendo": 5,
+    "obrigacoes_sem_prazo": 649,
+    "obrigacoes_com_multa": 634,
+    "valor_multa_cominatoria_fmt": "R$ 314.285,16",
+    "recomendacoes": 899,
+    "classificacao_decisoes": {
+      "DETERMINACAO": 198,
+      "OUTROS": 177
+    },
+    "ipern_obrigacoes": 446,
+    "ipern_pct": 33.5,
+    "previdencia_total": 643,
+    "previdencia_pct": 48.2,
+    "obrigacoes_por_ente": {
+      "Demais órgãos": 649,
+      "IPERN (estadual)": 446,
+      "Outros RPPS (municipais)": 197,
+      "Não identificado": 41
+    },
+    "obs": "DataCumprimento e a data-limite (prazo), nao a comprovacao de cumprimento."
+  }
+}

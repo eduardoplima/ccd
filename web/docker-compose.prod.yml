@@ -1,0 +1,103 @@
+name: frap-controle
+
+# Stack consolidado (CCD + CGAD + FRAP) que substitui a app FRAP-only.
+# Anexa à rede `frap-controle` JÁ EXISTENTE no host (external) — não recriar:
+# outros containers/proxy dependem dela. Nomes de container `frap-*` preservados.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: frap-redis
+    restart: unless-stopped
+    networks: [frap-controle]
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      network: host  # host não tem a rede default "bridge" (chama-se "bridge1")
+    image: frap-backend:latest
+    container_name: frap-backend
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - redis
+    volumes:
+      - frap_extratos:/app/docs/extratos_frap
+      - frap_data:/app/data
+      - ccd_artifacts:/app/backend/.artifacts  # PDFs/ZIPs do CCD (serve o download)
+    networks: [frap-controle]
+    # Aplica migrations (auth) e sobe a API.
+    command: ["sh", "-c", "cd /app/backend && alembic upgrade head && cd /app && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+
+  worker:
+    image: frap-backend:latest
+    container_name: frap-worker
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      REDIS_URL: redis://redis:6379
+      # Share de PDFs (montado via CIFS) usado pela geração de Antecedentes.
+      CCD_INFORMACOES_DIR: /mnt/tce/Informacoes_PDF
+    depends_on:
+      - redis
+      - backend
+    volumes:
+      - frap_extratos:/app/docs/extratos_frap
+      - frap_data:/app/data
+      - ccd_artifacts:/app/backend/.artifacts  # mesmo volume do backend (escreve aqui)
+      - informacoes_pdf:/mnt/tce:ro             # share \\10.24.0.6\tce$ (CIFS, leitura)
+    networks: [frap-controle]
+    command: ["sh", "-c", "cd /app && exec arq app.worker.WorkerSettings"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      network: host  # idem backend
+      args:
+        NEXT_PUBLIC_API_URL: ""  # mesma origem via Caddy (/api relativo)
+    image: frap-frontend:latest
+    container_name: frap-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks: [frap-controle]
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: frap-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+    networks: [frap-controle]
+
+networks:
+  frap-controle:
+    external: true
+    name: frap-controle_default   # anexa à rede JÁ EXISTENTE no host; compose não a cria/remove
+
+volumes:
+  frap_extratos:
+  frap_data:
+  caddy_data:
+  caddy_config:
+  ccd_artifacts:
+  # Share Windows \\10.24.0.6\tce$ montado via CIFS pelo daemon Docker do host.
+  # Credenciais vêm do .env (SHARE_USER/SHARE_PASS/SHARE_DOMAIN). Host precisa de
+  # suporte a CIFS (cifs-utils/kernel) e rota até 10.24.0.6:445.
+  informacoes_pdf:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SHARE_USER},password=${SHARE_PASS},ro,vers=2.0,uid=0,gid=0"
+      device: "//10.24.0.6/tce$$"  # $$ = '$' literal (share oculto "tce$")

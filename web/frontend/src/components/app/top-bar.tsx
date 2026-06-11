@@ -17,7 +17,12 @@ const MODULES = [
 ] as const;
 
 const SUBNAV: Record<string, NavItem[]> = {
-  ccd: [{ href: "/ccd", label: "Início" }],
+  ccd: [
+    { href: "/ccd", label: "Início" },
+    { href: "/ccd/desconto-folha", label: "Desconto em Folha" },
+    { href: "/ccd/antecedentes", label: "Antecedentes" },
+    { href: "/ccd/alertas", label: "Alertas" },
+  ],
   cgad: [
     { href: "/cgad/reviews", label: "Revisões" },
     { href: "/cgad/etl", label: "Extrações", admin: true },
@@ -43,6 +48,11 @@ export function TopBar({ user }: { user: UserOut }) {
   const isAdmin = user.papel === "admin";
   const current = activeModule(pathname);
   const subnav = (SUBNAV[current] ?? []).filter((l) => !l.admin || isAdmin);
+  // link ativo = correspondência de prefixo mais longa (evita o root "/ccd"
+  // ficar aceso junto com "/ccd/desconto-folha" etc.)
+  const activeHref = [...subnav]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((l) => pathname === l.href || pathname?.startsWith(l.href + "/"))?.href;
 
   async function handleLogout() {
     await logout();
@@ -112,7 +122,7 @@ export function TopBar({ user }: { user: UserOut }) {
       {/* sub-navegação do módulo ativo */}
       <div className="flex h-11 items-center gap-6 bg-[var(--brand-dark)]/95 px-6 text-sm text-white/90">
         {subnav.map((link) => {
-          const active = pathname === link.href || pathname?.startsWith(link.href + "/");
+          const active = link.href === activeHref;
           return (
             <Link
               key={link.href}

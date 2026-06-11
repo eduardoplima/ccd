@@ -8,6 +8,8 @@ from pathlib import Path
 from arq.connections import RedisSettings
 from dotenv import load_dotenv
 
+from app.ccd.antecedentes.tasks import task_gerar_antecedentes
+from app.ccd.desconto_folha.tasks import task_gerar_desconto_folha
 from app.cgad.tasks import run_full_extraction
 from app.config import get_settings
 from app.jobs.tasks import task_conciliar_mes, task_parse_e_publicar
@@ -25,7 +27,14 @@ def _redis_settings() -> RedisSettings:
 
 class WorkerSettings:
     # FRAP (parse/conciliação) + CGAD (extração NER→obrigação→recomendação)
-    functions = [task_parse_e_publicar, task_conciliar_mes, run_full_extraction]
+    # + CCD (geração de despachos: desconto em folha, antecedentes)
+    functions = [
+        task_parse_e_publicar,
+        task_conciliar_mes,
+        run_full_extraction,
+        task_gerar_desconto_folha,
+        task_gerar_antecedentes,
+    ]
     redis_settings = _redis_settings()
     allow_abort_jobs = True
     job_timeout = 60 * 60  # NER do CGAD pode demorar em janelas largas
