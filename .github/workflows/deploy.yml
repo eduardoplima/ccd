@@ -21,33 +21,49 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Escrever .env de produção
+      - name: Escrever .env de produção (valores reais de /home/sudip/.env)
         working-directory: web
         run: |
-          cat > .env << 'ENVEOF'
-          SQL_SERVER_HOST=${{ secrets.SQL_SERVER_HOST }}
-          SQL_SERVER_PORT=${{ secrets.SQL_SERVER_PORT }}
-          SQL_SERVER_USER=${{ secrets.SQL_SERVER_USER }}
-          SQL_SERVER_PASS=${{ secrets.SQL_SERVER_PASS }}
+          # Os segredos reais vivem em /home/sudip/.env no host (o runner roda como
+          # sudip); os secrets do repo no GitHub NÃO são usados. As linhas literais/
+          # geradas (DB names, JWT, CORS, REDIS) ficam montadas abaixo.
+          ENV_SRC=/home/sudip/.env
+          set -a; . "$ENV_SRC"; set +a
+          for v in SQL_SERVER_HOST SQL_SERVER_PORT SQL_SERVER_USER SQL_SERVER_PASS \
+                   AZURE_OPENAI_API_KEY AZURE_OPENAI_ENDPOINT OPENAI_API_VERSION \
+                   SHARE_USER SHARE_PASS SHARE_DOMAIN; do
+            eval "val=\${$v:-}"
+            [ -n "$val" ] || { echo "ERRO: $v ausente/vazio em $ENV_SRC"; exit 1; }
+          done
+          # JWT estável: gera uma vez e persiste em $ENV_SRC p/ não deslogar todos a cada deploy.
+          if [ -z "${JWT_SECRET_KEY:-}" ]; then
+            JWT_SECRET_KEY=$(openssl rand -hex 32)
+            echo "JWT_SECRET_KEY=${JWT_SECRET_KEY}" >> "$ENV_SRC"
+          fi
+          cat > .env << ENVEOF
+          SQL_SERVER_HOST=${SQL_SERVER_HOST}
+          SQL_SERVER_PORT=${SQL_SERVER_PORT}
+          SQL_SERVER_USER=${SQL_SERVER_USER}
+          SQL_SERVER_PASS=${SQL_SERVER_PASS}
           SQL_SERVER_DATABASE=BdDIP
           SQL_SERVER_DRIVER=ODBC Driver 18 for SQL Server
           SQL_SERVER_DB_PROCESSOS=processo
           SQL_SERVER_DB_DECISOES=BdDIP
           SQL_SERVER_DB_SIAI=BdSIAI
-          JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+          JWT_SECRET_KEY=${JWT_SECRET_KEY}
           JWT_ALGORITHM=HS256
           JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
           JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
           CORS_ALLOWED_ORIGINS=http://10.24.0.197
           REDIS_URL=redis://redis:6379
-          AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }}
-          AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }}
-          OPENAI_API_VERSION=${{ secrets.OPENAI_API_VERSION }}
-          AZURE_OPENAI_DEPLOYMENT=${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+          AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+          OPENAI_API_VERSION=${OPENAI_API_VERSION}
+          AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}
           CCD_INFORMACOES_DIR=/mnt/tce/Informacoes_PDF
-          SHARE_USER=${{ secrets.SHARE_USER }}
-          SHARE_PASS=${{ secrets.SHARE_PASS }}
-          SHARE_DOMAIN=${{ secrets.SHARE_DOMAIN }}
+          SHARE_USER=${SHARE_USER}
+          SHARE_PASS=${SHARE_PASS}
+          SHARE_DOMAIN=${SHARE_DOMAIN}
           ENVEOF
           chmod 600 .env
 
@@ -66,10 +82,18 @@ jobs:
         working-directory: web
         run: |
           echo "Aguardando containers iniciarem..."
-          for i in $(seq 1 12); do
-            curl -fsS http://localhost/api/v1/health && echo "OK" && break
-            echo "Tentativa $i/12, aguardando 5s..."
+          ok=0
+          for i in $(seq 1 24); do
+            if curl -fsS http://localhost/api/v1/ccd/health > /dev/null; then
+              echo "OK (tentativa $i)"; ok=1; break
+            fi
+            echo "Tentativa $i/24, aguardando 5s..."
             sleep 5
           done
           echo "--- docker compose ps ---"
           docker compose -f docker-compose.prod.yml ps
+          if [ "$ok" != "1" ]; then
+            echo "ERRO: health-check falhou em /api/v1/ccd/health"
+            docker compose -f docker-compose.prod.yml logs --tail=50 backend
+            exit 1
+          fi
