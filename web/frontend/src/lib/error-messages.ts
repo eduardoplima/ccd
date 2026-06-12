@@ -11,9 +11,7 @@ import { AxiosError } from "axios";
 export function messageForError(error: unknown, fallback: string): string {
   if (error instanceof AxiosError) {
     const status = error.response?.status;
-    const data = error.response?.data as
-      | { detail?: string | unknown }
-      | undefined;
+    const data = error.response?.data as { detail?: string | unknown } | undefined;
     const detail = typeof data?.detail === "string" ? data.detail : "";
 
     if (error.code === "ERR_NETWORK") {

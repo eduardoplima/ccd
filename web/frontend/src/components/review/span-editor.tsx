@@ -21,13 +21,7 @@ type SpanEditorProps = {
  * Only strings cross the boundary — we never emit offsets. See
  * frontend/CLAUDE.md "Span editor behavior".
  */
-export function SpanEditor({
-  text,
-  matchedSpan,
-  onChange,
-  disabled,
-  emptyState,
-}: SpanEditorProps) {
+export function SpanEditor({ text, matchedSpan, onChange, disabled, emptyState }: SpanEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const parts = useMemo(() => {

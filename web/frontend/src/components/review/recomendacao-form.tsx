@@ -20,25 +20,17 @@ import { RecomendacaoReview, recomendacaoReviewSchema } from "@/schemas/review";
 function toDefaults(staged: Record<string, unknown>): RecomendacaoReview {
   return {
     id_processo: (staged.id_processo as number | null | undefined) ?? null,
-    id_composicao_pauta:
-      (staged.id_composicao_pauta as number | null | undefined) ?? null,
+    id_composicao_pauta: (staged.id_composicao_pauta as number | null | undefined) ?? null,
     id_voto_pauta: (staged.id_voto_pauta as number | null | undefined) ?? null,
-    descricao_recomendacao:
-      (staged.descricao_recomendacao as string | null | undefined) ?? null,
+    descricao_recomendacao: (staged.descricao_recomendacao as string | null | undefined) ?? null,
     prazo_cumprimento_recomendacao:
-      (staged.prazo_cumprimento_recomendacao as string | null | undefined) ??
-      null,
+      (staged.prazo_cumprimento_recomendacao as string | null | undefined) ?? null,
     data_cumprimento_recomendacao:
-      (staged.data_cumprimento_recomendacao as string | null | undefined) ??
-      null,
-    nome_responsavel:
-      (staged.nome_responsavel as string | null | undefined) ?? null,
-    id_pessoa_responsavel:
-      (staged.id_pessoa_responsavel as number | null | undefined) ?? null,
-    orgao_responsavel:
-      (staged.orgao_responsavel as string | null | undefined) ?? null,
-    id_orgao_responsavel:
-      (staged.id_orgao_responsavel as number | null | undefined) ?? null,
+      (staged.data_cumprimento_recomendacao as string | null | undefined) ?? null,
+    nome_responsavel: (staged.nome_responsavel as string | null | undefined) ?? null,
+    id_pessoa_responsavel: (staged.id_pessoa_responsavel as number | null | undefined) ?? null,
+    orgao_responsavel: (staged.orgao_responsavel as string | null | undefined) ?? null,
+    id_orgao_responsavel: (staged.id_orgao_responsavel as number | null | undefined) ?? null,
     cancelado: (staged.cancelado as boolean | null | undefined) ?? null,
   };
 }
@@ -68,11 +60,7 @@ export function RecomendacaoForm({
 }: RecomendacaoFormProps) {
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onApprove)}
-        className="space-y-4"
-        noValidate
-      >
+      <form onSubmit={form.handleSubmit(onApprove)} className="space-y-4" noValidate>
         <FormField
           control={form.control}
           name="descricao_recomendacao"
@@ -85,11 +73,7 @@ export function RecomendacaoForm({
                   disabled={disabled}
                   {...field}
                   value={field.value ?? ""}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value === "" ? null : e.target.value,
-                    )
-                  }
+                  onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                 />
               </FormControl>
               <FormMessage />
@@ -109,11 +93,7 @@ export function RecomendacaoForm({
                     disabled={disabled}
                     {...field}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : e.target.value,
-                      )
-                    }
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -133,11 +113,7 @@ export function RecomendacaoForm({
                     disabled={disabled}
                     {...field}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : e.target.value,
-                      )
-                    }
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -158,11 +134,7 @@ export function RecomendacaoForm({
                     disabled={disabled}
                     {...field}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : e.target.value,
-                      )
-                    }
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -181,11 +153,7 @@ export function RecomendacaoForm({
                     disabled={disabled}
                     {...field}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : e.target.value,
-                      )
-                    }
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -221,11 +189,7 @@ export function RecomendacaoForm({
           >
             Rejeitar
           </Button>
-          <Button
-            type="submit"
-            disabled={disabled || isSubmitting}
-            data-testid="approve-button"
-          >
+          <Button type="submit" disabled={disabled || isSubmitting} data-testid="approve-button">
             {isSubmitting ? "Aprovando..." : "Aprovar"}
           </Button>
         </div>

@@ -9,13 +9,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -91,9 +85,7 @@ function StatusBadge({ status }: { status: RunStatus }) {
     error: "erro",
   };
   return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-xs font-medium ${map[status]}`}
-    >
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${map[status]}`}>
       {label[status]}
     </span>
   );
@@ -131,11 +123,7 @@ function ExtracaoStepper({ extracao }: { extracao: ExtracaoOut }) {
           return (
             <li key={stage.key} className="flex items-center gap-3">
               <StageDot state={state} />
-              <span
-                className={
-                  state === "idle" ? "text-muted-foreground" : "text-foreground"
-                }
-              >
+              <span className={state === "idle" ? "text-muted-foreground" : "text-foreground"}>
                 {stage.label}
               </span>
               {state === "done" || state === "running" ? (
@@ -241,9 +229,7 @@ export default function EtlPage() {
       <Card>
         <CardHeader>
           <CardTitle>Nova extração</CardTitle>
-          <CardDescription>
-            Selecione o intervalo de datas das sessões.
-          </CardDescription>
+          <CardDescription>Selecione o intervalo de datas das sessões.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -336,35 +322,22 @@ export default function EtlPage() {
             <TableBody>
               {listLoading && items.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center text-muted-foreground"
-                  >
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center text-muted-foreground"
-                  >
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Nenhuma extração registrada.
                   </TableCell>
                 </TableRow>
               ) : (
                 items.map((item) => (
-                  <TableRow
-                    key={item.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
+                  <TableRow key={item.id} className="cursor-pointer hover:bg-muted/50">
                     <TableCell>
-                      <Link
-                        href={`/cgad/etl/${item.id}`}
-                        className="block w-full hover:underline"
-                      >
-                        {formatDate(item.data_inicio)} a{" "}
-                        {formatDate(item.data_fim)}
+                      <Link href={`/cgad/etl/${item.id}`} className="block w-full hover:underline">
+                        {formatDate(item.data_inicio)} a {formatDate(item.data_fim)}
                       </Link>
                     </TableCell>
                     <TableCell>
@@ -375,15 +348,9 @@ export default function EtlPage() {
                     <TableCell>
                       <StatusBadge status={item.status} />
                     </TableCell>
-                    <TableCell className="text-right">
-                      {item.decisoes_processadas}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {item.obrigacoes_geradas}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {item.recomendacoes_geradas}
-                    </TableCell>
+                    <TableCell className="text-right">{item.decisoes_processadas}</TableCell>
+                    <TableCell className="text-right">{item.obrigacoes_geradas}</TableCell>
+                    <TableCell className="text-right">{item.recomendacoes_geradas}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         {item.status === "queued" || item.status === "running" ? (
@@ -398,9 +365,7 @@ export default function EtlPage() {
                               abort.mutate(item.id, {
                                 onSuccess: () => toast.success("Extração cancelada."),
                                 onError: (err) =>
-                                  toast.error(
-                                    messageForError(err, "Erro ao cancelar a extração."),
-                                  ),
+                                  toast.error(messageForError(err, "Erro ao cancelar a extração.")),
                               });
                             }}
                           >
@@ -423,9 +388,7 @@ export default function EtlPage() {
                               del.mutate(item.id, {
                                 onSuccess: () => toast.success("Extração removida."),
                                 onError: (err) =>
-                                  toast.error(
-                                    messageForError(err, "Erro ao remover a extração."),
-                                  ),
+                                  toast.error(messageForError(err, "Erro ao remover a extração.")),
                               });
                             }}
                           >
@@ -488,8 +451,7 @@ function FilterBar({
     onChange(next);
   }
 
-  const hasActiveFilters =
-    !!filters.status || !!filters.start_date_from || !!filters.start_date_to;
+  const hasActiveFilters = !!filters.status || !!filters.start_date_from || !!filters.start_date_to;
 
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-md border bg-muted/30 p-3">
@@ -499,10 +461,7 @@ function FilterBar({
           className="h-9 rounded-md border bg-background px-2 text-sm"
           value={filters.status ?? ""}
           onChange={(e) =>
-            update(
-              "status",
-              e.target.value === "" ? undefined : (e.target.value as RunStatus),
-            )
+            update("status", e.target.value === "" ? undefined : (e.target.value as RunStatus))
           }
         >
           <option value="">Todos</option>
@@ -517,9 +476,7 @@ function FilterBar({
         <Input
           type="date"
           value={filters.start_date_from ?? ""}
-          onChange={(e) =>
-            update("start_date_from", e.target.value || undefined)
-          }
+          onChange={(e) => update("start_date_from", e.target.value || undefined)}
         />
       </div>
       <div className="flex flex-col gap-1">

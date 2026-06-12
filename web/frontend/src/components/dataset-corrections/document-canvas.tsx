@@ -17,10 +17,7 @@ function nerClass(label: string | null): string {
   return NER_LABEL_CLASS[label] ?? "bg-gray-100 text-gray-900";
 }
 
-function groupRingClass(
-  status: EntityGroup["status"],
-  selected: boolean,
-): string {
+function groupRingClass(status: EntityGroup["status"], selected: boolean): string {
   const ring = (() => {
     switch (status) {
       case "accept":
@@ -49,11 +46,7 @@ type Range = {
   group: EntityGroup | null;
 };
 
-function buildRanges(
-  textLength: number,
-  nerSpans: NerSpan[],
-  groups: EntityGroup[],
-): Range[] {
+function buildRanges(textLength: number, nerSpans: NerSpan[], groups: EntityGroup[]): Range[] {
   const points = new Set<number>([0, textLength]);
   for (const s of nerSpans) {
     points.add(Math.max(0, s.char_start));
@@ -69,11 +62,8 @@ function buildRanges(
     const start = sorted[i];
     const end = sorted[i + 1];
     if (start === end) continue;
-    const ner = nerSpans.find(
-      (s) => s.char_start <= start && s.char_end >= end,
-    );
-    const group =
-      groups.find((g) => g.char_start <= start && g.char_end >= end) ?? null;
+    const ner = nerSpans.find((s) => s.char_start <= start && s.char_end >= end);
+    const group = groups.find((g) => g.char_start <= start && g.char_end >= end) ?? null;
     ranges.push({ start, end, nerLabel: ner?.label ?? null, group });
   }
   return ranges;
@@ -103,8 +93,7 @@ export function DocumentCanvas({
         const chunk = text.slice(r.start, r.end);
         if (!chunk) return null;
         const ner = nerClass(r.nerLabel);
-        const isSelected =
-          r.group != null && r.group.group_id === selectedGroupId;
+        const isSelected = r.group != null && r.group.group_id === selectedGroupId;
 
         const className = cn(
           "rounded-sm",

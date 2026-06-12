@@ -28,6 +28,8 @@ export async function getFasesDebitosNotificados(cpfcnpj: string): Promise<Debit
 }
 
 export async function getFasesEnviados(cpfcnpj: string): Promise<EnviadosListResponse> {
-  const { data } = await apiClient.get(`/api/v1/frap/desconto-folha/pessoas/${cpfcnpj}/fases/enviados`);
+  const { data } = await apiClient.get(
+    `/api/v1/frap/desconto-folha/pessoas/${cpfcnpj}/fases/enviados`,
+  );
   return enviadosListResponseSchema.parse(data);
 }

@@ -15,10 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  useDocuments,
-  useProgress,
-} from "@/hooks/use-dataset-corrections";
+import { useDocuments, useProgress } from "@/hooks/use-dataset-corrections";
 import { useMinConfidence } from "@/hooks/use-min-confidence";
 import { exportUrl } from "@/lib/dataset-corrections-api";
 import { getAccessToken } from "@/lib/auth";
@@ -62,9 +59,7 @@ export default function CleanlabReviewPage() {
       });
   }
 
-  const totalPages = documents.data
-    ? Math.max(1, Math.ceil(documents.data.total / PAGE_SIZE))
-    : 1;
+  const totalPages = documents.data ? Math.max(1, Math.ceil(documents.data.total / PAGE_SIZE)) : 1;
 
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 p-6">
@@ -93,9 +88,7 @@ export default function CleanlabReviewPage() {
       {progress.data ? (
         <div className="flex flex-wrap items-center gap-3 rounded-md border bg-white p-4">
           <div className="flex flex-col">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              Progresso
-            </span>
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Progresso</span>
             <span className="text-lg font-semibold">
               {progress.data.decided} / {progress.data.total}
             </span>
@@ -161,13 +154,9 @@ export default function CleanlabReviewPage() {
             ) : null}
             {documents.isError ? (
               <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="py-8 text-center text-rose-700"
-                >
-                  Erro ao carregar documentos. Reinicie o backend para
-                  garantir o código mais recente, ou abra o devtools para
-                  ver o erro de schema.
+                <TableCell colSpan={4} className="py-8 text-center text-rose-700">
+                  Erro ao carregar documentos. Reinicie o backend para garantir o código mais
+                  recente, ou abra o devtools para ver o erro de schema.
                 </TableCell>
               </TableRow>
             ) : null}
@@ -191,9 +180,7 @@ export default function CleanlabReviewPage() {
                       {d.text_preview}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {d.group_count}
-                  </TableCell>
+                  <TableCell className="text-right font-mono">{d.group_count}</TableCell>
                   <TableCell className="text-right font-mono">
                     {allDone ? (
                       <Badge variant="default">

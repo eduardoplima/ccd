@@ -2,10 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-import {
-  gerarAntecedentes,
-  listCandidatosAntecedentes,
-} from "@/lib/api/ccd-antecedentes";
+import { gerarAntecedentes, listCandidatosAntecedentes } from "@/lib/api/ccd-antecedentes";
 
 export function useCandidatosAntecedentes(todos: boolean) {
   return useQuery({

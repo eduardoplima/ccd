@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 import { toast } from "sonner";
 
+import { SortableHead, useClientSort } from "@/components/sortable-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,7 +41,6 @@ import { formatBRL, formatDate, matchStatusVariant } from "@/lib/format";
 import type { ParcelaPessoaItem } from "@/schemas/desconto-folha";
 
 import { FasesSummary } from "../_fases-summary";
-import { SortableHead, useClientSort } from "../_sortable";
 
 const STATUS_ATRASO = new Set(["NAO_DESCONTADA", "DESCONTADA_SEM_REPASSE", "BAIXADA_SEM_RASTRO"]);
 

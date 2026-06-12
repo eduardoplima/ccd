@@ -15,12 +15,7 @@ import { toast } from "sonner";
 
 import { KpiCard } from "@/components/dashboards/kpi-card";
 import { PeriodPicker } from "@/components/dashboards/period-picker";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardSummary } from "@/hooks/use-dashboards";
 import { messageForError } from "@/lib/error-messages";
 import { formatCurrencyBRL, formatPercent } from "@/lib/format";
@@ -39,12 +34,10 @@ function isoMinusDays(days: number): string {
 }
 
 export default function DashboardsPage() {
-  const [range, setRange] = useState<{ startDate: string; endDate: string }>(
-    () => ({
-      startDate: isoMinusDays(90),
-      endDate: isoToday(),
-    }),
-  );
+  const [range, setRange] = useState<{ startDate: string; endDate: string }>(() => ({
+    startDate: isoMinusDays(90),
+    endDate: isoToday(),
+  }));
 
   const { data, isLoading, isError, error } = useDashboardSummary({
     startDate: range.startDate,
@@ -70,11 +63,7 @@ export default function DashboardsPage() {
             Visão consolidada de obrigações e recomendações já cadastradas.
           </p>
         </div>
-        <PeriodPicker
-          startDate={range.startDate}
-          endDate={range.endDate}
-          onChange={setRange}
-        />
+        <PeriodPicker startDate={range.startDate} endDate={range.endDate} onChange={setRange} />
       </div>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -122,13 +111,7 @@ export default function DashboardsPage() {
   );
 }
 
-function ChartCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Card>
       <CardHeader>
@@ -144,13 +127,7 @@ function ChartCard({
 const COLOR_PRIMARY = "#347d6b";
 const COLOR_ACCENT = "#d4a017";
 
-function EmptyOrLoading({
-  isLoading,
-  isEmpty,
-}: {
-  isLoading: boolean;
-  isEmpty: boolean;
-}) {
+function EmptyOrLoading({ isLoading, isEmpty }: { isLoading: boolean; isEmpty: boolean }) {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -172,13 +149,7 @@ function truncate(value: string, max = 40): string {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
-function OrgaoBarChart({
-  data,
-  isLoading,
-}: {
-  data: OrgaoBucket[];
-  isLoading: boolean;
-}) {
+function OrgaoBarChart({ data, isLoading }: { data: OrgaoBucket[]; isLoading: boolean }) {
   if (isLoading || data.length === 0) {
     return <EmptyOrLoading isLoading={isLoading} isEmpty={data.length === 0} />;
   }
@@ -198,30 +169,14 @@ function OrgaoBarChart({
           labelFormatter={(_, payload) => payload?.[0]?.payload?.nome ?? ""}
         />
         <Legend />
-        <Bar
-          dataKey="obrigacoes"
-          name="Obrigações"
-          stackId="a"
-          fill={COLOR_PRIMARY}
-        />
-        <Bar
-          dataKey="recomendacoes"
-          name="Recomendações"
-          stackId="a"
-          fill={COLOR_ACCENT}
-        />
+        <Bar dataKey="obrigacoes" name="Obrigações" stackId="a" fill={COLOR_PRIMARY} />
+        <Bar dataKey="recomendacoes" name="Recomendações" stackId="a" fill={COLOR_ACCENT} />
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
-function PessoaBarChart({
-  data,
-  isLoading,
-}: {
-  data: PessoaBucket[];
-  isLoading: boolean;
-}) {
+function PessoaBarChart({ data, isLoading }: { data: PessoaBucket[]; isLoading: boolean }) {
   if (isLoading || data.length === 0) {
     return <EmptyOrLoading isLoading={isLoading} isEmpty={data.length === 0} />;
   }
@@ -245,18 +200,8 @@ function PessoaBarChart({
           }}
         />
         <Legend />
-        <Bar
-          dataKey="obrigacoes"
-          name="Obrigações"
-          stackId="a"
-          fill={COLOR_PRIMARY}
-        />
-        <Bar
-          dataKey="recomendacoes"
-          name="Recomendações"
-          stackId="a"
-          fill={COLOR_ACCENT}
-        />
+        <Bar dataKey="obrigacoes" name="Obrigações" stackId="a" fill={COLOR_PRIMARY} />
+        <Bar dataKey="recomendacoes" name="Recomendações" stackId="a" fill={COLOR_ACCENT} />
       </BarChart>
     </ResponsiveContainer>
   );

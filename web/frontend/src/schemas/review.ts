@@ -14,9 +14,7 @@ export const spanMatchStatusSchema = z.enum(["exact", "fuzzy", "not_found"]);
 export type SpanMatchStatus = z.infer<typeof spanMatchStatusSchema>;
 
 // Pydantic `date` — ISO yyyy-mm-dd on the wire.
-const isoDateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Data inválida." });
+const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Data inválida." });
 
 // Mirrors SolidarioMulta in backend/app/review/schemas.py.
 export const solidarioMultaSchema = z.object({
@@ -42,10 +40,7 @@ export const obrigacaoReviewSchema = z.object({
   id_composicao_pauta: z.number().int().nullable().optional(),
   id_voto_pauta: z.number().int().nullable().optional(),
 
-  descricao_obrigacao: z
-    .string()
-    .trim()
-    .min(1, { message: "Descreva a obrigação." }),
+  descricao_obrigacao: z.string().trim().min(1, { message: "Descreva a obrigação." }),
 
   // Pydantic defaults (True/False) kick in server-side when a field is
   // absent; on the wire the type is still nullable. Defaults for the form
@@ -63,10 +58,7 @@ export const obrigacaoReviewSchema = z.object({
   valor_multa_cominatoria: z.number().nullable().optional(),
   periodo_multa_cominatoria: z.string().nullable().optional(),
   e_multa_cominatoria_solidaria: z.boolean().nullable().optional(),
-  solidarios_multa_cominatoria: z
-    .array(solidarioMultaSchema)
-    .nullable()
-    .optional(),
+  solidarios_multa_cominatoria: z.array(solidarioMultaSchema).nullable().optional(),
 });
 export type ObrigacaoReview = z.infer<typeof obrigacaoReviewSchema>;
 
@@ -183,9 +175,6 @@ export type ClaimResponse = z.infer<typeof claimResponseSchema>;
 
 // Mirrors RejectRequest in backend/app/review/schemas.py.
 export const rejectRequestSchema = z.object({
-  review_notes: z
-    .string()
-    .trim()
-    .min(10, { message: "Justifique com ao menos 10 caracteres." }),
+  review_notes: z.string().trim().min(10, { message: "Justifique com ao menos 10 caracteres." }),
 });
 export type RejectRequest = z.infer<typeof rejectRequestSchema>;

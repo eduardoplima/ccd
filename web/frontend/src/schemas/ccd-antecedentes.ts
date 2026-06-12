@@ -13,9 +13,7 @@ export const candidatosAntecedentesResponseSchema = z.object({
   items: z.array(candidatoAntecedentesSchema),
   total: z.number(),
 });
-export type CandidatosAntecedentesResponse = z.infer<
-  typeof candidatosAntecedentesResponseSchema
->;
+export type CandidatosAntecedentesResponse = z.infer<typeof candidatosAntecedentesResponseSchema>;
 
 // mirrors backend GerarAntecedentesRequest
 export const gerarAntecedentesRequestSchema = z.object({

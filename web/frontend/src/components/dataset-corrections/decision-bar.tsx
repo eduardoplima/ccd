@@ -6,11 +6,7 @@ import { toast } from "sonner";
 import { RangeAdjuster } from "@/components/dataset-corrections/range-adjuster";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  useDecideGroup,
-  useDecideUnmapped,
-  useLabels,
-} from "@/hooks/use-dataset-corrections";
+import { useDecideGroup, useDecideUnmapped, useLabels } from "@/hooks/use-dataset-corrections";
 import { messageForError } from "@/lib/error-messages";
 import { cn } from "@/lib/utils";
 import {
@@ -119,8 +115,7 @@ export function GroupDecisionBar({
     const decidedId = group.group_id;
     const isCustomWithRange =
       decision === "custom" &&
-      (customFirst !== group.first_token_idx ||
-        customLast !== group.last_token_idx);
+      (customFirst !== group.first_token_idx || customLast !== group.last_token_idx);
     decideMutation.mutate(
       {
         groupId: decidedId,
@@ -200,8 +195,8 @@ export function GroupDecisionBar({
     <aside className="flex flex-col gap-4 rounded-md border bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">
-          Entidade {group.gold_entity_label ?? "(livre)"} ·{" "}
-          {group.tokens.length} tokens · {flaggedTokens.length} flagrado(s)
+          Entidade {group.gold_entity_label ?? "(livre)"} · {group.tokens.length} tokens ·{" "}
+          {flaggedTokens.length} flagrado(s)
         </div>
         <Badge variant={statusBadgeVariant(group.status)}>
           {statusLabel(group.status)}
@@ -218,19 +213,14 @@ export function GroupDecisionBar({
         </div>
         <ul className="mt-2 flex max-h-40 flex-col gap-1 overflow-auto text-sm">
           {flaggedTokens.map((tok) => (
-            <li
-              key={tok.token_idx_in_doc}
-              className="flex items-center justify-between gap-2"
-            >
+            <li key={tok.token_idx_in_doc} className="flex items-center justify-between gap-2">
               <span className="font-mono">{tok.text}</span>
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <span className="font-mono">{tok.bio_original}</span>
                 <span>→</span>
                 <span className="font-mono">{tok.label_sugerido}</span>
                 {tok.confianca != null ? (
-                  <span className="ml-2">
-                    {Math.round(tok.confianca * 100)}%
-                  </span>
+                  <span className="ml-2">{Math.round(tok.confianca * 100)}%</span>
                 ) : null}
               </span>
             </li>
@@ -292,9 +282,8 @@ export function GroupDecisionBar({
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          “Marcar como” reescreve o BIO da faixa selecionada (
-          {customLast - customFirst + 1} tokens). Primeiro token vira{" "}
-          <code className="font-mono">B-…</code>, demais{" "}
+          “Marcar como” reescreve o BIO da faixa selecionada ({customLast - customFirst + 1}{" "}
+          tokens). Primeiro token vira <code className="font-mono">B-…</code>, demais{" "}
           <code className="font-mono">I-…</code>.
         </p>
       </div>
@@ -388,9 +377,7 @@ export function UnmappedDecisionBar({
         <div className="text-xs uppercase tracking-wide text-muted-foreground">
           Erro #{error.row_id}
         </div>
-        <Badge
-          variant={error.status === "pending" ? "destructive" : "default"}
-        >
+        <Badge variant={error.status === "pending" ? "destructive" : "default"}>
           {statusLabel(error.status)}
         </Badge>
       </div>
@@ -402,9 +389,7 @@ export function UnmappedDecisionBar({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded border bg-muted/40 p-3">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">
-            Original
-          </div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">Original</div>
           <div className="mt-1 font-mono text-sm">{error.label_original}</div>
         </div>
         <div className="rounded border bg-muted/40 p-3">
@@ -417,11 +402,7 @@ export function UnmappedDecisionBar({
               <div
                 className={cn(
                   "h-full",
-                  conf > 80
-                    ? "bg-rose-500"
-                    : conf > 50
-                      ? "bg-amber-500"
-                      : "bg-emerald-500",
+                  conf > 80 ? "bg-rose-500" : conf > 50 ? "bg-amber-500" : "bg-emerald-500",
                 )}
                 style={{ width: `${conf}%` }}
               />
@@ -432,18 +413,10 @@ export function UnmappedDecisionBar({
       </div>
 
       <div className="flex flex-col gap-2">
-        <Button
-          variant="default"
-          disabled={isPending}
-          onClick={() => fireDecide("accept")}
-        >
+        <Button variant="default" disabled={isPending} onClick={() => fireDecide("accept")}>
           Aceitar sugestão ({error.label_sugerido})
         </Button>
-        <Button
-          variant="secondary"
-          disabled={isPending}
-          onClick={() => fireDecide("reject")}
-        >
+        <Button variant="secondary" disabled={isPending} onClick={() => fireDecide("reject")}>
           Manter original ({error.label_original})
         </Button>
         <div className="flex items-center gap-2 pt-2">

@@ -13,9 +13,7 @@ export const parcelamentoCanceladoDetalheSchema = z.object({
   numero_parcelas: z.number().nullable(),
   parcelas_pagas: z.number().nullable(),
 });
-export type ParcelamentoCanceladoDetalhe = z.infer<
-  typeof parcelamentoCanceladoDetalheSchema
->;
+export type ParcelamentoCanceladoDetalhe = z.infer<typeof parcelamentoCanceladoDetalheSchema>;
 
 // mirrors backend AlertaParcelamentoCancelado
 export const alertaParcelamentoCanceladoSchema = z.object({
@@ -29,9 +27,7 @@ export const alertaParcelamentoCanceladoSchema = z.object({
 });
 
 // mirrors backend AlertaOut (discriminated union pronta para novos tipos)
-export const alertaSchema = z.discriminatedUnion("tipo", [
-  alertaParcelamentoCanceladoSchema,
-]);
+export const alertaSchema = z.discriminatedUnion("tipo", [alertaParcelamentoCanceladoSchema]);
 export type Alerta = z.infer<typeof alertaSchema>;
 
 // mirrors backend TipoAlertaInfo

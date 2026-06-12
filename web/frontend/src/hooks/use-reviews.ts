@@ -25,16 +25,10 @@ import {
 
 export const reviewKeys = {
   all: ["reviews"] as const,
-  list: (args: {
-    kind: ReviewKind;
-    status: ReviewStatus;
-    page: number;
-    pageSize: number;
-  }) => ["reviews", "list", args] as const,
-  detail: (kind: ReviewKind, id: number) =>
-    ["reviews", "detail", kind, id] as const,
-  texto: (kind: ReviewKind, id: number) =>
-    ["reviews", "texto", kind, id] as const,
+  list: (args: { kind: ReviewKind; status: ReviewStatus; page: number; pageSize: number }) =>
+    ["reviews", "list", args] as const,
+  detail: (kind: ReviewKind, id: number) => ["reviews", "detail", kind, id] as const,
+  texto: (kind: ReviewKind, id: number) => ["reviews", "texto", kind, id] as const,
   awaitingDispatch: (args: { page: number; pageSize: number }) =>
     ["reviews", "awaiting-dispatch", args] as const,
 };
@@ -109,9 +103,7 @@ export function useClaim({ kind, id }: IdArgs) {
       await queryClient.cancelQueries({
         queryKey: reviewKeys.detail(kind, id),
       });
-      const prev = queryClient.getQueryData<ReviewDetail>(
-        reviewKeys.detail(kind, id),
-      );
+      const prev = queryClient.getQueryData<ReviewDetail>(reviewKeys.detail(kind, id));
       if (prev && me) {
         const now = new Date().toISOString();
         queryClient.setQueryData<ReviewDetail>(reviewKeys.detail(kind, id), {
@@ -128,9 +120,7 @@ export function useClaim({ kind, id }: IdArgs) {
       }
     },
     onSuccess: (claim: ClaimResponse) => {
-      const prev = queryClient.getQueryData<ReviewDetail>(
-        reviewKeys.detail(kind, id),
-      );
+      const prev = queryClient.getQueryData<ReviewDetail>(reviewKeys.detail(kind, id));
       if (prev) {
         queryClient.setQueryData<ReviewDetail>(reviewKeys.detail(kind, id), {
           ...prev,
@@ -168,8 +158,7 @@ export function useApprove({ kind, id }: IdArgs) {
 export function useReject({ kind, id }: IdArgs) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (reviewNotes: string) =>
-      rejectReview({ kind, id }, reviewNotes),
+    mutationFn: (reviewNotes: string) => rejectReview({ kind, id }, reviewNotes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reviewKeys.all });
     },
