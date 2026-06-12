@@ -31,12 +31,7 @@ type RejectDialogProps = {
   isSubmitting?: boolean;
 };
 
-export function RejectDialog({
-  open,
-  onOpenChange,
-  onConfirm,
-  isSubmitting,
-}: RejectDialogProps) {
+export function RejectDialog({ open, onOpenChange, onConfirm, isSubmitting }: RejectDialogProps) {
   const form = useForm<RejectRequest>({
     resolver: zodResolver(rejectRequestSchema),
     defaultValues: { review_notes: "" },
@@ -53,15 +48,12 @@ export function RejectDialog({
         <DialogHeader>
           <DialogTitle>Rejeitar item</DialogTitle>
           <DialogDescription>
-            Justifique a rejeição. O texto ficará registrado no histórico do
-            item.
+            Justifique a rejeição. O texto ficará registrado no histórico do item.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit((values) =>
-              onConfirm(values.review_notes.trim()),
-            )}
+            onSubmit={form.handleSubmit((values) => onConfirm(values.review_notes.trim()))}
             className="space-y-4"
             noValidate
           >
@@ -92,11 +84,7 @@ export function RejectDialog({
               >
                 Cancelar
               </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={isSubmitting}
-              >
+              <Button type="submit" variant="destructive" disabled={isSubmitting}>
                 {isSubmitting ? "Enviando..." : "Rejeitar"}
               </Button>
             </DialogFooter>

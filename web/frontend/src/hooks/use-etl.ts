@@ -21,11 +21,8 @@ import {
 
 export const etlKeys = {
   all: ["etl"] as const,
-  extracoes: (args: {
-    page: number;
-    pageSize: number;
-    filters?: ExtracaoListFilters;
-  }) => ["etl", "extracoes", args] as const,
+  extracoes: (args: { page: number; pageSize: number; filters?: ExtracaoListFilters }) =>
+    ["etl", "extracoes", args] as const,
   extracao: (id: number) => ["etl", "extracao", id] as const,
   eventos: (id: number) => ["etl", "extracao", id, "eventos"] as const,
   decisoes: (id: number, args: { page: number; pageSize: number }) =>
@@ -38,11 +35,7 @@ type ListArgs = {
   filters?: ExtracaoListFilters;
 };
 
-export function useExtracoes({
-  page = 1,
-  pageSize = 20,
-  filters,
-}: ListArgs = {}) {
+export function useExtracoes({ page = 1, pageSize = 20, filters }: ListArgs = {}) {
   return useQuery({
     queryKey: etlKeys.extracoes({ page, pageSize, filters }),
     queryFn: () => listExtracoes({ page, pageSize, filters }),
@@ -104,9 +97,7 @@ export function useExtracao(id: number | null) {
     refetchInterval: (query) => {
       const data = query.state.data as ExtracaoOut | undefined;
       if (!data) return 3000;
-      return data.status === "queued" || data.status === "running"
-        ? 1500
-        : false;
+      return data.status === "queued" || data.status === "running" ? 1500 : false;
     },
     refetchIntervalInBackground: false,
   });
@@ -121,10 +112,7 @@ export function useExtracao(id: number | null) {
  * Returned ``events`` is the cumulative list, ordered newest-last so the
  * UI can render in chronological order or reverse it for a feed.
  */
-export function useExtracaoEventos(
-  id: number | null,
-  status: ExtracaoOut["status"] | undefined,
-) {
+export function useExtracaoEventos(id: number | null, status: ExtracaoOut["status"] | undefined) {
   const [events, setEvents] = useState<ExtracaoEventoOut[]>([]);
   const [since, setSince] = useState<string | null>(null);
 
@@ -138,10 +126,7 @@ export function useExtracaoEventos(
   const isLive = status === "queued" || status === "running";
 
   const query = useQuery({
-    queryKey:
-      id !== null
-        ? [...etlKeys.eventos(id), since]
-        : ["etl", "eventos", "null"],
+    queryKey: id !== null ? [...etlKeys.eventos(id), since] : ["etl", "eventos", "null"],
     queryFn: async () => {
       const page = await listEventos(id as number, { since });
       if (page.items.length > 0) {
@@ -174,10 +159,7 @@ export function useDecisoesExtracao(
   { page = 1, pageSize = 20 }: { page?: number; pageSize?: number } = {},
 ) {
   return useQuery({
-    queryKey:
-      id !== null
-        ? etlKeys.decisoes(id, { page, pageSize })
-        : ["etl", "decisoes", "null"],
+    queryKey: id !== null ? etlKeys.decisoes(id, { page, pageSize }) : ["etl", "decisoes", "null"],
     queryFn: () => listDecisoes(id as number, { page, pageSize }),
     enabled: id !== null,
   });

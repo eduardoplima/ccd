@@ -5,13 +5,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,10 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useCcdJob } from "@/hooks/use-ccd-job";
-import {
-  useCandidatosAntecedentes,
-  useGerarAntecedentes,
-} from "@/hooks/use-ccd-antecedentes";
+import { useCandidatosAntecedentes, useGerarAntecedentes } from "@/hooks/use-ccd-antecedentes";
 import { downloadCcdArtefato } from "@/lib/api/ccd-jobs";
 
 const PROCESSO_RE = /^\d{1,6}\/\d{4}$/;
@@ -130,8 +121,8 @@ export default function AntecedentesPage() {
       <p className="text-sm text-muted-foreground">
         Gera o despacho de antecedentes de cada processo selecionado. O servidor lê o último
         despacho no share de PDFs e usa um LLM para identificar os responsáveis — pode demorar
-        alguns minutos. A geração roda no worker ARQ e o resultado é um PDF (1 processo) ou um
-        ZIP (vários).
+        alguns minutos. A geração roda no worker ARQ e o resultado é um PDF (1 processo) ou um ZIP
+        (vários).
       </p>
 
       <div className="flex items-center gap-2">
@@ -234,14 +225,10 @@ export default function AntecedentesPage() {
 
       <div className="flex items-center gap-3">
         <Button onClick={onGerar} disabled={gerar.isPending || processosFinais.length === 0}>
-          {gerar.isPending
-            ? "Enfileirando..."
-            : `Gerar (${processosFinais.length} processo(s))`}
+          {gerar.isPending ? "Enfileirando..." : `Gerar (${processosFinais.length} processo(s))`}
         </Button>
         {invalidos.length > 0 ? (
-          <span className="text-xs text-destructive">
-            Formato inválido: {invalidos.join(", ")}
-          </span>
+          <span className="text-xs text-destructive">Formato inválido: {invalidos.join(", ")}</span>
         ) : null}
       </div>
 

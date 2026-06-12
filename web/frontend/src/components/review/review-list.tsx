@@ -92,9 +92,7 @@ export function ReviewList({
     try {
       await claimReview({ kind, id: rejectId });
       await rejectReview({ kind, id: rejectId }, `duplicado de #${keepId}`);
-      toast.success(
-        `Item #${rejectId} marcado como duplicado de #${keepId}.`,
-      );
+      toast.success(`Item #${rejectId} marcado como duplicado de #${keepId}.`);
       setSelectedIds(new Set());
       setConfirmOpen(false);
       queryClient.invalidateQueries({ queryKey: reviewKeys.all });
@@ -110,11 +108,7 @@ export function ReviewList({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setExpanded((v) => !v)}
-        >
+        <Button variant="outline" size="sm" onClick={() => setExpanded((v) => !v)}>
           {expanded ? (
             <>
               <ChevronUp className="mr-1 h-4 w-4" /> Recolher descrições
@@ -130,11 +124,7 @@ export function ReviewList({
             <span className="text-muted-foreground">
               {selectedIds.size} selecionado{selectedIds.size > 1 ? "s" : ""}
             </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedIds(new Set())}
-            >
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
               Limpar
             </Button>
             <Button
@@ -192,11 +182,7 @@ export function ReviewList({
                   </TableCell>
                 ) : null}
                 <TableCell className="font-mono align-top">
-                  {formatProcesso(
-                    item.numero_processo,
-                    item.ano_processo,
-                    item.id_processo,
-                  )}
+                  {formatProcesso(item.numero_processo, item.ano_processo, item.id_processo)}
                 </TableCell>
                 <TableCell
                   className={
@@ -215,9 +201,7 @@ export function ReviewList({
                     <span className="text-muted-foreground">—</span>
                   )}
                 </TableCell>
-                <TableCell className="align-top">
-                  {formatDate(item.reviewed_at)}
-                </TableCell>
+                <TableCell className="align-top">{formatDate(item.reviewed_at)}</TableCell>
                 <TableCell className="align-top">
                   <Link
                     href={`/cgad/reviews/${kind}/${item.id}`}

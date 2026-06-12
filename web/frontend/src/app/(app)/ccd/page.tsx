@@ -46,10 +46,7 @@ export default function CcdInicioPage() {
     "sort",
     parseAsStringLiteral(SORT_KEYS).withDefault("processo"),
   );
-  const [order, setOrder] = useQueryState(
-    "order",
-    parseAsStringLiteral(ORDERS).withDefault("asc"),
-  );
+  const [order, setOrder] = useQueryState("order", parseAsStringLiteral(ORDERS).withDefault("asc"));
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 
   const { data: filtros } = useFiltrosCCD();
@@ -99,9 +96,7 @@ export default function CcdInicioPage() {
           <SelectNative
             id="f-marcador"
             value={marcador}
-            style={
-              marcador && marcador !== SEM_MARCADOR ? marcadorColor(marcador) : undefined
-            }
+            style={marcador && marcador !== SEM_MARCADOR ? marcadorColor(marcador) : undefined}
             onChange={(e) => {
               void setMarcador(e.target.value);
               void setPage(1);

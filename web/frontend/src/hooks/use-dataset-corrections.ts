@@ -11,10 +11,7 @@ import {
   listDocuments,
   listUnmapped,
 } from "@/lib/dataset-corrections-api";
-import {
-  GroupDecisionRequest,
-  UnmappedDecisionRequest,
-} from "@/schemas/dataset-corrections";
+import { GroupDecisionRequest, UnmappedDecisionRequest } from "@/schemas/dataset-corrections";
 
 export const datasetCorrectionsKeys = {
   all: ["dataset-corrections"] as const,
@@ -26,21 +23,20 @@ export const datasetCorrectionsKeys = {
   }) => ["dataset-corrections", "documents", args] as const,
   document: (id: number, minConfidence: number) =>
     ["dataset-corrections", "documents", id, { minConfidence }] as const,
-  unmapped: (args: {
-    page: number;
-    pageSize: number;
-    minConfidence: number;
-  }) => ["dataset-corrections", "unmapped", args] as const,
+  unmapped: (args: { page: number; pageSize: number; minConfidence: number }) =>
+    ["dataset-corrections", "unmapped", args] as const,
   progress: () => ["dataset-corrections", "progress"] as const,
   labels: () => ["dataset-corrections", "labels"] as const,
 };
 
-export function useDocuments(args: {
-  page?: number;
-  pageSize?: number;
-  onlyPending?: boolean;
-  minConfidence?: number;
-} = {}) {
+export function useDocuments(
+  args: {
+    page?: number;
+    pageSize?: number;
+    onlyPending?: boolean;
+    minConfidence?: number;
+  } = {},
+) {
   const page = args.page ?? 1;
   const pageSize = args.pageSize ?? 20;
   const onlyPending = args.onlyPending ?? false;
@@ -52,8 +48,7 @@ export function useDocuments(args: {
       onlyPending,
       minConfidence,
     }),
-    queryFn: () =>
-      listDocuments({ page, pageSize, onlyPending, minConfidence }),
+    queryFn: () => listDocuments({ page, pageSize, onlyPending, minConfidence }),
   });
 }
 
@@ -68,11 +63,13 @@ export function useDocumentDetail(
   });
 }
 
-export function useUnmapped(args: {
-  page?: number;
-  pageSize?: number;
-  minConfidence?: number;
-} = {}) {
+export function useUnmapped(
+  args: {
+    page?: number;
+    pageSize?: number;
+    minConfidence?: number;
+  } = {},
+) {
   const page = args.page ?? 1;
   const pageSize = args.pageSize ?? 50;
   const minConfidence = args.minConfidence ?? 0;
@@ -105,13 +102,8 @@ export function useLabels() {
 export function useDecideGroup(documentId: number | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      groupId,
-      body,
-    }: {
-      groupId: string;
-      body: GroupDecisionRequest;
-    }) => decideGroup(groupId, body),
+    mutationFn: ({ groupId, body }: { groupId: string; body: GroupDecisionRequest }) =>
+      decideGroup(groupId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: datasetCorrectionsKeys.progress(),
@@ -131,13 +123,8 @@ export function useDecideGroup(documentId: number | null) {
 export function useDecideUnmapped() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      rowId,
-      body,
-    }: {
-      rowId: number;
-      body: UnmappedDecisionRequest;
-    }) => decideUnmapped(rowId, body),
+    mutationFn: ({ rowId, body }: { rowId: number; body: UnmappedDecisionRequest }) =>
+      decideUnmapped(rowId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: datasetCorrectionsKeys.progress(),

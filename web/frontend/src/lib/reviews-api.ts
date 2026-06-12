@@ -42,20 +42,12 @@ export async function getReview({ kind, id }: IdArgs): Promise<ReviewDetail> {
   return reviewDetailSchema.parse(response.data);
 }
 
-export async function getReviewTexto({
-  kind,
-  id,
-}: IdArgs): Promise<ReviewTexto> {
-  const response = await apiClient.get(
-    `/api/v1/cgad/reviews/${kind}/${id}/texto-acordao`,
-  );
+export async function getReviewTexto({ kind, id }: IdArgs): Promise<ReviewTexto> {
+  const response = await apiClient.get(`/api/v1/cgad/reviews/${kind}/${id}/texto-acordao`);
   return reviewTextoSchema.parse(response.data);
 }
 
-export async function claimReview({
-  kind,
-  id,
-}: IdArgs): Promise<ClaimResponse> {
+export async function claimReview({ kind, id }: IdArgs): Promise<ClaimResponse> {
   const response = await apiClient.post(`/api/v1/cgad/reviews/${kind}/${id}/claim`);
   return claimResponseSchema.parse(response.data);
 }
@@ -68,10 +60,7 @@ export async function approveObrigacao(
   id: number,
   payload: ObrigacaoReview,
 ): Promise<ReviewDetail> {
-  const response = await apiClient.post(
-    `/api/v1/cgad/reviews/obrigacao/${id}/approve`,
-    payload,
-  );
+  const response = await apiClient.post(`/api/v1/cgad/reviews/obrigacao/${id}/approve`, payload);
   return reviewDetailSchema.parse(response.data);
 }
 
@@ -79,10 +68,7 @@ export async function approveRecomendacao(
   id: number,
   payload: RecomendacaoReview,
 ): Promise<ReviewDetail> {
-  const response = await apiClient.post(
-    `/api/v1/cgad/reviews/recomendacao/${id}/approve`,
-    payload,
-  );
+  const response = await apiClient.post(`/api/v1/cgad/reviews/recomendacao/${id}/approve`, payload);
   return reviewDetailSchema.parse(response.data);
 }
 
@@ -103,9 +89,8 @@ export async function rejectReview(
   { kind, id }: IdArgs,
   reviewNotes: string,
 ): Promise<ReviewDetail> {
-  const response = await apiClient.post(
-    `/api/v1/cgad/reviews/${kind}/${id}/reject`,
-    { review_notes: reviewNotes },
-  );
+  const response = await apiClient.post(`/api/v1/cgad/reviews/${kind}/${id}/reject`, {
+    review_notes: reviewNotes,
+  });
   return reviewDetailSchema.parse(response.data);
 }

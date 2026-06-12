@@ -51,9 +51,7 @@ export function ClaimBanner({
   if (!claimedBy) {
     return (
       <div className="flex items-center justify-between rounded-md border bg-muted px-4 py-2 text-sm">
-        <span>
-          Item sem reserva. Clique em &ldquo;Reservar&rdquo; para iniciar.
-        </span>
+        <span>Item sem reserva. Clique em &ldquo;Reservar&rdquo; para iniciar.</span>
         <Button
           size="sm"
           onClick={onReclaim}
@@ -70,23 +68,14 @@ export function ClaimBanner({
     <div
       className={cn(
         "flex items-center justify-between rounded-md border px-4 py-2 text-sm",
-        lost
-          ? "border-amber-500 bg-amber-50"
-          : "border-emerald-500 bg-emerald-50",
+        lost ? "border-amber-500 bg-amber-50" : "border-emerald-500 bg-emerald-50",
       )}
       data-testid="claim-banner"
     >
       <div className="flex flex-col">
-        <span>
-          {isOwn ? "Reservado por você" : `Reservado por ${claimedBy}`}
-        </span>
-        <span
-          className="text-xs text-muted-foreground"
-          data-testid="claim-banner-countdown"
-        >
-          {isExpired
-            ? "Reserva expirada."
-            : `Expira em ${formatCountdown(remainingMs)}`}
+        <span>{isOwn ? "Reservado por você" : `Reservado por ${claimedBy}`}</span>
+        <span className="text-xs text-muted-foreground" data-testid="claim-banner-countdown">
+          {isExpired ? "Reserva expirada." : `Expira em ${formatCountdown(remainingMs)}`}
         </span>
       </div>
       {lost ? (

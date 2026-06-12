@@ -5,14 +5,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ClaimBanner } from "@/components/review/claim-banner";
-import {
-  ObrigacaoForm,
-  useObrigacaoForm,
-} from "@/components/review/obrigacao-form";
-import {
-  RecomendacaoForm,
-  useRecomendacaoForm,
-} from "@/components/review/recomendacao-form";
+import { ObrigacaoForm, useObrigacaoForm } from "@/components/review/obrigacao-form";
+import { RecomendacaoForm, useRecomendacaoForm } from "@/components/review/recomendacao-form";
 import { RejectDialog } from "@/components/review/reject-dialog";
 import { SpanEditor } from "@/components/review/span-editor";
 import { Button } from "@/components/ui/button";
@@ -122,16 +116,14 @@ function Detail({ kind, id }: { kind: ReviewKind; id: number }) {
             toast.success("Item aprovado.");
             router.replace("/cgad/reviews");
           },
-          onError: (err) =>
-            toast.error(messageForError(err, "Erro ao aprovar o item.")),
+          onError: (err) => toast.error(messageForError(err, "Erro ao aprovar o item.")),
         })
       }
       onOpenReject={() => setRejectOpen(true)}
       approveSubmitting={approve.isPending}
       onReclaim={() =>
         claim.mutate(undefined, {
-          onError: (err) =>
-            toast.error(messageForError(err, "Não foi possível reservar.")),
+          onError: (err) => toast.error(messageForError(err, "Não foi possível reservar.")),
         })
       }
       reclaimSubmitting={claim.isPending}
@@ -145,8 +137,7 @@ function Detail({ kind, id }: { kind: ReviewKind; id: number }) {
             toast.success("Item rejeitado.");
             router.replace("/cgad/reviews");
           },
-          onError: (err) =>
-            toast.error(messageForError(err, "Erro ao rejeitar o item.")),
+          onError: (err) => toast.error(messageForError(err, "Erro ao rejeitar o item.")),
         })
       }
       rejectSubmitting={reject.isPending}
@@ -191,9 +182,7 @@ function ReviewBody({
   rejectSubmitting,
 }: ReviewBodyProps) {
   const holdsClaim =
-    !!detail.claimed_by &&
-    !!currentUsername &&
-    detail.claimed_by === currentUsername;
+    !!detail.claimed_by && !!currentUsername && detail.claimed_by === currentUsername;
   const formDisabled = !holdsClaim;
 
   const obrigacaoForm = useObrigacaoForm(detail.staged);
@@ -219,15 +208,10 @@ function ReviewBody({
         <div>
           <h1 className="text-2xl font-semibold">
             {kind === "obrigacao" ? "Obrigação" : "Recomendação"} · Processo{" "}
-            {formatProcesso(
-              texto?.numero_processo,
-              texto?.ano_processo,
-              detail.id_processo,
-            )}
+            {formatProcesso(texto?.numero_processo, texto?.ano_processo, detail.id_processo)}
           </h1>
           <p className="text-xs text-muted-foreground">
-            Item #{detail.id} · Pauta {detail.id_composicao_pauta}/
-            {detail.id_voto_pauta}
+            Item #{detail.id} · Pauta {detail.id_composicao_pauta}/{detail.id_voto_pauta}
           </p>
         </div>
         <Button variant="outline" onClick={onBackToList}>

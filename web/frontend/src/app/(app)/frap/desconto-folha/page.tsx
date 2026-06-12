@@ -60,8 +60,7 @@ export default function DescontoFolhaPage() {
     void router.push(`/frap/desconto-folha/orgao/${idOrgao}`);
   }
 
-  const placeholder =
-    tab === "orgaos" ? "Buscar órgão..." : "Buscar pessoa, CPF/CNPJ ou órgão...";
+  const placeholder = tab === "orgaos" ? "Buscar órgão..." : "Buscar pessoa, CPF/CNPJ ou órgão...";
 
   return (
     <div className="flex flex-col gap-6">

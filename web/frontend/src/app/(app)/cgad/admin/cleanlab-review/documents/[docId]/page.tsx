@@ -10,10 +10,7 @@ import { GroupDecisionBar } from "@/components/dataset-corrections/decision-bar"
 import { DocumentCanvas } from "@/components/dataset-corrections/document-canvas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  useDocumentDetail,
-  useDocuments,
-} from "@/hooks/use-dataset-corrections";
+import { useDocumentDetail, useDocuments } from "@/hooks/use-dataset-corrections";
 import { useMinConfidence } from "@/hooks/use-min-confidence";
 import { EntityGroup } from "@/schemas/dataset-corrections";
 
@@ -49,23 +46,15 @@ export default function DocumentReviewPage() {
     minConfidence,
   });
 
-  const groups = useMemo(
-    () => detail.data?.groups ?? [],
-    [detail.data?.groups],
-  );
+  const groups = useMemo(() => detail.data?.groups ?? [], [detail.data?.groups]);
 
   const selectedGroupId = (() => {
     const raw = searchParams.get("group");
     if (raw == null) return groups[0]?.group_id ?? null;
-    return groups.find((g) => g.group_id === raw)?.group_id
-      ?? groups[0]?.group_id
-      ?? null;
+    return groups.find((g) => g.group_id === raw)?.group_id ?? groups[0]?.group_id ?? null;
   })();
-  const selected =
-    groups.find((g) => g.group_id === selectedGroupId) ?? null;
-  const selectedIndex = selected
-    ? groups.findIndex((g) => g.group_id === selected.group_id)
-    : -1;
+  const selected = groups.find((g) => g.group_id === selectedGroupId) ?? null;
+  const selectedIndex = selected ? groups.findIndex((g) => g.group_id === selected.group_id) : -1;
 
   const setSelectedGroup = useCallback(
     (groupId: string | null) => {
@@ -108,7 +97,10 @@ export default function DocumentReviewPage() {
     if (!docList.data) return null;
     const items = docList.data.items;
     if (items.length === 0) return null;
-    const startIdx = Math.max(0, items.findIndex((d) => d.document_id === docId));
+    const startIdx = Math.max(
+      0,
+      items.findIndex((d) => d.document_id === docId),
+    );
     for (let offset = 1; offset <= items.length; offset++) {
       const target = items[(startIdx + offset) % items.length];
       if (target.document_id === docId) continue;
@@ -160,12 +152,8 @@ export default function DocumentReviewPage() {
       }
       // Otherwise: prefer the next pending group after the current; fall
       // back to the first pending group if we're past the last one.
-      const decidedIdx = groups.findIndex(
-        (g) => g.group_id === decidedGroupId,
-      );
-      const after = groups
-        .slice(decidedIdx + 1)
-        .find((g) => g.status === "pending");
+      const decidedIdx = groups.findIndex((g) => g.group_id === decidedGroupId);
+      const after = groups.slice(decidedIdx + 1).find((g) => g.status === "pending");
       const target = after ?? remainingPending[0];
       setSelectedGroup(target.group_id);
     },
@@ -198,15 +186,10 @@ export default function DocumentReviewPage() {
     <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link
-            href={backToListHref}
-            className="text-xs text-muted-foreground hover:underline"
-          >
+          <Link href={backToListHref} className="text-xs text-muted-foreground hover:underline">
             ← Voltar
           </Link>
-          <h1 className="mt-1 text-xl font-semibold">
-            Documento {detail.data.document_id}
-          </h1>
+          <h1 className="mt-1 text-xl font-semibold">Documento {detail.data.document_id}</h1>
           <p className="text-xs text-muted-foreground">
             {decidedCount} / {groups.length} entidades decididas neste documento
             {percentage > 0 ? ` · confiança ≥ ${percentage}%` : null}
@@ -261,8 +244,7 @@ export default function DocumentReviewPage() {
             <ul className="flex flex-col gap-1.5 text-sm">
               {groups.map((g) => {
                 const isSel = g.group_id === selectedGroupId;
-                const summary =
-                  g.gold_entity_label ?? "(livre)";
+                const summary = g.gold_entity_label ?? "(livre)";
                 return (
                   <li key={g.group_id}>
                     <button
@@ -275,14 +257,11 @@ export default function DocumentReviewPage() {
                       <span className="truncate">
                         <span className="font-mono text-xs">{summary}</span>
                         <span className="ml-2 text-xs text-muted-foreground">
-                          {g.tokens.length} tokens · {g.flagged_row_ids.length}{" "}
-                          flagrado(s)
+                          {g.tokens.length} tokens · {g.flagged_row_ids.length} flagrado(s)
                         </span>
                       </span>
                       {g.status !== "pending" ? (
-                        <Badge variant={statusBadgeVariant(g.status)}>
-                          ✓
-                        </Badge>
+                        <Badge variant={statusBadgeVariant(g.status)}>✓</Badge>
                       ) : null}
                     </button>
                   </li>

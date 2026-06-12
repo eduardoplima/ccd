@@ -3,13 +3,7 @@ import { z } from "zod";
 // Mirrors DTOs in backend/app/dataset_corrections/schemas.py.
 // Field names and types must stay one-to-one with the Pydantic source.
 
-export const decisionStatusSchema = z.enum([
-  "pending",
-  "accept",
-  "reject",
-  "custom",
-  "mixed",
-]);
+export const decisionStatusSchema = z.enum(["pending", "accept", "reject", "custom", "mixed"]);
 export type DecisionStatus = z.infer<typeof decisionStatusSchema>;
 
 export const decisionKindSchema = z.enum(["accept", "reject", "custom"]);
@@ -130,9 +124,7 @@ export const unmappedDecisionRequestSchema = z.object({
   decision: decisionKindSchema,
   label_final: z.string().nullable().optional(),
 });
-export type UnmappedDecisionRequest = z.infer<
-  typeof unmappedDecisionRequestSchema
->;
+export type UnmappedDecisionRequest = z.infer<typeof unmappedDecisionRequestSchema>;
 
 export const unmappedDecisionResponseSchema = z.object({
   row_id: z.number().int(),
@@ -141,9 +133,7 @@ export const unmappedDecisionResponseSchema = z.object({
   decided_by: z.string().nullable(),
   decided_at: z.string().nullable(),
 });
-export type UnmappedDecisionResponse = z.infer<
-  typeof unmappedDecisionResponseSchema
->;
+export type UnmappedDecisionResponse = z.infer<typeof unmappedDecisionResponseSchema>;
 
 export const progressSchema = z.object({
   total: z.number().int(),

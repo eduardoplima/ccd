@@ -2,11 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import {
-  getFiltrosCCD,
-  listProcessosCCD,
-  type ProcessoCCDFilters,
-} from "@/lib/api/ccd";
+import { getFiltrosCCD, listProcessosCCD, type ProcessoCCDFilters } from "@/lib/api/ccd";
 
 export function useProcessosCCD(filters: ProcessoCCDFilters) {
   return useQuery({

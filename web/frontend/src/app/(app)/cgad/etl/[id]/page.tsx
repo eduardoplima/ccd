@@ -6,13 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -23,11 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import {
-  useDecisoesExtracao,
-  useExtracao,
-  useExtracaoEventos,
-} from "@/hooks/use-etl";
+import { useDecisoesExtracao, useExtracao, useExtracaoEventos } from "@/hooks/use-etl";
 import {
   DecisaoExtraidaItem,
   DecisaoItemRow,
@@ -73,9 +63,7 @@ const STATUS_TONE: Record<RunStatus, string> = {
 
 function StatusBadge({ status }: { status: RunStatus }) {
   return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[status]}`}
-    >
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[status]}`}>
       {STATUS_LABEL[status]}
     </span>
   );
@@ -144,9 +132,8 @@ function Detail({ id }: { id: number }) {
         <div>
           <h1 className="text-2xl font-semibold">Extração #{extracao.id}</h1>
           <p className="text-sm text-muted-foreground">
-            Período {formatDate(extracao.data_inicio)} a{" "}
-            {formatDate(extracao.data_fim)} · disparada em{" "}
-            {formatDateTime(extracao.data_execucao)}
+            Período {formatDate(extracao.data_inicio)} a {formatDate(extracao.data_fim)} · disparada
+            em {formatDateTime(extracao.data_execucao)}
           </p>
         </div>
         <Button variant="outline" onClick={() => router.push("/cgad/etl")}>
@@ -187,18 +174,9 @@ function Summary({ extracao }: { extracao: ExtracaoOut }) {
             <StatusBadge status={extracao.status} />
           </Stat>
           <Stat label="Etapa atual" value={extracao.etapa_atual} />
-          <Stat
-            label="Decisões processadas"
-            value={extracao.decisoes_processadas}
-          />
-          <Stat
-            label="Obrigações geradas"
-            value={extracao.obrigacoes_geradas}
-          />
-          <Stat
-            label="Recomendações geradas"
-            value={extracao.recomendacoes_geradas}
-          />
+          <Stat label="Decisões processadas" value={extracao.decisoes_processadas} />
+          <Stat label="Obrigações geradas" value={extracao.obrigacoes_geradas} />
+          <Stat label="Recomendações geradas" value={extracao.recomendacoes_geradas} />
         </div>
         {extracao.status === "error" && extracao.mensagem_erro ? (
           <p className="mt-4 rounded border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-700 dark:text-red-300">
@@ -222,9 +200,7 @@ function Stat({
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-base font-medium">
-        {children ?? (value !== undefined ? value : "—")}
-      </p>
+      <p className="text-base font-medium">{children ?? (value !== undefined ? value : "—")}</p>
     </div>
   );
 }
@@ -236,8 +212,7 @@ function ActivityFeed({ events }: { events: ExtracaoEventoOut[] }) {
   if (ordered.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Aguardando eventos. Eles aparecem aqui assim que a extração começar a
-        processar decisões.
+        Aguardando eventos. Eles aparecem aqui assim que a extração começar a processar decisões.
       </p>
     );
   }
@@ -274,8 +249,7 @@ function describeEvent(e: ExtracaoEventoOut): React.ReactNode {
     case "stage_progress":
       return (
         <span>
-          Total a processar nesta etapa: <strong>{Number(p.total ?? 0)}</strong>{" "}
-          decisões.
+          Total a processar nesta etapa: <strong>{Number(p.total ?? 0)}</strong> decisões.
         </span>
       );
     case "stage_done":
@@ -295,8 +269,7 @@ function describeEvent(e: ExtracaoEventoOut): React.ReactNode {
     case "decision_done":
       return (
         <span>
-          Decisão {String(p.id_processo ?? "?")}/
-          {String(p.id_voto_pauta ?? "?")} processada (
+          Decisão {String(p.id_processo ?? "?")}/{String(p.id_voto_pauta ?? "?")} processada (
           <strong>
             {Number(p.processed ?? 0)}/{Number(p.total ?? 0)}
           </strong>
@@ -313,8 +286,8 @@ function describeEvent(e: ExtracaoEventoOut): React.ReactNode {
     case "recomendacao_extracted":
       return (
         <span>
-          Recomendação extraída — id {String(p.id_recomendacao ?? "?")}{" "}
-          (processo {String(p.id_processo ?? "?")})
+          Recomendação extraída — id {String(p.id_recomendacao ?? "?")} (processo{" "}
+          {String(p.id_processo ?? "?")})
         </span>
       );
     case "obrigacao_skipped":
@@ -341,9 +314,7 @@ function DecisoesPanel({ id }: { id: number }) {
     page,
     pageSize: PAGE_SIZE,
   });
-  const [activeTab, setActiveTab] = useState<"obrigacoes" | "recomendacoes">(
-    "obrigacoes",
-  );
+  const [activeTab, setActiveTab] = useState<"obrigacoes" | "recomendacoes">("obrigacoes");
 
   const total = data?.total ?? 0;
   const items = data?.items ?? [];
@@ -354,16 +325,12 @@ function DecisoesPanel({ id }: { id: number }) {
       <CardHeader>
         <CardTitle>Decisões extraídas</CardTitle>
         <CardDescription>
-          NERDecisões geradas por esta extração e os itens
-          (obrigações/recomendações) que delas saíram. Clique em um item para
-          abri-lo na fila de revisão.
+          NERDecisões geradas por esta extração e os itens (obrigações/recomendações) que delas
+          saíram. Clique em um item para abri-lo na fila de revisão.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-        >
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
           <TabsList>
             <TabsTrigger value="obrigacoes">Obrigações</TabsTrigger>
             <TabsTrigger value="recomendacoes">Recomendações</TabsTrigger>
@@ -380,30 +347,20 @@ function DecisoesPanel({ id }: { id: number }) {
           <TableBody>
             {isLoading && items.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={2}
-                  className="text-center text-muted-foreground"
-                >
+                <TableCell colSpan={2} className="text-center text-muted-foreground">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={2}
-                  className="text-center text-muted-foreground"
-                >
-                  Esta extração ainda não emitiu decisões com vínculo (ou foi
-                  disparada antes do tracking de RunId).
+                <TableCell colSpan={2} className="text-center text-muted-foreground">
+                  Esta extração ainda não emitiu decisões com vínculo (ou foi disparada antes do
+                  tracking de RunId).
                 </TableCell>
               </TableRow>
             ) : (
               items.map((decisao) => (
-                <DecisaoRow
-                  key={decisao.id_ner_decisao}
-                  decisao={decisao}
-                  kind={activeTab}
-                />
+                <DecisaoRow key={decisao.id_ner_decisao} decisao={decisao} kind={activeTab} />
               ))
             )}
           </TableBody>
@@ -446,8 +403,7 @@ function DecisaoRow({
   decisao: DecisaoExtraidaItem;
   kind: "obrigacoes" | "recomendacoes";
 }) {
-  const items =
-    kind === "obrigacoes" ? decisao.obrigacoes : decisao.recomendacoes;
+  const items = kind === "obrigacoes" ? decisao.obrigacoes : decisao.recomendacoes;
   const reviewKind = kind === "obrigacoes" ? "obrigacao" : "recomendacao";
 
   return (
@@ -464,8 +420,7 @@ function DecisaoRow({
       <TableCell>
         {items.length === 0 ? (
           <span className="text-xs text-muted-foreground">
-            Nenhuma {kind === "obrigacoes" ? "obrigação" : "recomendação"}{" "}
-            gerada.
+            Nenhuma {kind === "obrigacoes" ? "obrigação" : "recomendação"} gerada.
           </span>
         ) : (
           <ul className="space-y-1">

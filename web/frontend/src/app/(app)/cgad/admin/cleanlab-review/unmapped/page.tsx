@@ -27,9 +27,7 @@ export default function UnmappedPage() {
 
   const items = data.data?.items ?? [];
   const selected = items.find((e) => e.row_id === selectedRowId) ?? items[0] ?? null;
-  const selectedIndex = selected
-    ? items.findIndex((e) => e.row_id === selected.row_id)
-    : -1;
+  const selectedIndex = selected ? items.findIndex((e) => e.row_id === selected.row_id) : -1;
 
   function moveNext() {
     if (items.length === 0) return;
@@ -42,23 +40,18 @@ export default function UnmappedPage() {
     setSelectedRowId(prev.row_id);
   }
 
-  const totalPages = data.data
-    ? Math.max(1, Math.ceil(data.data.total / PAGE_SIZE))
-    : 1;
+  const totalPages = data.data ? Math.max(1, Math.ceil(data.data.total / PAGE_SIZE)) : 1;
 
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 p-6">
       <div>
-        <Link
-          href={backToListHref}
-          className="text-xs text-muted-foreground hover:underline"
-        >
+        <Link href={backToListHref} className="text-xs text-muted-foreground hover:underline">
           ← Voltar
         </Link>
         <h1 className="mt-1 text-xl font-semibold">Erros sem documento</h1>
         <p className="text-sm text-muted-foreground">
-          Tokens flagrados cuja sentença não foi localizada em um documento do
-          dataset. Use o contexto do cleanlab para decidir.
+          Tokens flagrados cuja sentença não foi localizada em um documento do dataset. Use o
+          contexto do cleanlab para decidir.
           {percentage > 0 ? ` · filtrando confiança ≥ ${percentage}%` : null}
         </p>
       </div>
@@ -67,9 +60,7 @@ export default function UnmappedPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-3">
-          {data.isLoading ? (
-            <div className="text-sm text-muted-foreground">Carregando…</div>
-          ) : null}
+          {data.isLoading ? <div className="text-sm text-muted-foreground">Carregando…</div> : null}
           {!data.isLoading && items.length === 0 ? (
             <div className="rounded-md border bg-white p-6 text-sm text-muted-foreground">
               Tudo certo: nenhum erro sem documento.

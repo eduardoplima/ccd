@@ -46,8 +46,7 @@ export function RangeAdjuster({
     <div className="rounded border bg-muted/40 p-3">
       <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
         <span>
-          Faixa da entidade · tokens {firstIdx}–{lastIdx} (
-          {lastIdx - firstIdx + 1})
+          Faixa da entidade · tokens {firstIdx}–{lastIdx} ({lastIdx - firstIdx + 1})
         </span>
         {dirty ? (
           <button
@@ -115,8 +114,7 @@ export function RangeAdjuster({
 
       <div className="mt-3 max-h-24 overflow-auto rounded border bg-white p-2 font-mono text-xs leading-relaxed">
         {docTokens.slice(previewStart, previewEnd + 1).map((tok) => {
-          const inRange =
-            tok.token_idx_in_doc >= firstIdx && tok.token_idx_in_doc <= lastIdx;
+          const inRange = tok.token_idx_in_doc >= firstIdx && tok.token_idx_in_doc <= lastIdx;
           return (
             <span
               key={tok.token_idx_in_doc}

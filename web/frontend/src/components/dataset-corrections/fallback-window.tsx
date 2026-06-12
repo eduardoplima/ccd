@@ -20,9 +20,7 @@ export function FallbackWindow({ error }: { error: UnmappedError }) {
         Sentença #{error.sentenca_idx} · contexto cleanlab
       </div>
       <span>{before}</span>
-      <span className="rounded bg-amber-100 px-0.5 ring-2 ring-red-500">
-        {hit}
-      </span>
+      <span className="rounded bg-amber-100 px-0.5 ring-2 ring-red-500">{hit}</span>
       <span>{after}</span>
     </div>
   );

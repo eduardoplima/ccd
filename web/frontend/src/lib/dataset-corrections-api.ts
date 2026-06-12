@@ -86,10 +86,7 @@ export async function decideUnmapped(
   rowId: number,
   body: UnmappedDecisionRequest,
 ): Promise<UnmappedDecisionResponse> {
-  const response = await apiClient.post(
-    `${BASE}/unmapped/${rowId}/decide`,
-    body,
-  );
+  const response = await apiClient.post(`${BASE}/unmapped/${rowId}/decide`, body);
   return unmappedDecisionResponseSchema.parse(response.data);
 }
 

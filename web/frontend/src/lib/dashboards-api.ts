@@ -1,8 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import {
-  DashboardSummary,
-  dashboardSummarySchema,
-} from "@/schemas/dashboards";
+import { DashboardSummary, dashboardSummarySchema } from "@/schemas/dashboards";
 
 type SummaryArgs = {
   startDate?: string; // YYYY-MM-DD

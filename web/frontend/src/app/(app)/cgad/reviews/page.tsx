@@ -144,19 +144,13 @@ function AwaitingDispatchTable({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell
-                colSpan={4}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
+              <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
                 Carregando...
               </TableCell>
             </TableRow>
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell
-                colSpan={4}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
+              <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
                 Nenhum item aguardando envio.
               </TableCell>
             </TableRow>
@@ -164,22 +158,14 @@ function AwaitingDispatchTable({
             items.map((item) => (
               <TableRow key={`${item.kind}-${item.id}`}>
                 <TableCell className="font-mono">
-                  {formatProcesso(
-                    item.numero_processo,
-                    item.ano_processo,
-                    item.id_processo,
-                  )}
+                  {formatProcesso(item.numero_processo, item.ano_processo, item.id_processo)}
                 </TableCell>
-                <TableCell>
-                  {item.kind === "obrigacao" ? "Obrigação" : "Recomendação"}
-                </TableCell>
+                <TableCell>{item.kind === "obrigacao" ? "Obrigação" : "Recomendação"}</TableCell>
                 <TableCell className="max-w-xl truncate" title={item.descricao}>
                   {item.descricao}
                 </TableCell>
                 <TableCell>
-                  {item.reviewer ?? (
-                    <span className="text-muted-foreground">—</span>
-                  )}
+                  {item.reviewer ?? <span className="text-muted-foreground">—</span>}
                 </TableCell>
               </TableRow>
             ))

@@ -3,9 +3,8 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { useFasesDebitosNotificados, useFasesTotais } from "@/hooks/use-fases";
 import { formatBRL } from "@/lib/format";
+import { SortableHead, useClientSort } from "@/components/sortable-table";
 import type { DebitoFase, DebitosFaseResumo } from "@/schemas/fases";
-
-import { SortableHead, useClientSort } from "./_sortable";
 
 type DebitoSortKey =
   | "idDebito"

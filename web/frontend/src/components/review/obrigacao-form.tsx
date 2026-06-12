@@ -17,60 +17,38 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ObrigacaoReview,
-  Pessoa,
-  obrigacaoReviewSchema,
-} from "@/schemas/review";
+import { ObrigacaoReview, Pessoa, obrigacaoReviewSchema } from "@/schemas/review";
 
 function toDefaults(staged: Record<string, unknown>): ObrigacaoReview {
   return {
     id_processo: (staged.id_processo as number | null | undefined) ?? null,
-    id_composicao_pauta:
-      (staged.id_composicao_pauta as number | null | undefined) ?? null,
+    id_composicao_pauta: (staged.id_composicao_pauta as number | null | undefined) ?? null,
     id_voto_pauta: (staged.id_voto_pauta as number | null | undefined) ?? null,
-    descricao_obrigacao:
-      (staged.descricao_obrigacao as string | undefined) ?? "",
+    descricao_obrigacao: (staged.descricao_obrigacao as string | undefined) ?? "",
     de_fazer: (staged.de_fazer as boolean | null | undefined) ?? true,
     prazo: (staged.prazo as string | null | undefined) ?? null,
-    data_cumprimento:
-      (staged.data_cumprimento as string | null | undefined) ?? null,
-    orgao_responsavel:
-      (staged.orgao_responsavel as string | null | undefined) ?? null,
-    id_orgao_responsavel:
-      (staged.id_orgao_responsavel as number | null | undefined) ?? null,
-    tem_multa_cominatoria:
-      (staged.tem_multa_cominatoria as boolean | null | undefined) ?? false,
+    data_cumprimento: (staged.data_cumprimento as string | null | undefined) ?? null,
+    orgao_responsavel: (staged.orgao_responsavel as string | null | undefined) ?? null,
+    id_orgao_responsavel: (staged.id_orgao_responsavel as number | null | undefined) ?? null,
+    tem_multa_cominatoria: (staged.tem_multa_cominatoria as boolean | null | undefined) ?? false,
     nome_responsavel_multa_cominatoria:
-      (staged.nome_responsavel_multa_cominatoria as
-        | string
-        | null
-        | undefined) ?? null,
+      (staged.nome_responsavel_multa_cominatoria as string | null | undefined) ?? null,
     documento_responsavel_multa_cominatoria:
-      (staged.documento_responsavel_multa_cominatoria as
-        | string
-        | null
-        | undefined) ?? null,
+      (staged.documento_responsavel_multa_cominatoria as string | null | undefined) ?? null,
     id_pessoa_multa_cominatoria:
       (staged.id_pessoa_multa_cominatoria as number | null | undefined) ?? null,
-    valor_multa_cominatoria:
-      (staged.valor_multa_cominatoria as number | null | undefined) ?? null,
+    valor_multa_cominatoria: (staged.valor_multa_cominatoria as number | null | undefined) ?? null,
     periodo_multa_cominatoria:
       (staged.periodo_multa_cominatoria as string | null | undefined) ?? null,
     e_multa_cominatoria_solidaria:
-      (staged.e_multa_cominatoria_solidaria as boolean | null | undefined) ??
-      false,
-    solidarios_multa_cominatoria: coerceSolidarios(
-      staged.solidarios_multa_cominatoria,
-    ),
+      (staged.e_multa_cominatoria_solidaria as boolean | null | undefined) ?? false,
+    solidarios_multa_cominatoria: coerceSolidarios(staged.solidarios_multa_cominatoria),
   };
 }
 
 // Defensive: backend already coerces legacy ``list[str]`` rows, but if any
 // slip through (e.g. an older approve), wrap into ``{nome, documento}``.
-function coerceSolidarios(
-  raw: unknown,
-): { nome: string; documento: string | null }[] | null {
+function coerceSolidarios(raw: unknown): { nome: string; documento: string | null }[] | null {
   if (!Array.isArray(raw)) return null;
   return raw
     .map((item) => {
@@ -78,8 +56,7 @@ function coerceSolidarios(
       if (item && typeof item === "object") {
         const obj = item as Record<string, unknown>;
         const nome = typeof obj.nome === "string" ? obj.nome : "";
-        const documento =
-          typeof obj.documento === "string" ? obj.documento : null;
+        const documento = typeof obj.documento === "string" ? obj.documento : null;
         return { nome, documento };
       }
       return null;
@@ -115,11 +92,7 @@ export function ObrigacaoForm({
   const isSolidaria = !!form.watch("e_multa_cominatoria_solidaria");
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onApprove)}
-        className="space-y-4"
-        noValidate
-      >
+      <form onSubmit={form.handleSubmit(onApprove)} className="space-y-4" noValidate>
         <FormField
           control={form.control}
           name="descricao_obrigacao"
@@ -182,11 +155,7 @@ export function ObrigacaoForm({
                     disabled={disabled}
                     {...field}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : e.target.value,
-                      )
-                    }
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -206,11 +175,7 @@ export function ObrigacaoForm({
                     disabled={disabled}
                     {...field}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : e.target.value,
-                      )
-                    }
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -230,11 +195,7 @@ export function ObrigacaoForm({
                   disabled={disabled}
                   {...field}
                   value={field.value ?? ""}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value === "" ? null : e.target.value,
-                    )
-                  }
+                  onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                 />
               </FormControl>
               <FormMessage />
@@ -254,11 +215,7 @@ export function ObrigacaoForm({
                     disabled={disabled}
                     {...field}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : e.target.value,
-                      )
-                    }
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -277,11 +234,7 @@ export function ObrigacaoForm({
                     disabled={disabled}
                     {...field}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : e.target.value,
-                      )
-                    }
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -304,9 +257,7 @@ export function ObrigacaoForm({
                     disabled={disabled}
                     value={field.value ?? ""}
                     onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : Number(e.target.value),
-                      )
+                      field.onChange(e.target.value === "" ? null : Number(e.target.value))
                     }
                   />
                 </FormControl>
@@ -326,11 +277,7 @@ export function ObrigacaoForm({
                     disabled={disabled}
                     {...field}
                     value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : e.target.value,
-                      )
-                    }
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -353,8 +300,7 @@ export function ObrigacaoForm({
                     if (next) {
                       // Reveal the section with one empty row so the reviewer
                       // can start typing the first solidário right away.
-                      const current =
-                        form.getValues("solidarios_multa_cominatoria") ?? [];
+                      const current = form.getValues("solidarios_multa_cominatoria") ?? [];
                       if (current.length === 0) {
                         form.setValue(
                           "solidarios_multa_cominatoria",
@@ -377,11 +323,7 @@ export function ObrigacaoForm({
         />
 
         {isSolidaria && (
-          <SolidariosSection
-            form={form}
-            pessoas={pessoas ?? []}
-            disabled={disabled}
-          />
+          <SolidariosSection form={form} pessoas={pessoas ?? []} disabled={disabled} />
         )}
 
         <div className="flex justify-end gap-2 border-t pt-4">
@@ -394,11 +336,7 @@ export function ObrigacaoForm({
           >
             Rejeitar
           </Button>
-          <Button
-            type="submit"
-            disabled={disabled || isSubmitting}
-            data-testid="approve-button"
-          >
+          <Button type="submit" disabled={disabled || isSubmitting} data-testid="approve-button">
             {isSubmitting ? "Aprovando..." : "Aprovar"}
           </Button>
         </div>
@@ -427,15 +365,11 @@ function SolidariosSection({
     if (!trimmed) return;
     const match = pessoas.find((p) => p.nome === trimmed);
     if (!match || !match.documento) return;
-    const current = form.getValues(
-      `solidarios_multa_cominatoria.${index}.documento`,
-    );
+    const current = form.getValues(`solidarios_multa_cominatoria.${index}.documento`);
     if (current) return;
-    form.setValue(
-      `solidarios_multa_cominatoria.${index}.documento`,
-      match.documento,
-      { shouldDirty: true },
-    );
+    form.setValue(`solidarios_multa_cominatoria.${index}.documento`, match.documento, {
+      shouldDirty: true,
+    });
   }
 
   return (
@@ -465,8 +399,7 @@ function SolidariosSection({
 
       {fields.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          Nenhum solidário. Clique em &quot;Adicionar solidário&quot; para
-          incluir.
+          Nenhum solidário. Clique em &quot;Adicionar solidário&quot; para incluir.
         </p>
       ) : (
         <div className="space-y-2">
@@ -504,9 +437,7 @@ function SolidariosSection({
                         disabled={disabled}
                         value={field.value ?? ""}
                         onChange={(e) =>
-                          field.onChange(
-                            e.target.value === "" ? null : e.target.value,
-                          )
+                          field.onChange(e.target.value === "" ? null : e.target.value)
                         }
                       />
                     </FormControl>

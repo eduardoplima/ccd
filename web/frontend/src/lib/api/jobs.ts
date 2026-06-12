@@ -31,7 +31,9 @@ export async function disparaConciliar(ano: number, mes: number): Promise<Job> {
 }
 
 export async function disparaConciliarTodos(ano: number): Promise<{ ano: number; jobs: Job[] }> {
-  const { data } = await apiClient.post("/api/v1/frap/jobs/conciliar-todos", null, { params: { ano } });
+  const { data } = await apiClient.post("/api/v1/frap/jobs/conciliar-todos", null, {
+    params: { ano },
+  });
   return { ano: data.ano, jobs: (data.jobs as unknown[]).map((j) => jobSchema.parse(j)) };
 }
 

@@ -1,15 +1,9 @@
 "use client";
 
+import { SortableHead, useClientSort } from "@/components/sortable-table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAlertasCCD } from "@/hooks/use-ccd-alertas";
 import { marcadorColor } from "@/lib/marcador-color";
 import type { Alerta, TipoAlerta } from "@/schemas/ccd-alertas";
@@ -42,21 +36,23 @@ export default function AlertasPage() {
 
       {isFetching && !data ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
 
-      {data?.tipos.map((info) => {
-        const items = data.items.filter((it) => it.tipo === info.tipo);
-        return (
-          <Card key={info.tipo}>
-            <CardHeader>
+      {data && data.tipos.length > 0 ? (
+        <Tabs defaultValue={data.tipos[0]?.tipo} className="w-full">
+          <TabsList>
+            {data.tipos.map((info) => (
+              <TabsTrigger key={info.tipo} value={info.tipo}>
+                {info.titulo}
+                <Badge variant={info.quantidade > 0 ? "warning" : "success"} className="ml-2">
+                  {info.quantidade.toLocaleString("pt-BR")}
+                </Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {data.tipos.map((info) => (
+            <TabsContent key={info.tipo} value={info.tipo} className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    {info.titulo}
-                    <Badge variant={info.quantidade > 0 ? "warning" : "success"}>
-                      {info.quantidade.toLocaleString("pt-BR")}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>{info.descricao}</CardDescription>
-                </div>
+                <p className="text-sm text-muted-foreground">{info.descricao}</p>
                 {info.tipo === "parcelamento_cancelado" ? (
                   <Badge
                     variant="outline"
@@ -67,41 +63,73 @@ export default function AlertasPage() {
                   </Badge>
                 ) : null}
               </div>
-            </CardHeader>
-            <CardContent>
-              <AlertaTabela tipo={info.tipo} items={items} />
-            </CardContent>
-          </Card>
-        );
-      })}
+              <AlertaTabela
+                tipo={info.tipo}
+                items={data.items.filter((it) => it.tipo === info.tipo)}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
+      ) : null}
     </div>
   );
 }
 
+type AlertaSortKey =
+  | "processo"
+  | "relator"
+  | "data_marcador"
+  | "situacao"
+  | "data_cancelamento"
+  | "parcelas_pagas";
+
+const GETTERS: Record<AlertaSortKey, (a: Alerta) => string | number | null | undefined> = {
+  processo: (a) => a.processo,
+  relator: (a) => a.relator,
+  data_marcador: (a) => a.data_marcador,
+  situacao: (a) => a.detalhe.situacao_descricao ?? a.detalhe.situacao,
+  data_cancelamento: (a) => a.detalhe.data_cancelamento,
+  parcelas_pagas: (a) => a.detalhe.parcelas_pagas,
+};
+
 function AlertaTabela({ tipo, items }: { tipo: TipoAlerta; items: Alerta[] }) {
+  const { sorted, sort, toggle } = useClientSort<Alerta, AlertaSortKey>(items, GETTERS);
+
   if (tipo !== "parcelamento_cancelado") return null;
+
   return (
     <div className="rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Processo</TableHead>
-            <TableHead>Relator</TableHead>
-            <TableHead>Marcador desde</TableHead>
-            <TableHead>Último parcelamento</TableHead>
-            <TableHead>Cancelado em</TableHead>
-            <TableHead>Parcelas pagas</TableHead>
+            <SortableHead label="Processo" col="processo" sort={sort} onClick={toggle} />
+            <SortableHead label="Relator" col="relator" sort={sort} onClick={toggle} />
+            <SortableHead label="Marcador desde" col="data_marcador" sort={sort} onClick={toggle} />
+            <SortableHead label="Último parcelamento" col="situacao" sort={sort} onClick={toggle} />
+            <SortableHead
+              label="Cancelado em"
+              col="data_cancelamento"
+              sort={sort}
+              onClick={toggle}
+            />
+            <SortableHead
+              label="Parcelas pagas"
+              col="parcelas_pagas"
+              sort={sort}
+              onClick={toggle}
+              align="right"
+            />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.length === 0 ? (
+          {sorted.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                 Nenhum alerta.
               </TableCell>
             </TableRow>
           ) : (
-            items.map((alerta) => {
+            sorted.map((alerta) => {
               const d = alerta.detalhe;
               const nuncaParcelado = d.id_parcelamento === null;
               const cancelado = d.situacao !== null && SITUACOES_CANCELADAS.has(d.situacao);
@@ -126,7 +154,7 @@ function AlertaTabela({ tipo, items }: { tipo: TipoAlerta; items: Alerta[] }) {
                   <TableCell className="whitespace-nowrap">
                     {formatarData(d.data_cancelamento)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap text-right">
                     {d.numero_parcelas === null
                       ? "—"
                       : `${d.parcelas_pagas ?? 0}/${d.numero_parcelas}`}

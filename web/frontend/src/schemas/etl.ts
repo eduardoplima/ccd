@@ -19,9 +19,7 @@ export type ExtractionFilters = z.infer<typeof extractionFiltersSchema>;
 export const extractionTriggerRequestSchema = z.object({
   filters: extractionFiltersSchema,
 });
-export type ExtractionTriggerRequest = z.infer<
-  typeof extractionTriggerRequestSchema
->;
+export type ExtractionTriggerRequest = z.infer<typeof extractionTriggerRequestSchema>;
 
 // Mirrors ExtractionJobAccepted.
 export const extractionJobAcceptedSchema = z.object({
@@ -35,13 +33,7 @@ export type ExtractionJobAccepted = z.infer<typeof extractionJobAcceptedSchema>;
 export const runStatusSchema = z.enum(["queued", "running", "done", "error"]);
 export type RunStatus = z.infer<typeof runStatusSchema>;
 
-export const etapaSchema = z.enum([
-  "queued",
-  "decisoes",
-  "obrigacoes",
-  "recomendacoes",
-  "done",
-]);
+export const etapaSchema = z.enum(["queued", "decisoes", "obrigacoes", "recomendacoes", "done"]);
 export type Etapa = z.infer<typeof etapaSchema>;
 
 // Mirrors ExtracaoOut.
@@ -98,9 +90,7 @@ export const extracaoEventoListPageSchema = z.object({
   items: z.array(extracaoEventoOutSchema),
   has_more: z.boolean(),
 });
-export type ExtracaoEventoListPage = z.infer<
-  typeof extracaoEventoListPageSchema
->;
+export type ExtracaoEventoListPage = z.infer<typeof extracaoEventoListPageSchema>;
 
 // Mirrors DecisaoItemRow.
 export const decisaoItemRowSchema = z.object({
@@ -128,9 +118,7 @@ export const decisaoExtraidaListPageSchema = z.object({
   page_size: z.number().int(),
   total: z.number().int(),
 });
-export type DecisaoExtraidaListPage = z.infer<
-  typeof decisaoExtraidaListPageSchema
->;
+export type DecisaoExtraidaListPage = z.infer<typeof decisaoExtraidaListPageSchema>;
 
 export const extracaoListFiltersSchema = z.object({
   status: runStatusSchema.optional(),

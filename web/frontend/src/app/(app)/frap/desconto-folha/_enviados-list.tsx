@@ -3,9 +3,8 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { useFasesEnviados } from "@/hooks/use-fases";
 import { formatDate } from "@/lib/format";
+import { SortableHead, useClientSort } from "@/components/sortable-table";
 import type { NotificacaoEnviada } from "@/schemas/fases";
-
-import { SortableHead, useClientSort } from "./_sortable";
 
 type EnviadoSortKey = "processo" | "idDebito" | "idEventoCcd" | "dataPublicacaoCcd" | "resumoCcd";
 

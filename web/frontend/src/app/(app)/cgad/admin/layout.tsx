@@ -5,11 +5,7 @@ import { useEffect } from "react";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
 
