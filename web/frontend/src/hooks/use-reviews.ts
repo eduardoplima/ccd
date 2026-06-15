@@ -100,18 +100,23 @@ export function useClaim({ kind, id }: IdArgs) {
     onMutate: async () => {
       // Optimistic: paint ourselves as the claimant immediately so the
       // banner doesn't flash.
+      const prev = queryClient.getQueryData<ReviewDetail>(reviewKeys.detail(kind, id));
+      // No cached detail yet means the initial load is still in flight (the
+      // page fires claim() on mount). Cancelling it here would strand the
+      // detail query in a cancelled-pending state with no data — leaving the
+      // page on "Carregando item..." forever in production builds (dev only
+      // survives because StrictMode's double-mount refetches). Skip the
+      // optimistic step entirely; the claim's onSuccess fills claimed_by.
+      if (!prev || !me) return { prev };
       await queryClient.cancelQueries({
         queryKey: reviewKeys.detail(kind, id),
       });
-      const prev = queryClient.getQueryData<ReviewDetail>(reviewKeys.detail(kind, id));
-      if (prev && me) {
-        const now = new Date().toISOString();
-        queryClient.setQueryData<ReviewDetail>(reviewKeys.detail(kind, id), {
-          ...prev,
-          claimed_by: me.login,
-          claimed_at: now,
-        });
-      }
+      const now = new Date().toISOString();
+      queryClient.setQueryData<ReviewDetail>(reviewKeys.detail(kind, id), {
+        ...prev,
+        claimed_by: me.login,
+        claimed_at: now,
+      });
       return { prev };
     },
     onError: (_err, _vars, context) => {
