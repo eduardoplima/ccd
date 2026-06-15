@@ -1,6 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -13,8 +15,11 @@ import { useTrocarSenha } from "@/hooks/use-usuarios";
 import { trocarSenhaInputSchema, type TrocarSenhaInput } from "@/schemas/usuario";
 
 export default function ContaPage() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
   const trocar = useTrocarSenha();
+  const deveTrocar = !!user?.deveTrocarSenha;
   const {
     register,
     handleSubmit,
@@ -25,8 +30,15 @@ export default function ContaPage() {
   async function onSubmit(input: TrocarSenhaInput) {
     try {
       await trocar.mutateAsync({ senhaAtual: input.senhaAtual, senhaNova: input.senhaNova });
-      toast.success("Senha trocada. Faça login novamente nos próximos acessos.");
       reset();
+      if (deveTrocar) {
+        // Troca obrigatória cumprida: atualiza a flag e libera o app.
+        await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+        toast.success("Senha definida com sucesso.");
+        router.replace("/frap/extratos");
+      } else {
+        toast.success("Senha trocada. Faça login novamente nos próximos acessos.");
+      }
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       toast.error(status === 401 ? "Senha atual incorreta." : "Falha ao trocar senha.");
@@ -36,12 +48,24 @@ export default function ContaPage() {
   return (
     <div className="flex max-w-xl flex-col gap-6">
       <h1 className="section-heading text-2xl">Conta</h1>
+      {deveTrocar ? (
+        <Card className="border-brand-accent">
+          <CardHeader>
+            <CardTitle className="text-base">Troca de senha obrigatória</CardTitle>
+            <CardDescription>
+              Este é seu primeiro acesso com senha provisória. Defina uma nova senha (mínimo 8
+              caracteres) para continuar usando o sistema.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
       {user ? (
         <Card>
           <CardHeader>
             <CardTitle>{user.nomeCompleto}</CardTitle>
             <CardDescription>
-              <span className="font-mono">{user.login}</span> · {user.email} · papel{" "}
+              <span className="font-mono">{user.login}</span>
+              {user.email ? <> · {user.email}</> : null} · papel{" "}
               <span className="font-mono">{user.papel}</span>
             </CardDescription>
           </CardHeader>

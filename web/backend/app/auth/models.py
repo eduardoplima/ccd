@@ -32,10 +32,15 @@ class Usuario(Base):
 
     IdUsuario: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     NomeUsuario: Mapped[str] = mapped_column(String(150), unique=True, nullable=False, index=True)
-    Email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    # Email é opcional; a unicidade é garantida por índice filtrado (WHERE Email IS NOT NULL)
+    # para permitir múltiplos usuários sem e-mail — ver migração 0015.
+    Email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     SenhaHash: Mapped[str] = mapped_column(String(255), nullable=False)
     Papel: Mapped[str] = mapped_column(String(8), nullable=False, default="user")
     Ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Quando True, o usuário é obrigado a trocar a senha antes de usar o app
+    # (senha provisória). Limpo em trocar_senha.
+    DeveTrocarSenha: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     DataCriacao: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utcnow)
     DataAtualizacao: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow, onupdate=_utcnow

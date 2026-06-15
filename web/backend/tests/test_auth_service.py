@@ -20,7 +20,6 @@ def _create_user(
     user = FRAPUsuario(
         Login=login,
         Email=email,
-        NomeCompleto="Test User",
         SenhaHash=hash_password("senha-123"),
         Papel=papel,
         Ativo=ativo,

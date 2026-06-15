@@ -41,21 +41,23 @@ def gerar_senha_temporaria() -> str:
 
 
 def criar_usuario(
-    session: Session, *, login: str, email: str, nome_completo: str, papel: str
+    session: Session, *, login: str, email: str | None = None, nome_completo: str, papel: str
 ) -> tuple[FRAPUsuario, str]:
     senha = gerar_senha_temporaria()
     login_norm = login.strip().lower()
-    email_norm = email.strip().lower()
+    email_norm = email.strip().lower() if email else None
     if session.scalar(select(FRAPUsuario).where(FRAPUsuario.Login == login_norm)):
         raise LoginDuplicadoError(f"login já cadastrado: {login_norm}")
     # `Usuarios` não tem coluna de nome completo separada; o login é o NomeUsuario.
     _ = nome_completo
+    # Senha provisória → obriga troca no primeiro acesso.
     user = FRAPUsuario(
         Login=login_norm,
         Email=email_norm,
         SenhaHash=hash_password(senha),
         Papel=papel,
         Ativo=True,
+        DeveTrocarSenha=True,
     )
     session.add(user)
     try:
@@ -146,6 +148,8 @@ def resetar_senha(session: Session, id_usuario: int) -> str:
     user = obter_usuario(session, id_usuario)
     senha = gerar_senha_temporaria()
     user.SenhaHash = hash_password(senha)
+    # Senha provisória de reset → obriga troca no próximo acesso.
+    user.DeveTrocarSenha = True
     user.DataAtualizacao = datetime.now(UTC).replace(tzinfo=None)
     _revogar_refresh_tokens(session, user.IdUsuario)
     session.commit()
@@ -158,6 +162,7 @@ def trocar_senha(session: Session, *, user: FRAPUsuario, senha_atual: str, senha
     if len(senha_nova.encode("utf-8")) > BCRYPT_MAX_BYTES:
         raise PasswordTooLongError(f"senha excede {BCRYPT_MAX_BYTES} bytes (limite do bcrypt)")
     user.SenhaHash = hash_password(senha_nova)
+    user.DeveTrocarSenha = False
     user.DataAtualizacao = datetime.now(UTC).replace(tzinfo=None)
     _revogar_refresh_tokens(session, user.IdUsuario)
     session.commit()
