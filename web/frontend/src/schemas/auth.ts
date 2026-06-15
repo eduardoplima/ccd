@@ -20,10 +20,11 @@ export type TokenPair = z.infer<typeof tokenPairSchema>;
 export const userOutSchema = z.object({
   idUsuario: z.number(),
   login: z.string(),
-  email: z.string().email(),
+  email: z.string().email().nullable(),
   nomeCompleto: z.string(),
   papel: z.string(),
   ativo: z.boolean(),
+  deveTrocarSenha: z.boolean(),
   dataCriacao: z.string(),
 });
 export type UserOut = z.infer<typeof userOutSchema>;

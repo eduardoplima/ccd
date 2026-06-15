@@ -22,7 +22,15 @@ def get_processo_session() -> Generator[Session, None, None]:
     yield from processo_session_scope()
 
 
+# Rotas liberadas mesmo quando o usuário precisa trocar a senha (senão ele não
+# conseguiria nem ver os próprios dados nem efetuar a troca).
+_TROCA_SENHA_ALLOWLIST = frozenset(
+    {"/api/v1/auth/me", "/api/v1/auth/trocar-senha"}
+)
+
+
 def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     session: Session = Depends(get_db_session),
 ) -> FRAPUsuario:
@@ -42,6 +50,12 @@ def get_current_user(
     user = session.get(FRAPUsuario, int(sub))
     if user is None or not user.Ativo:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="user not found")
+    # Defesa em profundidade: usuário com senha provisória só acessa /me e a
+    # troca de senha; o frontend redireciona para /conta antes disso.
+    if user.DeveTrocarSenha and request.url.path not in _TROCA_SENHA_ALLOWLIST:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="must change password"
+        )
     return user
 
 

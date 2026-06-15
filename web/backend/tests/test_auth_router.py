@@ -34,7 +34,6 @@ def client(in_memory_engine: Engine) -> Iterator[TestClient]:
             FRAPUsuario(
                 Login="admin",
                 Email="admin@tce.rn",
-                NomeCompleto="Admin Teste",
                 SenhaHash=hash_password("senha-123"),
                 Papel="admin",
                 Ativo=True,
@@ -58,9 +57,10 @@ def test_login_then_me_round_trip(client: TestClient) -> None:
         "idUsuario": body["idUsuario"],
         "login": "admin",
         "email": "admin@tce.rn",
-        "nomeCompleto": "Admin Teste",
+        "nomeCompleto": "admin",
         "papel": "admin",
         "ativo": True,
+        "deveTrocarSenha": False,
         "dataCriacao": body["dataCriacao"],
     }
 

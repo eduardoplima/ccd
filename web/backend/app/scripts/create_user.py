@@ -26,7 +26,7 @@ from app.db import session_scope
 
 @click.command()
 @click.option("--login", required=True, help="Login do usuário (chave única de autenticação).")
-@click.option("--email", required=True, help="E-mail do usuário.")
+@click.option("--email", default=None, help="E-mail do usuário (opcional).")
 @click.option("--nome", required=True, help="Nome completo.")
 @click.option(
     "--papel",
@@ -39,7 +39,16 @@ from app.db import session_scope
     default=None,
     help="Senha em claro. Se omitida, será solicitada via prompt seguro.",
 )
-def main(login: str, email: str, nome: str, papel: str, senha: str | None) -> None:
+@click.option(
+    "--forcar-troca/--sem-forcar-troca",
+    "forcar_troca",
+    default=True,
+    show_default=True,
+    help="Obriga o usuário a trocar a senha no primeiro acesso (senha provisória).",
+)
+def main(
+    login: str, email: str | None, nome: str, papel: str, senha: str | None, forcar_troca: bool
+) -> None:
     senha_via_flag = senha is not None
     if not senha_via_flag:
         senha = getpass.getpass("Senha: ")
@@ -53,14 +62,20 @@ def main(login: str, email: str, nome: str, papel: str, senha: str | None) -> No
 
     senha_hash = hash_password(senha)
     login_norm = login.strip().lower()
-    email_norm = email.strip().lower()
+    email_norm = email.strip().lower() if email else None
 
     for session in session_scope():
-        _upsert(session, login_norm, email_norm, nome.strip(), papel.lower(), senha_hash)
+        _upsert(session, login_norm, email_norm, nome.strip(), papel.lower(), senha_hash, forcar_troca)
 
 
 def _upsert(
-    session: Session, login: str, email: str, nome: str, papel: str, senha_hash: str
+    session: Session,
+    login: str,
+    email: str | None,
+    nome: str,
+    papel: str,
+    senha_hash: str,
+    forcar_troca: bool,
 ) -> None:
     _ = nome  # não persistido em Usuarios
     existente = session.scalar(select(FRAPUsuario).where(FRAPUsuario.Login == login))
@@ -72,18 +87,21 @@ def _upsert(
                 SenhaHash=senha_hash,
                 Papel=papel,
                 Ativo=True,
+                DeveTrocarSenha=forcar_troca,
             )
         )
         session.commit()
-        click.echo(f"Usuário criado: {login} (papel={papel})")
+        click.echo(f"Usuário criado: {login} (papel={papel}, forcar_troca={forcar_troca})")
         return
 
-    existente.Email = email
+    if email is not None:
+        existente.Email = email
     existente.Papel = papel
     existente.SenhaHash = senha_hash
     existente.Ativo = True
+    existente.DeveTrocarSenha = forcar_troca
     session.commit()
-    click.echo(f"Usuário atualizado: {login} (papel={papel})")
+    click.echo(f"Usuário atualizado: {login} (papel={papel}, forcar_troca={forcar_troca})")
 
 
 if __name__ == "__main__":

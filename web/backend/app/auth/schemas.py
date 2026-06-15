@@ -24,10 +24,13 @@ class TokenPair(BaseModel):
 class UserOut(BaseModel):
     id_usuario: int = Field(validation_alias="IdUsuario", serialization_alias="idUsuario")
     login: str = Field(validation_alias="Login")
-    email: EmailStr = Field(validation_alias="Email")
+    email: EmailStr | None = Field(default=None, validation_alias="Email")
     nome_completo: str = Field(validation_alias="NomeCompleto", serialization_alias="nomeCompleto")
     papel: str = Field(validation_alias="Papel")
     ativo: bool = Field(validation_alias="Ativo")
+    deve_trocar_senha: bool = Field(
+        validation_alias="DeveTrocarSenha", serialization_alias="deveTrocarSenha"
+    )
     data_criacao: datetime = Field(
         validation_alias="DataCriacao", serialization_alias="dataCriacao"
     )

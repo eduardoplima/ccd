@@ -41,7 +41,6 @@ def _seed_admin(factory: sessionmaker[Session]) -> FRAPUsuario:
         admin = FRAPUsuario(
             Login="admin",
             Email="admin@tce.rn",
-            NomeCompleto="Admin",
             SenhaHash=hash_password("senha-admin"),
             Papel="admin",
             Ativo=True,
@@ -58,7 +57,6 @@ def _seed_user(factory: sessionmaker[Session]) -> FRAPUsuario:
         u = FRAPUsuario(
             Login="user1",
             Email="user@tce.rn",
-            NomeCompleto="User",
             SenhaHash=hash_password("senha-user"),
             Papel="user",
             Ativo=True,
@@ -97,7 +95,24 @@ def test_admin_cria_usuario_e_recebe_senha_temporaria(
         body = r.json()
         assert body["usuario"]["login"] == "novo"
         assert body["usuario"]["email"] == "novo@tce.rn"
+        assert body["usuario"]["deveTrocarSenha"] is True
         assert len(body["senhaTemporaria"]) >= 8
+
+
+def test_admin_cria_usuario_sem_email_forca_troca(
+    factory: sessionmaker[Session],
+) -> None:
+    admin = _seed_admin(factory)
+    app = _build_app(factory, lambda: admin)
+    with TestClient(app) as c:
+        r = c.post(
+            "/api/v1/usuarios",
+            json={"login": "sememail", "nomeCompleto": "Sem Email", "papel": "user"},
+        )
+        assert r.status_code == 201, r.text
+        usuario = r.json()["usuario"]
+        assert usuario["email"] is None
+        assert usuario["deveTrocarSenha"] is True
 
 
 def test_admin_cria_login_duplicado_retorna_409(factory: sessionmaker[Session]) -> None:
