@@ -25,8 +25,13 @@ import {
 
 export const reviewKeys = {
   all: ["reviews"] as const,
-  list: (args: { kind: ReviewKind; status: ReviewStatus; page: number; pageSize: number }) =>
-    ["reviews", "list", args] as const,
+  list: (args: {
+    kind: ReviewKind;
+    status: ReviewStatus;
+    page: number;
+    pageSize: number;
+    processo?: string;
+  }) => ["reviews", "list", args] as const,
   detail: (kind: ReviewKind, id: number) => ["reviews", "detail", kind, id] as const,
   texto: (kind: ReviewKind, id: number) => ["reviews", "texto", kind, id] as const,
   awaitingDispatch: (args: { page: number; pageSize: number }) =>
@@ -38,6 +43,7 @@ type ListArgs = {
   status?: ReviewStatus;
   page?: number;
   pageSize?: number;
+  processo?: string;
   enabled?: boolean;
 };
 
@@ -46,11 +52,12 @@ export function useReviews({
   status = "pending",
   page = 1,
   pageSize = 20,
+  processo,
   enabled = true,
 }: ListArgs) {
   return useQuery({
-    queryKey: reviewKeys.list({ kind, status, page, pageSize }),
-    queryFn: () => listReviews({ kind, status, page, pageSize }),
+    queryKey: reviewKeys.list({ kind, status, page, pageSize, processo }),
+    queryFn: () => listReviews({ kind, status, page, pageSize, processo }),
     enabled,
   });
 }

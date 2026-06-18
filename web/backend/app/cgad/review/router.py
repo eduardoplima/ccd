@@ -28,6 +28,7 @@ def list_reviews(
     ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    processo: str | None = Query(None),
     session: Session = Depends(get_db_session),
     current_user: UserORM = Depends(get_current_user),
 ) -> schemas.ReviewListPage:
@@ -38,6 +39,7 @@ def list_reviews(
         page=page,
         page_size=page_size,
         current_user=current_user,
+        processo=processo,
     )
 
 

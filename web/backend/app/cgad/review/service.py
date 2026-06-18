@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timedelta
 from typing import Any, Literal, Optional
 
@@ -267,6 +268,36 @@ def _load_processo_numero_ano(
         return {}
 
 
+def _resolve_processo_ids(processo: str) -> list[int]:
+    """Resolve a user-typed ``"<numero>[/<ano>]"`` (e.g. ``"5202/2020"``) to the
+    matching ``IdProcesso`` set in ``processo.dbo.Processos``. ``Numero_Processo``
+    is stored zero-padded (``"005202"``), so we match on ``TRY_CAST(... AS INT)``.
+    Returns ``[]`` when the input is unparseable or the query fails/finds nothing
+    — the caller turns that into an empty page.
+    """
+    parts = processo.strip().replace("-", "/").split("/")
+    numero_digits = re.sub(r"\D", "", parts[0]) if parts else ""
+    if not numero_digits:
+        return []
+    params: dict[str, int] = {"num": int(numero_digits)}
+    sql = (
+        "SELECT IdProcesso FROM processo.dbo.Processos "
+        "WHERE TRY_CAST(Numero_Processo AS INT) = :num"
+    )
+    if len(parts) > 1:
+        ano_digits = re.sub(r"\D", "", parts[1])
+        if ano_digits:
+            sql += " AND TRY_CAST(Ano_Processo AS INT) = :ano"
+            params["ano"] = int(ano_digits)
+    try:
+        with get_connection(DB_PROCESSOS).connect() as conn:
+            rows = conn.execute(text(sql), params).all()
+        return [int(r.IdProcesso) for r in rows]
+    except Exception:
+        logger.exception("failed to resolve processo %r", processo)
+        return []
+
+
 def _load_decisao_context(
     id_processo: int, id_composicao: int, id_voto: int
 ) -> dict[str, Any]:
@@ -433,6 +464,7 @@ def list_reviews(
     page: int,
     page_size: int,
     current_user: UserORM,
+    processo: Optional[str] = None,
 ) -> schemas.ReviewListPage:
     final = _final_orm(kind)
     staging = _staging_orm(kind)
@@ -463,6 +495,9 @@ def list_reviews(
             .join(staging, fk == pk)
             .where(staging.Status == status_filter)
         )
+
+    if processo and processo.strip():
+        stmt = stmt.where(final.IdProcesso.in_(_resolve_processo_ids(processo)))
 
     total = session.execute(
         select(func.count()).select_from(stmt.order_by(None).subquery())

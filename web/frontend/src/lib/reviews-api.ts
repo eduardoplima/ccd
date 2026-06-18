@@ -21,6 +21,7 @@ type ListArgs = {
   status?: ReviewStatus;
   page?: number;
   pageSize?: number;
+  processo?: string;
 };
 
 export async function listReviews({
@@ -28,9 +29,10 @@ export async function listReviews({
   status = "pending",
   page = 1,
   pageSize = 20,
+  processo,
 }: ListArgs): Promise<ReviewListPage> {
   const response = await apiClient.get("/api/v1/cgad/reviews", {
-    params: { kind, status, page, page_size: pageSize },
+    params: { kind, status, page, page_size: pageSize, processo: processo || undefined },
   });
   return reviewListPageSchema.parse(response.data);
 }
