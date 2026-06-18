@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { ReviewList } from "@/components/review/review-list";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -26,6 +27,8 @@ type Tab = ReviewKind | "awaiting-dispatch";
 export default function ReviewsPage() {
   const [tab, setTab] = useState<Tab>("obrigacao");
   const [page, setPage] = useState(1);
+  const [processoInput, setProcessoInput] = useState("");
+  const [processo, setProcesso] = useState("");
 
   const isAwaiting = tab === "awaiting-dispatch";
 
@@ -34,6 +37,7 @@ export default function ReviewsPage() {
     status: "pending",
     page,
     pageSize: PAGE_SIZE,
+    processo,
     enabled: !isAwaiting,
   });
   const awaiting = useAwaitingDispatch({
@@ -84,6 +88,41 @@ export default function ReviewsPage() {
           <TabsTrigger value="awaiting-dispatch">Aguardando envio</TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {!isAwaiting && (
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setProcesso(processoInput.trim());
+            setPage(1);
+          }}
+        >
+          <Input
+            value={processoInput}
+            onChange={(e) => setProcessoInput(e.target.value)}
+            placeholder="Buscar por processo (ex.: 123/2026)"
+            className="max-w-xs"
+            inputMode="numeric"
+          />
+          <Button type="submit" variant="outline">
+            Buscar
+          </Button>
+          {processo && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setProcessoInput("");
+                setProcesso("");
+                setPage(1);
+              }}
+            >
+              Limpar
+            </Button>
+          )}
+        </form>
+      )}
 
       {isAwaiting ? (
         <AwaitingDispatchTable
