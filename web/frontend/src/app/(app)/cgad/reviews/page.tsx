@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ReviewList } from "@/components/review/review-list";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -178,18 +179,19 @@ function AwaitingDispatchTable({
             <TableHead>Tipo</TableHead>
             <TableHead>Descrição</TableHead>
             <TableHead>Revisado por</TableHead>
+            <TableHead className="w-0" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
+              <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
                 Carregando...
               </TableCell>
             </TableRow>
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
+              <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
                 Nenhum item aguardando envio.
               </TableCell>
             </TableRow>
@@ -205,6 +207,14 @@ function AwaitingDispatchTable({
                 </TableCell>
                 <TableCell>
                   {item.reviewer ?? <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell>
+                  <Link
+                    href={`/cgad/reviews/${item.kind}/${item.id}`}
+                    className={buttonVariants({ size: "sm", variant: "outline" })}
+                  >
+                    Ver
+                  </Link>
                 </TableCell>
               </TableRow>
             ))
