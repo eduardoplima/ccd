@@ -88,10 +88,17 @@ def build_enriched_df() -> pd.DataFrame:
     ).drop_duplicates("id_debito")
     df = df.merge(st, how="left", on="id_debito")
 
+    # domínio oficial dos códigos (antes só 0/3 eram traduzidos; os demais
+    # vazavam como número cru — ex.: "7" no despacho do 003661/2022)
+    dominio_protesto = pd.read_sql(
+        "SELECT IdExe_StatusProtesto, Descricao FROM processo.dbo.Exe_StatusProtesto",
+        eng,
+    ).set_index("IdExe_StatusProtesto")["Descricao"].str.strip().to_dict()
+
     def protesto_status(x):  # cell 27 do notebook
         if pd.isna(x) or x == 0:
             return "Sem Protesto"
-        return "Protestada" if x == 3 else int(x)
+        return dominio_protesto.get(int(x), f"Status {int(x)} (não catalogado)")
 
     # dívida ativa: Status_PGE da Exe_Debito está sempre NULL; o envio real está em
     # PGE_Processo (join por IdDebitoExecucao = id_debito). Rótulo = status do processo
