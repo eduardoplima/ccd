@@ -215,6 +215,12 @@ class AreaRestrita:
             txtNomeArquivo1=nome_arquivo,
             oculto="I",
         )
+        # Processos de CONTAS trazem os combos "é relatório (inicial) de auditoria?"
+        # em branco (obrigatórios); a inclusão falha silenciosa se não respondidos.
+        # Uma informação de antecedentes não é relatório de auditoria -> "N".
+        for combo in ("cboRelatorioInicialAuditoria", "cboRelatorioAuditoria"):
+            if combo in campos and not str(campos[combo]).strip():
+                campos[combo] = "N"
         r = self._post(action, campos)
         # sucesso = servidor devolve o identificador da informação criada
         m = re.search(r'name="ocultoNomeArquivoPDF"[^>]*value="([^"]+)"', r.text)
