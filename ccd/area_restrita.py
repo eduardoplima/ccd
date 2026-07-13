@@ -241,20 +241,26 @@ class AreaRestrita:
 
     def substituir_informacao(self, numero: int, ano: int, autor_substituida: str,
                               resumo_substituta: str = "Informação instrutiva",
+                              data_substituida: str | None = None,
                               dry_run: bool = False) -> None:
-        """Substitui a informação de `autor_substituida` (a mais recente dele) pela
+        """Substitui a informação de `autor_substituida` (a mais recente dele — ou,
+        se `data_substituida` for dada, a daquela data, ex. '08/07/2026') pela
         'Informação instrutiva' mais recente, com motivo 'Informação incompleta'."""
         action, campos, linhas = self._consultar_substituicao(numero, ano)
         alvo = autor_substituida.casefold()
-        substituidas = [ln for ln in linhas if alvo in ln["autor"].casefold()]
+        substituidas = [ln for ln in linhas if alvo in ln["autor"].casefold()
+                        and (data_substituida is None or ln["data"] == data_substituida)]
         if not substituidas:
             raise LookupError(
-                f"nenhuma informação de {autor_substituida!r} entre: "
-                + "; ".join(f"{ln['ordem']}={ln['autor']}" for ln in linhas)
+                f"nenhuma informação de {autor_substituida!r}"
+                + (f" em {data_substituida}" if data_substituida else "")
+                + " entre: "
+                + "; ".join(f"{ln['ordem']}={ln['autor']} ({ln['data']})" for ln in linhas)
             )
         substituida = max(substituidas, key=lambda ln: ln["ordem"])
         chave = resumo_substituta.casefold()
-        substitutas = [ln for ln in linhas if ln["resumo"].casefold().startswith(chave)]
+        substitutas = [ln for ln in linhas if ln["resumo"].casefold().startswith(chave)
+                       and ln["id"] != substituida["id"]]
         if not substitutas:
             raise LookupError(
                 f"nenhuma informação com resumo {resumo_substituta!r} entre: "

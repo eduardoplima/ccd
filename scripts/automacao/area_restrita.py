@@ -46,6 +46,9 @@ def main() -> int:
     p_subst.add_argument("processos", nargs="+", help="numero/ano, ex.: 12345/2024")
     p_subst.add_argument("--autor", default="Luzenildo",
                          help="autor da informação a substituir (default: Luzenildo)")
+    p_subst.add_argument("--data", default=None,
+                         help="data de digitação da informação a substituir (ex.: 08/07/2026); "
+                              "sem ela, vale a mais recente do autor")
     p_subst.add_argument("--dry-run", action="store_true", help="só mostra o par; não substitui")
 
     p_tram = sub.add_parser("tramitar", help="tramitar processos EM LOTE do setor atual para o destino")
@@ -70,7 +73,8 @@ def main() -> int:
                 continue
             print(f"{numero:06d}/{ano}:")
             try:
-                ar.substituir_informacao(numero, ano, args.autor, dry_run=args.dry_run)
+                ar.substituir_informacao(numero, ano, args.autor,
+                                         data_substituida=args.data, dry_run=args.dry_run)
             except Exception as e:  # segue para o próximo do lote
                 print(f"  ERRO: {e}")
                 falhas += 1
