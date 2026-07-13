@@ -53,6 +53,8 @@ def main() -> int:
 
     p_tram = sub.add_parser("tramitar", help="tramitar processos EM LOTE do setor atual para o destino")
     p_tram.add_argument("processos", nargs="+", help="numero/ano, ex.: 12345/2024")
+    p_tram.add_argument("--setor", default="CCD",
+                        help="setor de ORIGEM da sessão (combo 'Selecione o setor'; default: CCD)")
     p_tram.add_argument("--destino", default="DIP", help="setor destino (default: DIP)")
     p_tram.add_argument("--relator", choices=sorted(GABINETES),
                         help='usa providência "ENVIO A <gabinete do relator>"')
@@ -92,7 +94,7 @@ def main() -> int:
         except ValueError as e:
             print(e)
             return 1
-        ar = AreaRestrita()
+        ar = AreaRestrita(setor=args.setor)
         try:
             ar.tramitar(procs, args.destino, providencia, dry_run=args.dry_run)
         except Exception as e:
