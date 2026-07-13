@@ -196,3 +196,15 @@ vault/.trash/
 
 # repos/ = clones de referência (frap-controle, decicontas.app) com .git próprio.
 repos/
+
+# scratch/ = scripts e dumps one-off arquivados (fora do histórico)
+scratch/
+
+# Dados brutos locais (extratos bancários, dumps de sistemas)
+extratos/
+decicontas/
+scripts/docs/extratos_700000_6/
+
+# Índice binário do GitNexus (dezenas de MB; regenerável com `node .gitnexus/run.cjs analyze`)
+.gitnexus/lbug
+.gitnexus/lbug.wal
