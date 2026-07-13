@@ -129,7 +129,10 @@ SOBRESTADO_NAO = (
 
 
 def fetch_sobrestados() -> set[str]:
-    """Processos da lista que têm (ou tiveram) marcador de sobrestamento."""
+    """Processos da lista sobrestados por QUALQUER das duas vias: marcador de
+    sobrestamento (Pro_Marcador) OU decisão do relator registrada como
+    informação (ex.: 'Decisão sobrestamento do processo de execução e da
+    prescrição - NEREU', evento 102 do 001391/2023 — sem marcador)."""
     placeholders = {f"p{i}": numero for i, numero in enumerate(PROCESSOS)}
     in_clause = ", ".join(f":{key}" for key in placeholders)
     sql = f"""
@@ -139,8 +142,13 @@ def fetch_sobrestados() -> set[str]:
     INNER JOIN dbo.Pro_Marcador m ON m.IdMarcador = mp.IdMarcador
     WHERE m.Descricao LIKE :sobrestado
       AND CONCAT(RIGHT('000000' + CAST(mp.Numero_Processo AS varchar), 6), '/', mp.Ano_Processo) IN ({in_clause})
+    UNION
+    SELECT DISTINCT CONCAT(inf.numero_processo, '/', inf.ano_processo)
+    FROM processo.dbo.vw_ata_informacao inf
+    WHERE (inf.nome_informacao LIKE :decisao OR inf.resumo LIKE :decisao)
+      AND CONCAT(inf.numero_processo, '/', inf.ano_processo) IN ({in_clause})
     """
-    df = run_query_df(sql, sobrestado="%sobrest%", **placeholders)
+    df = run_query_df(sql, sobrestado="%sobrest%", decisao="Decis%sobrest%", **placeholders)
     return set(df["processo"]) if not df.empty else set()
 
 
