@@ -26,7 +26,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -34,11 +33,11 @@ from typing import Any
 from urllib.parse import urljoin
 
 import requests
-from dotenv import load_dotenv
+
+from ccd.area_restrita import BASE, AreaRestrita
 
 # ── config ──────────────────────────────────────────────────────────────
-BASE_URL = "https://novaarearestrita.tce.rn.gov.br"
-LOGIN_URL = urljoin(BASE_URL, "/telaPrincipalMenu.asp")
+BASE_URL = BASE.rstrip("/")
 
 HEADERS = {
     "User-Agent": (
@@ -67,33 +66,10 @@ COLUMNS = [
 # ── helpers ──────────────────────────────────────────────────────────────
 
 
-def _load_env() -> None:
-    candidates = [
-        Path(__file__).resolve().parent / ".env",
-        Path(__file__).resolve().parent.parent / ".env",
-        Path.cwd() / ".env",
-    ]
-    for p in candidates:
-        if p.exists():
-            load_dotenv(p, override=False)
-            return
-
-
 def _criar_sessao() -> requests.Session:
-    user = os.environ.get("AR_USER")
-    passwd = os.environ.get("AR_PASS")
-    if not user or not passwd:
-        sys.exit(
-            "ERRO: AR_USER e AR_PASS devem estar definidos no .env "
-            "(scripts/.env ou raiz do projeto)."
-        )
-
-    sess = requests.Session()
-    sess.auth = (user, passwd)
+    """Sessão já autenticada (login/env centralizados em ccd.area_restrita)."""
+    sess = AreaRestrita().s
     sess.headers.update(HEADERS)
-
-    resp = sess.get(LOGIN_URL)
-    resp.raise_for_status()
     return sess
 
 
@@ -158,25 +134,23 @@ def _parse_linha(row_html: str) -> dict[str, Any]:
             continue
 
         # Relator: nome de conselheiro conhecido ou contém "("
-        if ("(" in txt and re.search(r"[A-ZÇÀ-Ú]{3,}", txt)) or \
-           any(n in txt.upper() for n in [
-               "CAVALCANTI", "JÚNIOR", "JUNIOR", "CONS.",
-               "GOMES", "FERNANDES", "ALVES", "DIAS",
-               "SOARES", "MONTENEGRO", "SANTANA", "JALES",
-               "CHAVES", "COSTA", "POTIGUAR",
-           ]):
-            if not rec.get("relator"):
-                rec["relator"] = txt
-                continue
+        if (("(" in txt and re.search(r"[A-ZÇÀ-Ú]{3,}", txt)) or
+                any(n in txt.upper() for n in [
+                    "CAVALCANTI", "JÚNIOR", "JUNIOR", "CONS.",
+                    "GOMES", "FERNANDES", "ALVES", "DIAS",
+                    "SOARES", "MONTENEGRO", "SANTANA", "JALES",
+                    "CHAVES", "COSTA", "POTIGUAR",
+                ])) and not rec.get("relator"):
+            rec["relator"] = txt
+            continue
 
         # Interessado: contém "PREF.", "MUNICÍPIO", "SECRETARIA", "FUNDAÇÃO"
         lower = txt.lower()
         if any(k in lower for k in ["pref.", "município", "municipal",
-                                      "fundação", "secretaria", "estado",
-                                      "governo", "departamento"]):
-            if not rec.get("interessado"):
-                rec["interessado"] = txt
-                continue
+                                    "fundação", "secretaria", "estado",
+                                    "governo", "departamento"]) and not rec.get("interessado"):
+            rec["interessado"] = txt
+            continue
 
         # Câmara: dígito solto "1", "2", ou "Pleno"
         m_cam = re.match(r"^(\d|Pleno)$", txt, re.IGNORECASE)
@@ -190,12 +164,11 @@ def _parse_linha(row_html: str) -> dict[str, Any]:
             rec["tipo"] = m_tipo.group(0)
             continue
 
-        # Assunto: texto longo (>20 chars) que não é nenhum dos anteriores
-        if len(txt) > 20 and not rec.get("assunto"):
-            # Verifica se não é relator ou ação
-            if not rec.get("relator") or txt != rec.get("relator"):
-                rec["assunto"] = txt
-                continue
+        # Assunto: texto longo (>20 chars) que não é relator nem ação
+        if (len(txt) > 20 and not rec.get("assunto")
+                and (not rec.get("relator") or txt != rec.get("relator"))):
+            rec["assunto"] = txt
+            continue
 
         # Datas: dd/mm/aaaa
         m_dt = re.search(r"(\d{2}/\d{2}/\d{4})", txt)
@@ -218,8 +191,8 @@ def _parse_linha(row_html: str) -> dict[str, Any]:
         # Última informação por: texto curto com nome de pessoa (CPF-like)
         if re.match(r"^[A-Za-zÀ-ú\s]{5,}$", txt) and \
            not rec.get("ultima_informacao_por") and \
-           not rec.get("relator") == txt and \
-           not rec.get("interessado") == txt:
+           rec.get("relator") != txt and \
+           rec.get("interessado") != txt:
             # É um nome de pessoa
             rec["ultima_informacao_por"] = txt
             continue
@@ -365,8 +338,6 @@ def buscar_processos(
 
 
 def main() -> None:
-    _load_env()
-
     parser = argparse.ArgumentParser(
         description="Scraper de Processos do TCE/RN (Área Restrita)"
     )

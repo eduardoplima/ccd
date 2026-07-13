@@ -26,9 +26,9 @@ import re
 import sys
 from pathlib import Path
 
+from ccd.area_restrita import BASE, parse_processo
 from ccd.config import load_env
 
-BASE = "https://novaarearestrita.tce.rn.gov.br/"
 # Administrativo > Informações > Assinar e Publicar Minhas Informações (processo eletrônico)
 PAGINA_ASSINAR = (
     BASE + "SISTEMAS/Informacoes/AssinarInformacoesPendentes.asp"
@@ -101,7 +101,7 @@ def _certificados(page, timeout_s: int = 60) -> list[str]:
         raise RuntimeError(
             "certificados não carregaram — extensão Web PKI instalada neste perfil? "
             "(rode --setup) Token conectado?"
-        )
+        ) from None
     return page.locator("#certificateSelect option").all_inner_texts()
 
 
@@ -180,11 +180,12 @@ def main() -> int:
 
     alvos: list[str] = []
     for p in args.processos:
-        m = re.fullmatch(r"(\d{1,6})/(\d{4})", p.strip())
-        if not m:
-            print(f"{p}: formato inválido (esperado numero/ano)")
+        try:
+            numero, ano = parse_processo(p)
+        except ValueError as e:
+            print(e)
             return 1
-        alvos.append(f"{int(m.group(1)):06d}/{m.group(2)}")
+        alvos.append(f"{numero:06d}/{ano}")
 
     with sync_playwright() as pw:
         ctx = _contexto(pw)
