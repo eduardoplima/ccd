@@ -49,6 +49,7 @@ def publica_extrato(
     engine: Engine,
     df: pd.DataFrame,
     pasta_origem: Path | None = None,
+    extensao: str = "txt",
 ) -> dict[tuple[str, str], int]:
     """Publica todo o DataFrame canônico no BdDIP, agrupando por (conta, periodo).
 
@@ -68,7 +69,7 @@ def publica_extrato(
     with engine.begin() as conn:
         for (conta, periodo), grupo in df.groupby(["conta", "periodo"], sort=True):
             id_conta = get_id_conta(engine, str(conta))
-            nome_arquivo = f"{periodo}.txt"
+            nome_arquivo = f"{periodo}.{extensao}"
             hash_sha = _hash_arquivo(pasta_origem, str(conta), str(periodo)) if pasta_origem else None
 
             id_arquivo = conn.execute(
