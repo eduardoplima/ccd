@@ -51,6 +51,10 @@ extend-exclude = [
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]  # line length handled by formatter, avoid noisy notebook-style strings
 
+[tool.ruff.lint.per-file-ignores]
+# script em células de notebook (imports por seção, expressões de exibição)
+"scripts/analise/planilha_nereu.py" = ["E402", "E702", "I001", "B018"]
+
 [tool.mypy]
 python_version = "3.12"
 files = ["ccd"]

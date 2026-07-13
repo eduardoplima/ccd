@@ -26,9 +26,10 @@ import pandas as pd
 _FRAP = Path(__file__).resolve().parents[2] / "web" / "tools" / "frap"
 sys.path.insert(0, str(_FRAP))
 
-from ccd.db import get_connection  # noqa: E402
 from frap.extratos import ingest  # noqa: E402
 from frap.persistencia.extrato import publica_extrato  # noqa: E402
+
+from ccd.db import get_connection  # noqa: E402
 
 PASTA = Path(__file__).resolve().parents[1] / "docs" / "extratos_700000_6"
 CONTA = "700000-6"

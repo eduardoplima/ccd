@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 from docxtpl import DocxTemplate
-from sqlalchemy import text, bindparam
+from sqlalchemy import bindparam, text
 
 from ccd.config import load_env
 from ccd.db import get_connection

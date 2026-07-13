@@ -138,7 +138,7 @@ def main() -> None:
         raise SystemExit(
             f"[erro] banco `processo` (SQL Server) inacessível — rode dentro da rede/VPN do TCE.\n"
             f"  detalhe: {type(e).__name__}: {str(e)[:120]}"
-        )
+        ) from None
     if not fonte[1]:
         print("[aviso] quota/voto não encontrados — §1 sairá só do contexto (menos específico).")
     paragrafos = redigir(ctx.llm, hdr, f"{numero}/{ano}", contexto, fonte)
