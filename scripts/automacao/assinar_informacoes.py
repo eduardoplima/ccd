@@ -173,6 +173,9 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="só lista pendências e certificados")
     ap.add_argument("--cert", default="", help="substring do certificado a usar (nome/CPF)")
     ap.add_argument("--timeout", type=int, default=300, help="segundos de espera pelo PIN/assinatura")
+    ap.add_argument("--pular-arquivo", action="append", default=[], metavar="ARQUIVO",
+                    help="não assinar este arquivo pendente (ex.: CCD_002162_2025_0001.doc); "
+                         "repetível. Útil quando um processo tem >1 informação pendente")
     args = ap.parse_args()
 
     load_env()
@@ -232,7 +235,8 @@ def main() -> int:
             if n_lote == 0:
                 _confiar_site(ctx, thumb, nome_cert)
             lote_alvos, fila = fila[:LOTE_MAX], fila[LOTE_MAX:]
-            lote = [it for it in pend if it["proc"] in lote_alvos]
+            lote = [it for it in pend if it["proc"] in lote_alvos
+                    and it["arquivo"] not in args.pular_arquivo]
             n_lote += 1
             print(f"Lote {n_lote} (cert {nome_cert}): {[it['proc'] for it in lote]}")
             _assinar_lote(page, lote, args.timeout)
