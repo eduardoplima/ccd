@@ -15,6 +15,7 @@ import argparse
 import os
 import re
 import sys
+from pathlib import Path
 from urllib.parse import urljoin
 
 import requests
@@ -35,8 +36,25 @@ PAGINA_DIGITALIZAR = (
     BASE + "SISTEMAS/Informacoes/DigitalizarInformacao.asp"
     "?tcenet_Sistema=Administrativo&tcenet_Modulo=Informacoes"
 )
+# Administrativo > Informações > Substituir Informação
+PAGINA_SUBSTITUIR = (
+    BASE + "SISTEMAS/Informacoes/SubstituirInformacao.asp"
+    "?tcenet_Sistema=Administrativo&tcenet_Modulo=Informacoes"
+)
+MOTIVO_INFORMACAO_INCOMPLETA = "4"  # cmbMotivoExclusao
 MODELO_TITULO = "InformacaoInstrutiva"
 MODELO_RESUMO = "Informação instrutiva...."
+# pasta de saidas/nereu_ms -> sigla do gabinete (tabela Setor); providência = "ENVIO A <sigla>"
+GABINETES = {
+    "ana": "GAANA",
+    "antonio_ed": "GCAED",
+    "carlos": "GCCTH",
+    "george": "GCGEO",
+    "gilberto": "GCGIL",
+    "marco": "GAMAR",
+    "paulo": "GCPRO",
+    "renato": "GCREN",
+}
 
 
 class AreaRestrita:
@@ -190,6 +208,129 @@ class AreaRestrita:
             raise RuntimeError(f"inclusão não confirmada: {self._mensagem(r)}")
         print(f"  incluída: {m.group(1)} (pendente de assinatura no navegador)")
 
+    def _consultar_substituicao(self, numero: int, ano: int) -> tuple[str, dict, list[dict]]:
+        """Consulta a tela Substituir Informação. Retorna (action, campos, linhas),
+        cada linha = {id, ordem, resumo, data, autor} de uma informação substituível."""
+        r = self._get(PAGINA_SUBSTITUIR)
+        action, campos = self._form(r)
+        campos.update(
+            txtNumeroProcesso=f"{numero:06d}",
+            txtAnoProcesso=str(ano),
+            oculto="C",
+        )
+        r = self._post(action, campos)
+        doc = lxml_html.fromstring(r.text)
+        linhas = []
+        for rd in doc.xpath("//input[@name='rdInformacaoSubstituida']"):
+            tr = rd.xpath("ancestor::tr[1]")
+            celulas = [" ".join(t.strip() for t in td.xpath(".//text()") if t.strip())
+                       for td in tr[0].xpath("./td")] if tr else []
+            # células: [radio, ?, ordem, setor, resumo, data digitação, autor, data assinatura, ...]
+            linhas.append({
+                "id": rd.get("value") or "",
+                "ordem": int(celulas[2]) if len(celulas) > 2 and celulas[2].isdigit() else 0,
+                "resumo": celulas[4] if len(celulas) > 4 else "",
+                "data": celulas[5].split()[0] if len(celulas) > 5 and celulas[5] else "",
+                "autor": celulas[6] if len(celulas) > 6 else "",
+            })
+        if not linhas:
+            raise LookupError(f"consulta não listou informações: {self._mensagem(r)}")
+        action, campos = self._form(r)
+        return action, campos, linhas
+
+    def substituir_informacao(self, numero: int, ano: int, autor_substituida: str,
+                              resumo_substituta: str = "Informação instrutiva",
+                              dry_run: bool = False) -> None:
+        """Substitui a informação de `autor_substituida` (a mais recente dele) pela
+        'Informação instrutiva' mais recente, com motivo 'Informação incompleta'."""
+        action, campos, linhas = self._consultar_substituicao(numero, ano)
+        alvo = autor_substituida.casefold()
+        substituidas = [ln for ln in linhas if alvo in ln["autor"].casefold()]
+        if not substituidas:
+            raise LookupError(
+                f"nenhuma informação de {autor_substituida!r} entre: "
+                + "; ".join(f"{ln['ordem']}={ln['autor']}" for ln in linhas)
+            )
+        substituida = max(substituidas, key=lambda ln: ln["ordem"])
+        chave = resumo_substituta.casefold()
+        substitutas = [ln for ln in linhas if ln["resumo"].casefold().startswith(chave)]
+        if not substitutas:
+            raise LookupError(
+                f"nenhuma informação com resumo {resumo_substituta!r} entre: "
+                + "; ".join(f"{ln['ordem']}={ln['resumo'][:30]}" for ln in linhas)
+            )
+        substituta = max(substitutas, key=lambda ln: ln["ordem"])
+        if substituta["id"] == substituida["id"]:
+            raise RuntimeError("substituída e substituta são a mesma informação")
+        print(f"  substituída: ordem {substituida['ordem']} {substituida['autor']} "
+              f"({substituida['data']}) {substituida['resumo'][:50]!r}")
+        print(f"  substituta:  ordem {substituta['ordem']} {substituta['autor']} "
+              f"({substituta['data']}) {substituta['resumo'][:50]!r}")
+        if dry_run:
+            print("  dry-run: substituição NÃO enviada")
+            return
+        campos.update(
+            rdInformacaoSubstituida=substituida["id"],
+            rdInformacaoSubstituta=substituta["id"],
+            cmbMotivoExclusao=MOTIVO_INFORMACAO_INCOMPLETA,
+            txtMotivoOutros="",
+            oculto="I",
+        )
+        r = self._post(action, campos)
+        print(f"  incluída substituição: {self._mensagem(r)}")
+        # verificação: a substituída não deve mais aparecer como substituível
+        _, _, depois = self._consultar_substituicao(numero, ano)
+        if any(ln["id"] == substituida["id"] for ln in depois):
+            raise RuntimeError("informação substituída ainda aparece como substituível")
+        print("  verificado: informação substituída saiu da lista")
+
+    def tramitar(self, processos: list[tuple[int, int]], destino: str, providencia: str,
+                 dry_run: bool = False) -> None:
+        """Tramita os `processos` em UM lote: 'Tramitar Processo(s)' (oculto=M) com a
+        seleção montada direto no POST (checkProcesso1..N + quantidadeChk — a listagem
+        pagina de 30 em 30, mas o servidor só lê esses campos), depois 'Enviar
+        Processos' (oculto=I) com destino e providência por processo."""
+        chaves = [f"{numero:06d}{ano}" for numero, ano in processos]
+        r = self._get(PAGINA_SETOR)
+        action, campos = self._form(r)
+        selecao = {f"checkProcesso{i}": ch for i, ch in enumerate(chaves, start=1)}
+        selecao["quantidadeChk"] = str(len(chaves))
+        # 'Tramitar Processo(s)' abre a seção 'Enviar Processos'. Não commita.
+        r = self._post(action, {**campos, **selecao, "oculto": "M"})
+        action2, campos2 = self._form(r)
+        ecoados = {v: m.group(1) for k, v in campos2.items()
+                   if (m := re.fullmatch(r"Processo(\d+)", k))}
+        faltando = sorted(set(chaves) - set(ecoados))
+        if "txtSetorDestino" not in campos2 or faltando:
+            raise RuntimeError(
+                f"form de envio não veio com todos os processos (faltam {faltando}): "
+                f"{self._mensagem(r)}"
+            )
+        for chave in chaves:
+            i = ecoados[chave]
+            if f"txtFaseProcessual{i}" not in campos2:
+                raise RuntimeError(f"form sem txtFaseProcessual{i}")
+            campos2[f"txtFaseProcessual{i}"] = providencia
+            print(f"  Processo{i}={chave} prov={providencia!r}")
+        campos2["txtSetorDestino"] = destino
+        if dry_run:
+            print(f"  [dry-run] setaria txtSetorDestino={destino!r}; oculto=I NÃO enviado")
+            return
+        # 'Enviar Processos' (oculto=I) confirma a tramitação do lote
+        r = self._post(action2, {**campos2, "oculto": "I"})
+        print(f"lote enviado (destino={destino}): {self._mensagem(r)}")
+        # verificação real: quem tramitou some da listagem do setor (consulta filtrada)
+        ainda = []
+        for numero, ano in processos:
+            try:
+                self.consultar(numero, ano)
+                ainda.append(f"{numero:06d}/{ano}")
+            except LookupError:
+                pass  # fora da listagem = tramitado
+        if ainda:
+            raise RuntimeError(f"ainda na listagem do setor (NÃO tramitados?): {ainda}")
+        print(f"verificado: {len(chaves)} processo(s) fora da listagem do setor")
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Automação da Área Restrita do TCE")
@@ -204,7 +345,98 @@ def main() -> int:
     p_info.add_argument("--pdf", required=True, help="PDF a subir como arquivo digitalizado 1")
     p_info.add_argument("--dry-run", action="store_true", help="só consulta; não sobe nem inclui")
 
+    p_lote = sub.add_parser(
+        "informacao-lote",
+        help="cadastra informação digitalizada de cada PDF NNNNNN_YYYY.pdf de uma pasta",
+    )
+    p_lote.add_argument("--pasta", required=True, help="pasta com PDFs NNNNNN_YYYY.pdf (recursivo)")
+    p_lote.add_argument("--dry-run", action="store_true", help="só consulta; não sobe nem inclui")
+
+    p_subst = sub.add_parser(
+        "substituir",
+        help='substituir a informação de um autor pela "Informação instrutiva" mais recente',
+    )
+    p_subst.add_argument("processos", nargs="+", help="numero/ano, ex.: 12345/2024")
+    p_subst.add_argument("--autor", default="Luzenildo",
+                         help="autor da informação a substituir (default: Luzenildo)")
+    p_subst.add_argument("--dry-run", action="store_true", help="só mostra o par; não substitui")
+
+    p_tram = sub.add_parser("tramitar", help="tramitar processos EM LOTE do setor atual para o destino")
+    p_tram.add_argument("processos", nargs="+", help="numero/ano, ex.: 12345/2024")
+    p_tram.add_argument("--destino", default="DIP", help="setor destino (default: DIP)")
+    p_tram.add_argument("--relator", choices=sorted(GABINETES),
+                        help='usa providência "ENVIO A <gabinete do relator>"')
+    p_tram.add_argument("--providencia", help='providência explícita, ex.: "ENVIO A GAANA"')
+    p_tram.add_argument("--dry-run", action="store_true", help="vai até o form; não confirma")
+
     args = parser.parse_args()
+
+    if args.tarefa == "substituir":
+        ar = AreaRestrita()
+        falhas = 0
+        for proc in args.processos:
+            m = re.fullmatch(r"(\d{1,6})/(\d{4})", proc.strip())
+            if not m:
+                print(f"{proc}: formato inválido (esperado numero/ano)")
+                falhas += 1
+                continue
+            numero, ano = int(m.group(1)), int(m.group(2))
+            print(f"{numero:06d}/{ano}:")
+            try:
+                ar.substituir_informacao(numero, ano, args.autor, dry_run=args.dry_run)
+            except Exception as e:  # segue para o próximo do lote
+                print(f"  ERRO: {e}")
+                falhas += 1
+        return 1 if falhas else 0
+
+    if args.tarefa == "tramitar":
+        providencia = args.providencia or (
+            args.relator and f"ENVIO A {GABINETES[args.relator]}"
+        )
+        if not providencia:
+            print("informe --relator ou --providencia")
+            return 1
+        procs: list[tuple[int, int]] = []
+        for proc in args.processos:
+            m = re.fullmatch(r"(\d{1,6})/(\d{4})", proc.strip())
+            if not m:
+                print(f"{proc}: formato inválido (esperado numero/ano)")
+                return 1
+            procs.append((int(m.group(1)), int(m.group(2))))
+        ar = AreaRestrita()
+        try:
+            ar.tramitar(procs, args.destino, providencia, dry_run=args.dry_run)
+        except Exception as e:
+            print(f"ERRO: {e}")
+            return 1
+        return 0
+
+    if args.tarefa == "informacao-lote":
+        pasta = Path(args.pasta)
+        if not pasta.is_dir():
+            print(f"pasta não encontrada: {pasta}")
+            return 1
+        alvos: list[tuple[int, int, Path]] = []
+        for pdf in sorted(pasta.rglob("*.pdf")):
+            m = re.fullmatch(r"(\d{1,6})_(\d{4})", pdf.stem)
+            if not m:
+                print(f"  ignorado (nome fora do padrão NNNNNN_YYYY): {pdf.name}")
+                continue
+            alvos.append((int(m.group(1)), int(m.group(2)), pdf))
+        if not alvos:
+            print(f"nenhum PDF NNNNNN_YYYY.pdf em {pasta}")
+            return 1
+        ar = AreaRestrita()
+        falhas = 0
+        for numero, ano, pdf in alvos:
+            print(f"{numero:06d}/{ano}: ({pdf.relative_to(pasta)})")
+            try:
+                ar.cadastrar_informacao_digitalizada(numero, ano, str(pdf), dry_run=args.dry_run)
+            except Exception as e:  # segue para o próximo do lote
+                print(f"  ERRO: {e}")
+                falhas += 1
+        return 1 if falhas else 0
+
     if args.tarefa == "informacao" and not os.path.isfile(args.pdf):
         print(f"PDF não encontrado: {args.pdf}")
         return 1
