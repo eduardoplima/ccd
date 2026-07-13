@@ -18,11 +18,11 @@ from lxml import html as lxml_html
 from ccd.config import load_env
 
 BASE = "https://novaarearestrita.tce.rn.gov.br/"
-# tile "Proc./ Doc. Eletrônico no Setor" da Mesa Eletrônica
+# tile "Proc./ Doc. Eletrônico no Setor" da Mesa Eletrônica ({setor} = sigla ativa)
 PAGINA_SETOR = (
     BASE + "SISTEMAS/Processo/ProcessonoSetor.asp"
     "?tcenet_Sistema=Administrativo&tcenet_Modulo=Processo"
-    "&qsSetor=CCD&qsEletronico=S&seletivo=&qsTipoConsulta="
+    "&qsSetor={setor}&qsEletronico=S&seletivo=&qsTipoConsulta="
 )
 # Administrativo > Informações > Cadastrar Informação Digitalizada
 PAGINA_DIGITALIZAR = (
@@ -61,13 +61,26 @@ def parse_processo(texto: str) -> tuple[int, int]:
 class AreaRestrita:
     """Sessão autenticada na Área Restrita (Basic Auth + cookie ASP)."""
 
-    def __init__(self) -> None:
+    def __init__(self, setor: str = "CCD") -> None:
         load_env()
         urllib3.disable_warnings()
         self.s = requests.Session()
         self.s.auth = (os.environ["AR_USER"], os.environ["AR_PASS"])
         self.s.verify = False  # TLS interceptado pelo proxy corporativo
+        self.setor = "CCD"  # setor default da sessão recém-aberta
         self._get(BASE + "telaPrincipalMenu.asp")  # estabelece ASPSESSIONID
+        if setor != self.setor:
+            self.trocar_setor(setor)
+
+    def trocar_setor(self, sigla: str) -> None:
+        """Troca o setor ativo da sessão (combo 'Selecione o setor' da tela
+        principal — mesmo AJAX de CarregaOrgaoSetor.asp)."""
+        import time
+        self._get(BASE + f"CarregaOrgaoSetor.asp?qsSigla={sigla}&id={int(time.time() * 1000)}")
+        self.setor = sigla
+
+    def _pagina_setor(self) -> str:
+        return PAGINA_SETOR.format(setor=self.setor)
 
     def _get(self, url: str) -> requests.Response:
         r = self.s.get(url, timeout=60)
@@ -119,7 +132,7 @@ class AreaRestrita:
 
     def consultar(self, numero: int, ano: int) -> tuple[str, dict, str, str]:
         """Filtra o processo na tela do setor. Retorna (action, campos, nome_checkbox, chave)."""
-        r = self._get(PAGINA_SETOR)
+        r = self._get(self._pagina_setor())
         action, campos = self._form(r)
         campos.update(
             txtNumeroProcesso=f"{numero:06d}",
@@ -298,7 +311,7 @@ class AreaRestrita:
         pagina de 30 em 30, mas o servidor só lê esses campos), depois 'Enviar
         Processos' (oculto=I) com destino e providência por processo."""
         chaves = [f"{numero:06d}{ano}" for numero, ano in processos]
-        r = self._get(PAGINA_SETOR)
+        r = self._get(self._pagina_setor())
         action, campos = self._form(r)
         selecao = {f"checkProcesso{i}": ch for i, ch in enumerate(chaves, start=1)}
         selecao["quantidadeChk"] = str(len(chaves))
