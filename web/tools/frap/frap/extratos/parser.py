@@ -53,6 +53,15 @@ def parse_extrato(filepath: str | Path) -> pd.DataFrame:
             valor = float(m.group(1).replace(".", "").replace(",", "."))
             valor_dc = m.group(2)
 
+        # Coluna Saldo (à direita do Valor). Presente nas linhas "Saldo Anterior",
+        # "S A L D O" e nos fins de dia — usada só nas validações de ingestão.
+        saldo: float | None = None
+        saldo_dc = ""
+        ms = _VALOR_PATTERN.search(raw[131:160])
+        if ms:
+            saldo = float(ms.group(1).replace(".", "").replace(",", "."))
+            saldo_dc = ms.group(2)
+
         parsed.append({
             "ordem_no_arquivo": ordem,
             "dt_movimento": raw[3:13].strip(),
@@ -63,6 +72,8 @@ def parse_extrato(filepath: str | Path) -> pd.DataFrame:
             "documento": raw[90:114].strip(),
             "valor": valor,
             "valor_dc": valor_dc,
+            "saldo": saldo,
+            "saldo_dc": saldo_dc,
             "descricao": rec["descricao"],
         })
 
