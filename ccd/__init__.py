@@ -1,3 +1,4 @@
+from ccd.area_restrita import AreaRestrita, parse_processo
 from ccd.config import (
     DEFAULT_AZURE_DEPLOYMENT,
     DEFAULT_INFORMACOES_DIR,
@@ -24,6 +25,8 @@ from ccd.processo import (
 )
 
 __all__ = [
+    "AreaRestrita",
+    "parse_processo",
     "DEFAULT_AZURE_DEPLOYMENT",
     "DEFAULT_INFORMACOES_DIR",
     "PACKAGE_DIR",
