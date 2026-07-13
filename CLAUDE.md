@@ -33,6 +33,7 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 - `ccd.pdf` — `extract_text_from_pdf(path)`, `merge_pdfs(paths, out)`.
 - `ccd.processo` — `get_info_file_path`, `get_pdf_files_processo`, `get_informacoes_processo`, `download_processo`. The processo SQL (a single parameterized query) lives inline in this module; the share path is overridable via `CCD_INFORMACOES_DIR`.
 - `ccd.docs` — `render_template(template, ctx, out)`, `docx_to_pdf(doc, dir)` (auto-picks Word on Windows, LibreOffice elsewhere). Force a backend with `docx_to_pdf_word` / `docx_to_pdf_libreoffice`.
+- `ccd.area_restrita` — `AreaRestrita` (sessão autenticada na Área Restrita: Basic Auth `AR_USER`/`AR_PASS` + encoding windows-1252) com as ações `consultar`, `distribuir_propria`, `cadastrar_informacao_digitalizada`, `substituir_informacao`, `tramitar`; helpers `parse_processo("12345/2024")` e `GABINETES`. **Única** implementação de login/sessão — não recriar `requests.Session` para o site. CLI em `scripts/automacao/area_restrita.py`; assinatura A3 (Playwright + Web PKI, tecnologia distinta) em `scripts/automacao/assinar_informacoes.py`.
 - `ccd/sql/` — bundled SQL files used by the package's API surface (`processo.sql`, `processos_transito_nome.sql`). Read with `ccd.config.read_sql("name.sql")`. **Note**: queries here use SQLAlchemy named placeholders (`:foo`); the older `.format()`-style files in `scripts/consultas/` are still used by notebooks and remain untouched.
 
 ### `scripts/` — notebooks and entrypoints
