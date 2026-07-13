@@ -1,13 +1,17 @@
 import locale
+
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 from ccd.config import load_env
+
 load_env()
 
 from ccd.db import get_connection
+
 conn = get_connection()
 
 from langchain_openai import AzureChatOpenAI
+
 llm_mini = AzureChatOpenAI(model='gpt-5.4-mini')
 
 CPF_NEREU = '13006444434'
@@ -16,6 +20,7 @@ CPF_NEREU = '13006444434'
 CNPJ_IPERN_RAIZ = '08242034'
 
 import re
+
 _ILLEGAL_XLSX = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
 
 def _strip_ctrl(v):
@@ -33,15 +38,17 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from tqdm import tqdm
 
+from ccd.config import load_env
 from ccd.db import run_query_df
 from ccd.pdf import extract_text_from_pdf
 from ccd.processo import get_info_file_path
 
-from ccd.config import load_env
 load_env(override=True)        # force re-read of .env over the stale value
 from ccd.db import get_connection
+
 conn = get_connection()        # rebuild the engine with the corrected host/port
 import os
+
 print("HOST =", os.getenv("SQL_SERVER_HOST"), "PORT =", os.getenv("SQL_SERVER_PORT"))
   # expect: HOST = 10.24.0.77   PORT = 59678
 # Citação de 5 dias via Cit_Citacoes (fonte autoritativa). Cobre os processos de ORIGEM e de

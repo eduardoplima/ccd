@@ -7,21 +7,16 @@ extrai texto dos PDFs, revisa ortografia/argumentação e gera relatório .md.
 
 from __future__ import annotations
 
-import os
 import re
-import sys
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Any
 
-# Add project root
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
-
 from ccd.processo import get_informacoes_processo
+
+load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
 
 PROCESSOS_LUZENILDO = [
     "000120/2023",
@@ -94,9 +89,9 @@ def revisar_texto(texto: str) -> dict[str, Any]:
 
 
 def resumir_texto(texto: str) -> str:
-    lines = [l.strip() for l in texto.split("\n") if l.strip()]
-    lines = [l for l in lines if len(l) > 10
-             and not re.match(r"^(oflcio|processo|interessado|assunto|n[°º]|data|página)", l, re.I)]
+    lines = [ln.strip() for ln in texto.split("\n") if ln.strip()]
+    lines = [ln for ln in lines if len(ln) > 10
+             and not re.match(r"^(oflcio|processo|interessado|assunto|n[°º]|data|página)", ln, re.I)]
     return " | ".join(lines[:5]) if lines else "(texto muito curto)"
 
 

@@ -281,7 +281,8 @@ def build_summary_sheet(wb) -> None:
         ns = [v[0] for k, v in por_estado.items() if pred(k)]
         vs = [v[1] for k, v in por_estado.items() if pred(k)]
         return sum(ns), sum(vs)
-    ativo = lambda k: not (str(k).startswith("Cancel") or str(k).startswith("Pago"))
+    def ativo(k):
+        return not (str(k).startswith("Cancel") or str(k).startswith("Pago"))
     out.append([None, None, None, None, None])
     out.append(["Total EM ABERTO (dívida atual)", "", "", *soma(lambda k: k == "Em Aberto")])
     out.append(["Total Em Aberto + Suspenso", "", "", *soma(lambda k: k in ("Em Aberto", "Suspenso"))])
