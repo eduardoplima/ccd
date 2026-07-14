@@ -38,7 +38,8 @@ SELECT
     FROM processo.dbo.vw_ia_votos_acordaos_decisoes d
     INNER JOIN processo.dbo.Processos p
         ON d.IdProcesso = p.IdProcesso
-    INNER JOIN processo.dbo.Orgaos o
+    -- LEFT JOIN: processos com IdOrgaoEnvolvido NULL ainda entram no pipeline
+    LEFT JOIN processo.dbo.Orgaos o
         ON p.IdOrgaoEnvolvido = o.IdOrgao
     INNER JOIN processo.dbo.Pro_ProcessosResponsavelDespesa pprd
         ON pprd.IdProcesso = p.IdProcesso
