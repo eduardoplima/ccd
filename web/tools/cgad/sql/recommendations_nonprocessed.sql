@@ -53,8 +53,8 @@ INNER JOIN processo.dbo.vw_ia_votos_acordaos_decisoes d
     ON nd.IdProcesso = p.IdProcesso
     AND nd.IdComposicaoPauta = d.IdComposicaoPauta
     AND nd.IdVotoPauta = d.IdVotoPauta
-INNER JOIN processo.dbo.Orgaos org 
-    ON p.IdOrgaoEnvolvido = org.IdOrgao 
+LEFT JOIN processo.dbo.Orgaos org
+    ON p.IdOrgaoEnvolvido = org.IdOrgao
 INNER JOIN processo.dbo.Pro_ProcessosResponsavelDespesa pprd 
     ON pprd.IdProcesso = p.IdProcesso 
 INNER JOIN processo.dbo.GenPessoa gp 
