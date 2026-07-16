@@ -30,11 +30,11 @@ logger = logging.getLogger(__name__)
 
 # ---- factories (never called at import time) -----------------------------
 
-# Azure deployment + structured-output mode shared by every stage. ``gpt-4``
-# era a config anterior; ``gpt-5.4-nano`` não suporta o ``json_schema`` ainda,
-# então usamos ``function_calling`` (também mais barato em tokens).
-_LLM_DEPLOYMENT = "gpt-5.4-nano"
-_LLM_MODEL = "gpt-5.4-nano"
+# Azure deployment + structured-output mode shared by every stage. Config
+# anterior foi ``gpt-4`` → ``gpt-5.4-nano`` → ``deepseek-v4-flash``. Mantemos
+# ``function_calling`` (não assumimos suporte a ``json_schema`` no modelo novo).
+_LLM_DEPLOYMENT = "deepseek-v4-flash"
+_LLM_MODEL = "deepseek-v4-flash"
 _LLM_METHOD = "function_calling"
 
 
