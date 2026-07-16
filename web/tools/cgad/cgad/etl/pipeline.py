@@ -96,6 +96,23 @@ def _fetch_driver_rows(sql_filename: str, filters: ExtractionFilters) -> Iterabl
     return (row.to_dict() for _, row in df.iterrows())
 
 
+def _clean_str(value: Any) -> str | None:
+    """Coerce a driver-row cell to ``str`` or ``None``. Rows come from pandas,
+    so an absent ``orgao_responsavel`` (e.g. processo sem ``IdOrgaoEnvolvido``)
+    arrives as ``float('nan')`` — truthy, so a plain ``or`` fallback wouldn't
+    catch it and pydantic would reject the non-string.
+    """
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    text = str(value).strip()
+    return text or None
+
+
 def _as_row_dict(row: Mapping[str, Any] | Any) -> dict:
     if isinstance(row, dict):
         return row
@@ -219,7 +236,7 @@ def enqueue_obrigacao_extraction(
 
         draft = Obrigacao(
             descricao_obrigacao=descricao,
-            orgao_responsavel=row.get("orgao_responsavel"),
+            orgao_responsavel=_clean_str(row.get("orgao_responsavel")),
         )
         try:
             result = extract_obrigacao(
@@ -341,7 +358,7 @@ def enqueue_recomendacao_extraction(
 
         draft = Recomendacao(
             descricao_recomendacao=descricao,
-            orgao_responsavel_recomendacao=row.get("orgao_responsavel")
+            orgao_responsavel_recomendacao=_clean_str(row.get("orgao_responsavel"))
             or "Desconhecido",
             nome_responsavel_recomendacao="Desconhecido",
         )
