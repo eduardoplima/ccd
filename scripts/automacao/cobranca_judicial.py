@@ -2,7 +2,7 @@
 
 Para cada processo, busca o relator no banco e renderiza o template
 `templates/cobranca_judicial.docx` com as variáveis `processo` e `relator`,
-salvando `.docx` e `.pdf` em `saidas/cobranca_judicial/`.
+salvando `.docx` e `.pdf` em `saidas/automacao/cobranca_judicial/`.
 """
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from pathlib import Path
 import pandas as pd
 from docxtpl import DocxTemplate
 
+from ccd.config import REPO_ROOT
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 
@@ -20,7 +21,7 @@ PROCESSOS = [
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATE_PATH = BASE_DIR / "templates" / "cobranca_judicial.docx"
-OUT_DIR = BASE_DIR / "saidas" / "cobranca_judicial"
+OUT_DIR = REPO_ROOT / "saidas" / "automacao" / "cobranca_judicial"
 
 
 def fetch_relatores(processos: list[str]) -> pd.DataFrame:

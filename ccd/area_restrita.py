@@ -37,7 +37,7 @@ PAGINA_SUBSTITUIR = (
 MOTIVO_INFORMACAO_INCOMPLETA = "4"  # cmbMotivoExclusao
 MODELO_TITULO = "InformacaoInstrutiva"
 MODELO_RESUMO = "Informação instrutiva...."
-# pasta de saidas/nereu_ms -> sigla do gabinete (tabela Setor); providência = "ENVIO A <sigla>"
+# pasta de saidas/automacao/nereu_ms -> sigla do gabinete (tabela Setor); providência = "ENVIO A <sigla>"
 GABINETES = {
     "ana": "GAANA",
     "antonio_ed": "GCAED",

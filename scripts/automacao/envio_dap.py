@@ -4,7 +4,7 @@ marcador "Nereu - dúvida quanto*".
 Consulta o banco `processo` pelos processos que estão no setor DIP_SOBR com um
 marcador ativo cuja descrição casa o padrão e, para cada processo, renderiza
 `templates/envio_dap.docx` com as variáveis `processo` e `relator`, salvando
-`.docx` e `.pdf` em `saidas/envio_dap/`.
+`.docx` e `.pdf` em `saidas/automacao/envio_dap/`.
 """
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from pathlib import Path
 import pandas as pd
 from docxtpl import DocxTemplate
 
+from ccd.config import REPO_ROOT
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 
@@ -21,7 +22,7 @@ MARCADOR_LIKE = "Nereu - dúvida quanto%"
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATE_PATH = BASE_DIR / "templates" / "envio_dap.docx"
-OUT_DIR = BASE_DIR / "saidas" / "envio_dap"
+OUT_DIR = REPO_ROOT / "saidas" / "automacao" / "envio_dap"
 
 SQL = """
 SELECT DISTINCT

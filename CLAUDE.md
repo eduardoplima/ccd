@@ -41,7 +41,7 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 - `scripts/utils_ccd.py` — compatibility shim. Re-exports `get_connection`, `extract_text_from_pdf`, `merge_pdfs`, `get_info_file_path`, `get_pdf_files_processo`, `get_informacoes_processo`, `download_processo`, `generate_pdf` (= `docx_to_pdf_libreoffice`), `generate_pdf_office` (= `docx_to_pdf_word`), `DIR_INFORMACOES`. The 22 notebooks that do `from utils_ccd import ...` keep working unchanged.
 - `scripts/automacao/antecedentes.py` — generates the antecedentes despacho. Uses `ccd.config.read_sql` + `ccd.db.run_query_df` with named params.
 - `scripts/analise/` — exploratory notebooks (stats, LLM corpus analyses, ad-hoc downloads).
-- `scripts/automacao/` — `.docx` deliverables built from `templates/*.docx` via `docxtpl.DocxTemplate`. Templates and per-notebook `saidas/` stay alongside their notebooks.
+- `scripts/automacao/` — `.docx` deliverables built from `templates/*.docx` via `docxtpl.DocxTemplate`. Templates stay alongside their notebooks; generated artifacts go to the top-level `saidas/<area>/` (see below).
 - `scripts/consultas/` — legacy `.sql` files loaded by notebooks via `open("../consultas/x.sql").read().format(...)`. Not migrated — modify here when changing notebook queries.
 - `scripts/db/`, `scripts/docs/` — input spreadsheets/pickles.
 - `scripts/erros/`, `scripts/json_antecedentes/` — auxiliary.
@@ -50,7 +50,7 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 
 - New SQL must use named parameters (`:foo`) with `ccd.db.run_query_df(sql, **params)`. Don't extend the legacy `.format()` pattern in `scripts/consultas/`; if you touch one of those queries, migrate it to `ccd/sql/` and parameters at the same time.
 - All user-facing strings (template variable names, LLM prompts, generated text) are in **Portuguese (pt-BR)**.
-- `templates/~$*.docx` are Word lockfiles — never commit them. `scripts/<area>/saidas/` directories accumulate generated artifacts; check `git status` before staging.
+- `templates/~$*.docx` are Word lockfiles — never commit them. Generated artifacts accumulate in the top-level `saidas/<area>/` (`saidas/analise/`, `saidas/automacao/`, gitignored); scripts resolve it via `ccd.config.REPO_ROOT / "saidas"`, notebooks via `../../saidas/<area>/`.
 - The PDF share path and Azure deployment name live in `ccd/config.py` as `DEFAULT_INFORMACOES_DIR` / `DEFAULT_AZURE_DEPLOYMENT`. Override per-host via `CCD_INFORMACOES_DIR` / `AZURE_OPENAI_DEPLOYMENT` env vars rather than editing the source.
 - Commits: use **mensagens curtas** (uma linha, estilo dos commits recentes) e **sem `Co-Authored-By: Claude`** no rodapé.
 
