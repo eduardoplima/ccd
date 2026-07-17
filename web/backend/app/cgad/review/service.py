@@ -313,6 +313,12 @@ def _load_decisao_context(
         "numero_processo": None,
         "ano_processo": None,
         "pessoas": [],
+        "relatorio": None,
+        "fundamentacao_voto": None,
+        "conclusao": None,
+        "orgao_responsavel": None,
+        "orgao_origem": None,
+        "interessado": None,
     }
     try:
         with open(os.path.join(SQL_DIR, "decisions_full_text.sql")) as f:
@@ -355,6 +361,13 @@ def _load_decisao_context(
             "numero_processo": numero,
             "ano_processo": ano,
             "pessoas": pessoas,
+            "relatorio": getattr(head, "relatorio", None),
+            "fundamentacao_voto": getattr(head, "fundamentacao_voto", None),
+            "conclusao": getattr(head, "conclusao", None),
+            "orgao_responsavel": getattr(head, "orgao_responsavel", None),
+            "orgao_origem": getattr(head, "orgao_origem", None),
+            # interessado é char(255) no MSSQL — vem com padding à direita
+            "interessado": (getattr(head, "interessado", None) or "").strip() or None,
         }
     except Exception as exc:
         logger.exception(
@@ -450,6 +463,12 @@ def get_review_texto(
         numero_processo=ctx["numero_processo"],
         ano_processo=ctx["ano_processo"],
         pessoas=ctx.get("pessoas", []),
+        relatorio=ctx.get("relatorio"),
+        fundamentacao_voto=ctx.get("fundamentacao_voto"),
+        conclusao=ctx.get("conclusao"),
+        orgao_responsavel=ctx.get("orgao_responsavel"),
+        orgao_origem=ctx.get("orgao_origem"),
+        interessado=ctx.get("interessado"),
     )
 
 
