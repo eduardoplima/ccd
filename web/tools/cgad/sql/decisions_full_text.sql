@@ -18,6 +18,7 @@ SELECT
     d.idVotoPauta                                  AS id_voto_pauta,
     d.DataSessao                                   AS data_sessao,
     d.OrgaoOrigem                                  AS orgao_origem,
+    d.interessado                                  AS interessado,
     d.Relatorio                                    AS relatorio,
     d.FundamentacaoVoto                            AS fundamentacao_voto,
     d.Conclusao                                    AS conclusao,

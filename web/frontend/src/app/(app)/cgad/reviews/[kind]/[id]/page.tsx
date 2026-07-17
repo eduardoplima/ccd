@@ -274,6 +274,50 @@ function ReviewBody({
         </div>
       </div>
 
+      <section>
+        <h2 className="mb-2 text-sm font-medium">Informações Adicionais</h2>
+        {textoLoading && !texto ? (
+          <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
+            Carregando informações adicionais...
+          </div>
+        ) : (
+          <div className="divide-y rounded-md border">
+            <AccordionItem title="Voto">
+              <LabeledText label="Relatório" value={texto?.relatorio} />
+              <LabeledText label="Fundamentação" value={texto?.fundamentacao_voto} />
+              <LabeledText label="Conclusão" value={texto?.conclusao} />
+              {!texto?.relatorio && !texto?.fundamentacao_voto && !texto?.conclusao && (
+                <p className="text-sm text-muted-foreground">Indisponível.</p>
+              )}
+            </AccordionItem>
+            <AccordionItem title="Pessoas">
+              {texto?.pessoas.length ? (
+                <ul className="space-y-1 text-sm">
+                  {texto.pessoas.map((p) => (
+                    <li key={`${p.documento ?? p.nome}`}>
+                      {p.nome}
+                      {p.documento ? (
+                        <span className="text-muted-foreground"> · {p.documento}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Indisponível.</p>
+              )}
+            </AccordionItem>
+            <AccordionItem title="Órgãos">
+              <LabeledText label="Órgão envolvido" value={texto?.orgao_responsavel} />
+              <LabeledText label="Órgão de origem" value={texto?.orgao_origem} />
+              <LabeledText label="Interessado" value={texto?.interessado} />
+              {!texto?.orgao_responsavel && !texto?.orgao_origem && !texto?.interessado && (
+                <p className="text-sm text-muted-foreground">Indisponível.</p>
+              )}
+            </AccordionItem>
+          </div>
+        )}
+      </section>
+
       <RejectDialog
         open={rejectOpen}
         onOpenChange={onRejectOpenChange}
@@ -281,5 +325,27 @@ function ReviewBody({
         isSubmitting={rejectSubmitting}
       />
     </main>
+  );
+}
+
+function AccordionItem({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <details className="group">
+      <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-medium hover:bg-muted/30">
+        {title}
+        <span className="text-muted-foreground transition-transform group-open:rotate-180">▾</span>
+      </summary>
+      <div className="space-y-3 px-4 pb-4">{children}</div>
+    </details>
+  );
+}
+
+function LabeledText({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="whitespace-pre-wrap text-sm">{value}</p>
+    </div>
   );
 }

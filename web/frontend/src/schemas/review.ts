@@ -162,6 +162,12 @@ export const reviewTextoSchema = z.object({
   numero_processo: z.number().int().nullable().optional(),
   ano_processo: z.number().int().nullable().optional(),
   pessoas: z.array(pessoaSchema).default([]),
+  relatorio: z.string().nullable().optional(),
+  fundamentacao_voto: z.string().nullable().optional(),
+  conclusao: z.string().nullable().optional(),
+  orgao_responsavel: z.string().nullable().optional(),
+  orgao_origem: z.string().nullable().optional(),
+  interessado: z.string().nullable().optional(),
 });
 export type ReviewTexto = z.infer<typeof reviewTextoSchema>;
 

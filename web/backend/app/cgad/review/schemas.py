@@ -210,6 +210,12 @@ class ReviewTexto(BaseModel):
     numero_processo: Optional[int] = None
     ano_processo: Optional[int] = None
     pessoas: list[Pessoa] = Field(default_factory=list)
+    relatorio: Optional[str] = None
+    fundamentacao_voto: Optional[str] = None
+    conclusao: Optional[str] = None
+    orgao_responsavel: Optional[str] = None
+    orgao_origem: Optional[str] = None
+    interessado: Optional[str] = None
 
 
 # ----- Claim / reject -----------------------------------------------------
