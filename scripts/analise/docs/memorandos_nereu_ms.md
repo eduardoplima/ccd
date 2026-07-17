@@ -2,7 +2,7 @@
 
 > Nota interna: agrupamento por gabinete refeito pelo relator do processo de execução
 > (quando existe; senão o da origem). A planilha do Dr. Marco não teve alteração —
-> sem novo memorando. Versões anteriores em `scripts/automacao/saidas/nereu_ms/old/`.
+> sem novo memorando. Versões anteriores em `saidas/automacao/nereu_ms/old/`.
 
 ## Dra. Ana Paula (processos_nereu_sesap_dra_ana.xlsx)
 

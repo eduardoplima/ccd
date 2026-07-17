@@ -17,7 +17,7 @@ import pandas as pd
 from docxtpl import DocxTemplate
 from sqlalchemy import bindparam, text
 
-from ccd.config import load_env
+from ccd.config import REPO_ROOT, load_env
 from ccd.db import get_connection
 from ccd.pdf import extract_text_from_pdf
 from ccd.processo import get_info_file_path
@@ -26,7 +26,7 @@ load_env()
 CPF = "13006444434"
 MARCADOR = "DESCONTO EM FOLHA - Implementar Nereu"
 TEMPLATE = Path(__file__).resolve().parent / "templates" / "nereu_divida_ativa.docx"
-SAIDA = Path(__file__).resolve().parent / "saidas" / "divida_ativa"
+SAIDA = REPO_ROOT / "saidas" / "automacao" / "divida_ativa"
 _SUSP = re.compile(r"suspens|mandado de seguran|liminar|sobrestam", re.I)
 
 eng = get_connection("processo")

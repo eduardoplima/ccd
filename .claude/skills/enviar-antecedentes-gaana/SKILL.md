@@ -18,7 +18,7 @@ Fluxo de ponta a ponta: descobrir os processos de antecedentes no CCD, gerar as 
 
 ```
 python -m scripts.automacao.gerar_antecedentes --dry-run     # lista os candidatos (marcador antecedentes no CCD)
-python -m scripts.automacao.gerar_antecedentes               # gera todos -> saidas/antecedentes/gaana_YYYYMMDD/
+python -m scripts.automacao.gerar_antecedentes               # gera todos -> saidas/automacao/antecedentes/gaana_YYYYMMDD/
 ```
 
 `gerar_antecedentes.py` (porta de `web/backend/app/ccd/antecedentes/service.py`): descobre por `ccd/sql/antecedentes_candidatos.sql`; para cada processo pega o despacho-fonte (`antecedentes_info_despacho.sql`) → LLM (`ChatOpenAI` com `base_url=AZURE_OPENAI_ENDPOINT`, model gpt-4.1 — **não** `AzureChatOpenAI`, ver [[azure-llm-v1-endpoint-gpt41]]) extrai os responsáveis → débitos transitados em julgado por CPF → renderiza `templates/antecedentes.docx` → PDF `NNNNNN_YYYY.pdf`. Saída em pasta datada dedicada (o `informacao-lote` consome a pasta inteira; não misturar com PDFs antigos).
@@ -32,8 +32,8 @@ Armadilhas conhecidas (checar no gate):
 ```
 python -m scripts.automacao.area_restrita distribuir <procs...> --dry-run
 python -m scripts.automacao.area_restrita distribuir <procs...>
-python -m scripts.automacao.area_restrita informacao-lote --pasta saidas/antecedentes/gaana_YYYYMMDD --dry-run
-python -m scripts.automacao.area_restrita informacao-lote --pasta saidas/antecedentes/gaana_YYYYMMDD
+python -m scripts.automacao.area_restrita informacao-lote --pasta saidas/automacao/antecedentes/gaana_YYYYMMDD --dry-run
+python -m scripts.automacao.area_restrita informacao-lote --pasta saidas/automacao/antecedentes/gaana_YYYYMMDD
 ```
 
 Nota: **processos de CONTAS** têm os combos `cboRelatorioInicialAuditoria`/`cboRelatorioAuditoria` obrigatórios; `cadastrar_informacao_digitalizada` já os preenche com "N" (antecedentes não é relatório de auditoria). Sem isso, a inclusão falha silenciosa.
