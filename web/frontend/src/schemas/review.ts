@@ -1,11 +1,11 @@
 import { z } from "zod";
 
-// All schemas in this file mirror DTOs in backend/app/review/schemas.py.
+// All schemas in this file mirror DTOs in backend/app/cgad/review/schemas.py.
 // Field names and types must stay one-to-one with the Pydantic source —
 // mismatches cause silent data loss on approve.
 
-export const reviewKindSchema = z.enum(["obrigacao", "recomendacao"]);
-export type ReviewKind = z.infer<typeof reviewKindSchema>;
+export const tipoEntidadeSchema = z.enum(["multa", "obrigacao", "recomendacao", "ressarcimento"]);
+export type TipoEntidade = z.infer<typeof tipoEntidadeSchema>;
 
 export const reviewStatusSchema = z.enum(["pending", "approved", "rejected"]);
 export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
@@ -16,41 +16,42 @@ export type SpanMatchStatus = z.infer<typeof spanMatchStatusSchema>;
 // Pydantic `date` — ISO yyyy-mm-dd on the wire.
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Data inválida." });
 
-// Mirrors SolidarioMulta in backend/app/review/schemas.py.
+// Mirrors SolidarioMulta in backend schemas.
 export const solidarioMultaSchema = z.object({
   nome: z.string().trim().min(1, { message: "Informe o nome do solidário." }),
   documento: z.string().nullable().optional(),
 });
 export type SolidarioMulta = z.infer<typeof solidarioMultaSchema>;
 
-// Mirrors Pessoa in backend/app/review/schemas.py.
+// Mirrors Pessoa in backend schemas.
 export const pessoaSchema = z.object({
   nome: z.string(),
   documento: z.string().nullable().optional(),
 });
 export type Pessoa = z.infer<typeof pessoaSchema>;
 
-// Mirrors ObrigacaoReview in backend/app/review/schemas.py.
-// Reviewer-editable fields one-to-one with ObrigacaoORM (minus the
-// auto-assigned IdObrigacao PK). When ObrigacaoORM gains a new
-// reviewer-editable column, the backend schema-parity test fails — update
-// this schema in lockstep.
-export const obrigacaoReviewSchema = z.object({
-  id_processo: z.number().int().nullable().optional(),
-  id_composicao_pauta: z.number().int().nullable().optional(),
-  id_voto_pauta: z.number().int().nullable().optional(),
+// ----- Per-type editable fields (mirror *Fields in backend schemas) ---------
+// `tipo` is injected when the payload is built; the form schemas below omit it.
 
+export const multaFieldsSchema = z.object({
+  descricao_multa: z.string().trim().min(1, { message: "Descreva a multa." }),
+  valor_fixo: z.number().nullable().optional(),
+  percentual: z.number().nullable().optional(),
+  base_calculo: z.number().nullable().optional(),
+  nome_responsavel: z.string().nullable().optional(),
+  documento_responsavel: z.string().nullable().optional(),
+  e_multa_solidaria: z.boolean().nullable().optional(),
+  solidarios: z.array(solidarioMultaSchema).nullable().optional(),
+});
+export type MultaFields = z.infer<typeof multaFieldsSchema>;
+
+export const obrigacaoFieldsSchema = z.object({
   descricao_obrigacao: z.string().trim().min(1, { message: "Descreva a obrigação." }),
-
-  // Pydantic defaults (True/False) kick in server-side when a field is
-  // absent; on the wire the type is still nullable. Defaults for the form
-  // live in the toDefaults() helper in obrigacao-form.tsx.
   de_fazer: z.boolean().nullable().optional(),
   prazo: z.string().nullable().optional(),
   data_cumprimento: isoDateSchema.nullable().optional(),
   orgao_responsavel: z.string().nullable().optional(),
   id_orgao_responsavel: z.number().int().nullable().optional(),
-
   tem_multa_cominatoria: z.boolean().nullable().optional(),
   nome_responsavel_multa_cominatoria: z.string().nullable().optional(),
   documento_responsavel_multa_cominatoria: z.string().nullable().optional(),
@@ -60,17 +61,10 @@ export const obrigacaoReviewSchema = z.object({
   e_multa_cominatoria_solidaria: z.boolean().nullable().optional(),
   solidarios_multa_cominatoria: z.array(solidarioMultaSchema).nullable().optional(),
 });
-export type ObrigacaoReview = z.infer<typeof obrigacaoReviewSchema>;
+export type ObrigacaoFields = z.infer<typeof obrigacaoFieldsSchema>;
 
-// Mirrors RecomendacaoReview in backend/app/review/schemas.py.
-// Reviewer-editable fields one-to-one with RecomendacaoORM (minus the
-// auto-assigned IdRecomendacao PK).
-export const recomendacaoReviewSchema = z.object({
-  id_processo: z.number().int().nullable().optional(),
-  id_composicao_pauta: z.number().int().nullable().optional(),
-  id_voto_pauta: z.number().int().nullable().optional(),
-
-  descricao_recomendacao: z.string().nullable().optional(),
+export const recomendacaoFieldsSchema = z.object({
+  descricao_recomendacao: z.string().trim().min(1, { message: "Descreva a recomendação." }),
   prazo_cumprimento_recomendacao: z.string().nullable().optional(),
   data_cumprimento_recomendacao: isoDateSchema.nullable().optional(),
   nome_responsavel: z.string().nullable().optional(),
@@ -79,39 +73,140 @@ export const recomendacaoReviewSchema = z.object({
   id_orgao_responsavel: z.number().int().nullable().optional(),
   cancelado: z.boolean().nullable().optional(),
 });
-export type RecomendacaoReview = z.infer<typeof recomendacaoReviewSchema>;
+export type RecomendacaoFields = z.infer<typeof recomendacaoFieldsSchema>;
 
-// Mirrors ReviewListItem in backend/app/review/schemas.py.
-export const reviewListItemSchema = z.object({
+export const ressarcimentoFieldsSchema = z.object({
+  descricao_ressarcimento: z.string().trim().min(1, { message: "Descreva o ressarcimento." }),
+  valor_dano: z.number().nullable().optional(),
+  percentual_imputado: z.number().nullable().optional(),
+  valor_imputado: z.number().nullable().optional(),
+  nome_responsavel: z.string().nullable().optional(),
+  documento_responsavel: z.string().nullable().optional(),
+});
+export type RessarcimentoFields = z.infer<typeof ressarcimentoFieldsSchema>;
+
+export const fieldsSchemaByTipo = {
+  multa: multaFieldsSchema,
+  obrigacao: obrigacaoFieldsSchema,
+  recomendacao: recomendacaoFieldsSchema,
+  ressarcimento: ressarcimentoFieldsSchema,
+} as const;
+
+export type EntidadeFields =
+  | MultaFields
+  | ObrigacaoFields
+  | RecomendacaoFields
+  | RessarcimentoFields;
+
+// ----- Approve payload (mirrors EntidadeReview / DecisaoReviewPayload) ------
+
+export type EntidadeReview = {
+  tipo: TipoEntidade;
+  id_ner: number | null;
+  resultado: "approved" | "rejected";
+  observacoes?: string | null;
+  // Backend discriminated union requires `tipo` inside campos too.
+  campos?: (EntidadeFields & { tipo: TipoEntidade }) | null;
+};
+
+export type DecisaoReviewPayload = {
+  entidades: EntidadeReview[];
+};
+
+// ----- List / detail responses ----------------------------------------------
+
+// Mirrors DecisaoListItem in backend schemas.
+export const decisaoListItemSchema = z.object({
   id: z.number().int(),
-  kind: reviewKindSchema,
-  status: reviewStatusSchema,
-  descricao: z.string(),
   id_processo: z.number().int(),
   id_composicao_pauta: z.number().int(),
   id_voto_pauta: z.number().int(),
   numero_processo: z.number().int().nullable().optional(),
   ano_processo: z.number().int().nullable().optional(),
+  // Número do acórdão/decisão colegiada; tipo: "A" = Acórdão, "D" = Decisão.
+  numero_acordao: z.string().nullable().optional(),
+  ano_acordao: z.string().nullable().optional(),
+  tipo_acordao: z.string().nullable().optional(),
+  data_extracao: z.string().datetime({ offset: true }).nullable().optional(),
+  multas: z.number().int(),
+  obrigacoes: z.number().int(),
+  recomendacoes: z.number().int(),
+  ressarcimentos: z.number().int(),
   claimed_by: z.string().nullable().optional(),
   claimed_at: z.string().datetime({ offset: true }).nullable().optional(),
-  reviewer: z.string().nullable().optional(),
-  reviewed_at: z.string().datetime({ offset: true }).nullable().optional(),
 });
-export type ReviewListItem = z.infer<typeof reviewListItemSchema>;
+export type DecisaoListItem = z.infer<typeof decisaoListItemSchema>;
 
-// Mirrors ReviewListPage in backend/app/review/schemas.py.
-export const reviewListPageSchema = z.object({
-  items: z.array(reviewListItemSchema),
+// Mirrors DecisaoListPage in backend schemas.
+export const decisaoListPageSchema = z.object({
+  items: z.array(decisaoListItemSchema),
   page: z.number().int(),
   page_size: z.number().int(),
   total: z.number().int(),
 });
-export type ReviewListPage = z.infer<typeof reviewListPageSchema>;
+export type DecisaoListPage = z.infer<typeof decisaoListPageSchema>;
 
-// Mirrors AwaitingDispatchItem in backend/app/review/schemas.py.
+// Mirrors EntidadeOut in backend schemas.
+export const entidadeOutSchema = z.object({
+  tipo: tipoEntidadeSchema,
+  id_ner: z.number().int(),
+  descricao: z.string(),
+  status: reviewStatusSchema,
+  campos: z.record(z.string(), z.unknown()),
+  reviewer: z.string().nullable().optional(),
+  reviewed_at: z.string().datetime({ offset: true }).nullable().optional(),
+  observacoes: z.string().nullable().optional(),
+});
+export type EntidadeOut = z.infer<typeof entidadeOutSchema>;
+
+// Mirrors DecisaoDetail in backend schemas.
+export const decisaoDetailSchema = z.object({
+  id: z.number().int(),
+  id_processo: z.number().int(),
+  id_composicao_pauta: z.number().int(),
+  id_voto_pauta: z.number().int(),
+  data_extracao: z.string().datetime({ offset: true }).nullable().optional(),
+  claimed_by: z.string().nullable().optional(),
+  claimed_at: z.string().datetime({ offset: true }).nullable().optional(),
+  revisado_por: z.string().nullable().optional(),
+  data_revisao: z.string().datetime({ offset: true }).nullable().optional(),
+  entidades: z.array(entidadeOutSchema),
+});
+export type DecisaoDetail = z.infer<typeof decisaoDetailSchema>;
+
+// Mirrors EntidadeSpan in backend schemas.
+export const entidadeSpanSchema = z.object({
+  id_ner: z.number().int(),
+  tipo: tipoEntidadeSchema,
+  char_start: z.number().int().nullable().optional(),
+  char_end: z.number().int().nullable().optional(),
+  match_status: spanMatchStatusSchema,
+});
+export type EntidadeSpan = z.infer<typeof entidadeSpanSchema>;
+
+// Mirrors DecisaoTexto in backend schemas.
+export const decisaoTextoSchema = z.object({
+  texto_acordao: z.string().nullable().optional(),
+  numero_processo: z.number().int().nullable().optional(),
+  ano_processo: z.number().int().nullable().optional(),
+  numero_acordao: z.string().nullable().optional(),
+  ano_acordao: z.string().nullable().optional(),
+  tipo_acordao: z.string().nullable().optional(),
+  pessoas: z.array(pessoaSchema).default([]),
+  relatorio: z.string().nullable().optional(),
+  fundamentacao_voto: z.string().nullable().optional(),
+  conclusao: z.string().nullable().optional(),
+  orgao_responsavel: z.string().nullable().optional(),
+  orgao_origem: z.string().nullable().optional(),
+  interessado: z.string().nullable().optional(),
+  spans: z.array(entidadeSpanSchema).default([]),
+});
+export type DecisaoTexto = z.infer<typeof decisaoTextoSchema>;
+
+// Mirrors AwaitingDispatchItem in backend schemas.
 export const awaitingDispatchItemSchema = z.object({
   id: z.number().int(),
-  kind: reviewKindSchema,
+  tipo: tipoEntidadeSchema,
   id_processo: z.number().int(),
   numero_processo: z.number().int().nullable().optional(),
   ano_processo: z.number().int().nullable().optional(),
@@ -121,7 +216,7 @@ export const awaitingDispatchItemSchema = z.object({
 });
 export type AwaitingDispatchItem = z.infer<typeof awaitingDispatchItemSchema>;
 
-// Mirrors AwaitingDispatchPage in backend/app/review/schemas.py.
+// Mirrors AwaitingDispatchPage in backend schemas.
 export const awaitingDispatchPageSchema = z.object({
   items: z.array(awaitingDispatchItemSchema),
   page: z.number().int(),
@@ -130,48 +225,7 @@ export const awaitingDispatchPageSchema = z.object({
 });
 export type AwaitingDispatchPage = z.infer<typeof awaitingDispatchPageSchema>;
 
-// Mirrors ReviewDetail in backend/app/review/schemas.py.
-// `texto_acordao` and span-match metadata are fetched separately via
-// reviewTextoSchema below — splitting these makes the form render fast
-// while the (slow) MSSQL text query runs in parallel.
-export const reviewDetailSchema = z.object({
-  id: z.number().int(),
-  kind: reviewKindSchema,
-  status: reviewStatusSchema,
-
-  id_processo: z.number().int(),
-  id_composicao_pauta: z.number().int(),
-  id_voto_pauta: z.number().int(),
-
-  staged: z.record(z.string(), z.unknown()),
-  original_payload: z.record(z.string(), z.unknown()).nullable().optional(),
-
-  claimed_by: z.string().nullable().optional(),
-  claimed_at: z.string().datetime({ offset: true }).nullable().optional(),
-  reviewer: z.string().nullable().optional(),
-  reviewed_at: z.string().datetime({ offset: true }).nullable().optional(),
-  review_notes: z.string().nullable().optional(),
-});
-export type ReviewDetail = z.infer<typeof reviewDetailSchema>;
-
-// Mirrors ReviewTexto in backend/app/review/schemas.py.
-export const reviewTextoSchema = z.object({
-  texto_acordao: z.string().nullable().optional(),
-  matched_span: z.string().nullable().optional(),
-  span_match_status: spanMatchStatusSchema,
-  numero_processo: z.number().int().nullable().optional(),
-  ano_processo: z.number().int().nullable().optional(),
-  pessoas: z.array(pessoaSchema).default([]),
-  relatorio: z.string().nullable().optional(),
-  fundamentacao_voto: z.string().nullable().optional(),
-  conclusao: z.string().nullable().optional(),
-  orgao_responsavel: z.string().nullable().optional(),
-  orgao_origem: z.string().nullable().optional(),
-  interessado: z.string().nullable().optional(),
-});
-export type ReviewTexto = z.infer<typeof reviewTextoSchema>;
-
-// Mirrors ClaimResponse in backend/app/review/schemas.py.
+// Mirrors ClaimResponse in backend schemas.
 export const claimResponseSchema = z.object({
   claimed_by: z.string(),
   claimed_at: z.string().datetime({ offset: true }),
@@ -179,8 +233,11 @@ export const claimResponseSchema = z.object({
 });
 export type ClaimResponse = z.infer<typeof claimResponseSchema>;
 
-// Mirrors RejectRequest in backend/app/review/schemas.py.
-export const rejectRequestSchema = z.object({
-  review_notes: z.string().trim().min(10, { message: "Justifique com ao menos 10 caracteres." }),
-});
-export type RejectRequest = z.infer<typeof rejectRequestSchema>;
+// ----- UI labels --------------------------------------------------------------
+
+export const TIPO_LABEL: Record<TipoEntidade, string> = {
+  multa: "Multa",
+  obrigacao: "Obrigação",
+  recomendacao: "Recomendação",
+  ressarcimento: "Ressarcimento",
+};

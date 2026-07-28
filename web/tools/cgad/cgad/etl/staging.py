@@ -113,6 +113,88 @@ class ObrigacaoStagingORM(Base):
     ObservacoesRevisao = Column(Text, nullable=True)
 
 
+class MultaStagingORM(Base):
+    """Audit row da revisão de uma multa. Multa não tem tabela final nem
+    stage-2 — a linha aponta direto para ``NERMulta`` (``IdNerMulta`` NULL =
+    entidade adicionada manualmente pelo revisor). Campos estruturados vêm
+    vazios do extrator e são preenchidos pelo revisor.
+    """
+
+    __tablename__ = "MultaStaging"
+
+    IdMultaStaging = Column(Integer, primary_key=True, autoincrement=True)
+
+    IdNerMulta = Column(
+        Integer,
+        ForeignKey("NERMulta.IdNerMulta"),
+        nullable=True,
+        index=True,
+    )
+
+    IdProcesso = Column(Integer, nullable=False, index=True)
+    IdComposicaoPauta = Column(Integer, nullable=False)
+    IdVotoPauta = Column(Integer, nullable=False)
+
+    DescricaoMulta = Column(Text, nullable=False)
+    ValorFixo = Column(Float, nullable=True)
+    Percentual = Column(Float, nullable=True)
+    BaseCalculo = Column(Float, nullable=True)
+    NomeResponsavel = Column(String, nullable=True)
+    DocumentoResponsavel = Column(String, nullable=True)
+    EMultaSolidaria = Column(Boolean, default=False)
+    Solidarios = Column(JSON, nullable=True)
+
+    Status = Column(
+        _REVIEW_STATUS_ENUM,
+        nullable=False,
+        default=ReviewStatus.pending,
+        index=True,
+    )
+    Revisor = Column(String(255), nullable=True)
+    DataRevisao = Column(DateTime, nullable=True)
+    PayloadOriginal = Column(JSON, nullable=True)
+    ObservacoesRevisao = Column(Text, nullable=True)
+
+
+class RessarcimentoStagingORM(Base):
+    """Audit row da revisão de um ressarcimento. Mesmo modelo de
+    ``MultaStagingORM``: aponta direto para ``NERRessarcimento``.
+    """
+
+    __tablename__ = "RessarcimentoStaging"
+
+    IdRessarcimentoStaging = Column(Integer, primary_key=True, autoincrement=True)
+
+    IdNerRessarcimento = Column(
+        Integer,
+        ForeignKey("NERRessarcimento.IdNerRessarcimento"),
+        nullable=True,
+        index=True,
+    )
+
+    IdProcesso = Column(Integer, nullable=False, index=True)
+    IdComposicaoPauta = Column(Integer, nullable=False)
+    IdVotoPauta = Column(Integer, nullable=False)
+
+    DescricaoRessarcimento = Column(Text, nullable=False)
+    ValorDano = Column(Float, nullable=True)
+    PercentualImputado = Column(Float, nullable=True)
+    ValorImputado = Column(Float, nullable=True)
+    NomeResponsavel = Column(String, nullable=True)
+    DocumentoResponsavel = Column(String, nullable=True)
+
+    Status = Column(
+        _REVIEW_STATUS_ENUM,
+        nullable=False,
+        default=ReviewStatus.pending,
+        index=True,
+    )
+    Revisor = Column(String(255), nullable=True)
+    DataRevisao = Column(DateTime, nullable=True)
+    PayloadOriginal = Column(JSON, nullable=True)
+    ObservacoesRevisao = Column(Text, nullable=True)
+
+
 class RecomendacaoStagingORM(Base):
     __tablename__ = "RecomendacaoStaging"
 

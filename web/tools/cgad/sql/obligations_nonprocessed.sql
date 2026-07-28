@@ -67,9 +67,10 @@ WHERE NOT EXISTS (
   AND NOT EXISTS (
         SELECT 1
         FROM BdDIP.dbo.ObrigacaoStaging os
-        WHERE os.IdProcesso         = nd.IdProcesso
-          AND os.IdComposicaoPauta  = nd.IdComposicaoPauta
-          AND os.IdVotoPauta        = nd.IdVotoPauta
-          AND os.DescricaoObrigacao = o.DescricaoObrigacao
-          AND os.status IN ('pending', 'approved')
+        WHERE os.IdNerObrigacao = o.IdNerObrigacao
+           OR (os.IdNerObrigacao IS NULL
+               AND os.IdProcesso         = nd.IdProcesso
+               AND os.IdComposicaoPauta  = nd.IdComposicaoPauta
+               AND os.IdVotoPauta        = nd.IdVotoPauta
+               AND os.DescricaoObrigacao = o.DescricaoObrigacao)
     )

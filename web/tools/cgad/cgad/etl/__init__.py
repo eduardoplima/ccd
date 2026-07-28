@@ -19,6 +19,7 @@ from cgad.etl.staging import (
 from cgad.etl.text_alignment import (
     SpanMatchStatus,
     find_span_in_text,
+    find_span_offsets,
     find_span_with_status,
 )
 
@@ -32,5 +33,6 @@ __all__ = [
     "enqueue_obrigacao_extraction",
     "enqueue_recomendacao_extraction",
     "find_span_in_text",
+    "find_span_offsets",
     "find_span_with_status",
 ]

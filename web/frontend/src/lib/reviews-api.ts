@@ -4,74 +4,55 @@ import {
   awaitingDispatchPageSchema,
   ClaimResponse,
   claimResponseSchema,
-  ObrigacaoReview,
-  RecomendacaoReview,
-  ReviewDetail,
-  reviewDetailSchema,
-  ReviewKind,
-  ReviewListPage,
-  reviewListPageSchema,
-  ReviewStatus,
-  ReviewTexto,
-  reviewTextoSchema,
+  DecisaoDetail,
+  decisaoDetailSchema,
+  DecisaoListPage,
+  decisaoListPageSchema,
+  DecisaoReviewPayload,
+  DecisaoTexto,
+  decisaoTextoSchema,
 } from "@/schemas/review";
 
-type ListArgs = {
-  kind: ReviewKind;
-  status?: ReviewStatus;
-  page?: number;
-  pageSize?: number;
-  processo?: string;
-};
-
-export async function listReviews({
-  kind,
-  status = "pending",
+export async function listDecisoes({
   page = 1,
   pageSize = 20,
   processo,
-}: ListArgs): Promise<ReviewListPage> {
-  const response = await apiClient.get("/api/v1/cgad/reviews", {
-    params: { kind, status, page, page_size: pageSize, processo: processo || undefined },
+}: {
+  page?: number;
+  pageSize?: number;
+  processo?: string;
+} = {}): Promise<DecisaoListPage> {
+  const response = await apiClient.get("/api/v1/cgad/reviews/decisoes", {
+    params: { page, page_size: pageSize, processo: processo || undefined },
   });
-  return reviewListPageSchema.parse(response.data);
+  return decisaoListPageSchema.parse(response.data);
 }
 
-type IdArgs = { kind: ReviewKind; id: number };
-
-export async function getReview({ kind, id }: IdArgs): Promise<ReviewDetail> {
-  const response = await apiClient.get(`/api/v1/cgad/reviews/${kind}/${id}`);
-  return reviewDetailSchema.parse(response.data);
+export async function getDecisao(id: number): Promise<DecisaoDetail> {
+  const response = await apiClient.get(`/api/v1/cgad/reviews/decisoes/${id}`);
+  return decisaoDetailSchema.parse(response.data);
 }
 
-export async function getReviewTexto({ kind, id }: IdArgs): Promise<ReviewTexto> {
-  const response = await apiClient.get(`/api/v1/cgad/reviews/${kind}/${id}/texto-acordao`);
-  return reviewTextoSchema.parse(response.data);
+export async function getDecisaoTexto(id: number): Promise<DecisaoTexto> {
+  const response = await apiClient.get(`/api/v1/cgad/reviews/decisoes/${id}/texto-acordao`);
+  return decisaoTextoSchema.parse(response.data);
 }
 
-export async function claimReview({ kind, id }: IdArgs): Promise<ClaimResponse> {
-  const response = await apiClient.post(`/api/v1/cgad/reviews/${kind}/${id}/claim`);
+export async function claimDecisao(id: number): Promise<ClaimResponse> {
+  const response = await apiClient.post(`/api/v1/cgad/reviews/decisoes/${id}/claim`);
   return claimResponseSchema.parse(response.data);
 }
 
-export async function releaseReview({ kind, id }: IdArgs): Promise<void> {
-  await apiClient.post(`/api/v1/cgad/reviews/${kind}/${id}/release`);
+export async function releaseDecisao(id: number): Promise<void> {
+  await apiClient.post(`/api/v1/cgad/reviews/decisoes/${id}/release`);
 }
 
-export async function approveObrigacao(
+export async function approveDecisao(
   id: number,
-  payload: ObrigacaoReview,
-): Promise<ReviewDetail> {
-  const response = await apiClient.post(`/api/v1/cgad/reviews/obrigacao/${id}/approve`, payload);
-  return reviewDetailSchema.parse(response.data);
-}
-
-export async function approveRecomendacao(
-  id: number,
-  payload: RecomendacaoReview,
-): Promise<ReviewDetail> {
-  const response = await apiClient.post(`/api/v1/cgad/reviews/recomendacao/${id}/approve`, payload);
-  return reviewDetailSchema.parse(response.data);
+  payload: DecisaoReviewPayload,
+): Promise<DecisaoDetail> {
+  const response = await apiClient.post(`/api/v1/cgad/reviews/decisoes/${id}/approve`, payload);
+  return decisaoDetailSchema.parse(response.data);
 }
 
 export async function listAwaitingDispatch({
@@ -85,14 +66,4 @@ export async function listAwaitingDispatch({
     params: { page, page_size: pageSize },
   });
   return awaitingDispatchPageSchema.parse(response.data);
-}
-
-export async function rejectReview(
-  { kind, id }: IdArgs,
-  reviewNotes: string,
-): Promise<ReviewDetail> {
-  const response = await apiClient.post(`/api/v1/cgad/reviews/${kind}/${id}/reject`, {
-    review_notes: reviewNotes,
-  });
-  return reviewDetailSchema.parse(response.data);
 }

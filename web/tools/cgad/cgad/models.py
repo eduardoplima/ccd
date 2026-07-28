@@ -94,6 +94,13 @@ class NERDecisaoORM(Base):
 
     DataExtracao = Column(DateTime, server_default=func.now())
 
+    # Revisão por decisão: claim (reserva) e estado revisado vivem aqui.
+    # Pendente = RevisadoPor IS NULL e >=1 filho NER.
+    ReservadoPor = Column(String(255), nullable=True)
+    DataReserva = Column(DateTime, nullable=True)
+    RevisadoPor = Column(String(255), nullable=True)
+    DataRevisao = Column(DateTime, nullable=True)
+
     multas = relationship(
         "NERMultaORM",
         back_populates="decisao",

@@ -3,61 +3,41 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  approveObrigacao,
-  approveRecomendacao,
-  claimReview,
-  getReview,
-  getReviewTexto,
+  approveDecisao,
+  claimDecisao,
+  getDecisao,
+  getDecisaoTexto,
   listAwaitingDispatch,
-  listReviews,
-  rejectReview,
-  releaseReview,
+  listDecisoes,
+  releaseDecisao,
 } from "@/lib/reviews-api";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import {
-  ClaimResponse,
-  ObrigacaoReview,
-  RecomendacaoReview,
-  ReviewDetail,
-  ReviewKind,
-  ReviewStatus,
-} from "@/schemas/review";
+import { ClaimResponse, DecisaoDetail, DecisaoReviewPayload } from "@/schemas/review";
 
 export const reviewKeys = {
   all: ["reviews"] as const,
-  list: (args: {
-    kind: ReviewKind;
-    status: ReviewStatus;
-    page: number;
-    pageSize: number;
-    processo?: string;
-  }) => ["reviews", "list", args] as const,
-  detail: (kind: ReviewKind, id: number) => ["reviews", "detail", kind, id] as const,
-  texto: (kind: ReviewKind, id: number) => ["reviews", "texto", kind, id] as const,
+  list: (args: { page: number; pageSize: number; processo?: string }) =>
+    ["reviews", "decisoes", args] as const,
+  detail: (id: number) => ["reviews", "decisao", id] as const,
+  texto: (id: number) => ["reviews", "decisao-texto", id] as const,
   awaitingDispatch: (args: { page: number; pageSize: number }) =>
     ["reviews", "awaiting-dispatch", args] as const,
 };
 
-type ListArgs = {
-  kind: ReviewKind;
-  status?: ReviewStatus;
-  page?: number;
-  pageSize?: number;
-  processo?: string;
-  enabled?: boolean;
-};
-
-export function useReviews({
-  kind,
-  status = "pending",
+export function useDecisoes({
   page = 1,
   pageSize = 20,
   processo,
   enabled = true,
-}: ListArgs) {
+}: {
+  page?: number;
+  pageSize?: number;
+  processo?: string;
+  enabled?: boolean;
+} = {}) {
   return useQuery({
-    queryKey: reviewKeys.list({ kind, status, page, pageSize, processo }),
-    queryFn: () => listReviews({ kind, status, page, pageSize, processo }),
+    queryKey: reviewKeys.list({ page, pageSize, processo }),
+    queryFn: () => listDecisoes({ page, pageSize, processo }),
     enabled,
   });
 }
@@ -78,19 +58,17 @@ export function useAwaitingDispatch({
   });
 }
 
-type IdArgs = { kind: ReviewKind; id: number };
-
-export function useReview({ kind, id }: IdArgs) {
+export function useDecisao(id: number) {
   return useQuery({
-    queryKey: reviewKeys.detail(kind, id),
-    queryFn: () => getReview({ kind, id }),
+    queryKey: reviewKeys.detail(id),
+    queryFn: () => getDecisao(id),
   });
 }
 
-export function useReviewTexto({ kind, id }: IdArgs) {
+export function useDecisaoTexto(id: number) {
   return useQuery({
-    queryKey: reviewKeys.texto(kind, id),
-    queryFn: () => getReviewTexto({ kind, id }),
+    queryKey: reviewKeys.texto(id),
+    queryFn: () => getDecisaoTexto(id),
     // Texto can be slow (MSSQL); don't refetch automatically.
     staleTime: 5 * 60_000,
     gcTime: 10 * 60_000,
@@ -98,28 +76,28 @@ export function useReviewTexto({ kind, id }: IdArgs) {
   });
 }
 
-export function useClaim({ kind, id }: IdArgs) {
+export function useClaim(id: number) {
   const queryClient = useQueryClient();
   const { data: me } = useCurrentUser();
 
   return useMutation({
-    mutationFn: () => claimReview({ kind, id }),
+    mutationFn: () => claimDecisao(id),
     onMutate: async () => {
       // Optimistic: paint ourselves as the claimant immediately so the
       // banner doesn't flash.
-      const prev = queryClient.getQueryData<ReviewDetail>(reviewKeys.detail(kind, id));
+      const prev = queryClient.getQueryData<DecisaoDetail>(reviewKeys.detail(id));
       // No cached detail yet means the initial load is still in flight (the
       // page fires claim() on mount). Cancelling it here would strand the
       // detail query in a cancelled-pending state with no data — leaving the
-      // page on "Carregando item..." forever in production builds (dev only
+      // page on "Carregando decisão..." forever in production builds (dev only
       // survives because StrictMode's double-mount refetches). Skip the
       // optimistic step entirely; the claim's onSuccess fills claimed_by.
       if (!prev || !me) return { prev };
       await queryClient.cancelQueries({
-        queryKey: reviewKeys.detail(kind, id),
+        queryKey: reviewKeys.detail(id),
       });
       const now = new Date().toISOString();
-      queryClient.setQueryData<ReviewDetail>(reviewKeys.detail(kind, id), {
+      queryClient.setQueryData<DecisaoDetail>(reviewKeys.detail(id), {
         ...prev,
         claimed_by: me.login,
         claimed_at: now,
@@ -128,13 +106,13 @@ export function useClaim({ kind, id }: IdArgs) {
     },
     onError: (_err, _vars, context) => {
       if (context?.prev) {
-        queryClient.setQueryData(reviewKeys.detail(kind, id), context.prev);
+        queryClient.setQueryData(reviewKeys.detail(id), context.prev);
       }
     },
     onSuccess: (claim: ClaimResponse) => {
-      const prev = queryClient.getQueryData<ReviewDetail>(reviewKeys.detail(kind, id));
+      const prev = queryClient.getQueryData<DecisaoDetail>(reviewKeys.detail(id));
       if (prev) {
-        queryClient.setQueryData<ReviewDetail>(reviewKeys.detail(kind, id), {
+        queryClient.setQueryData<DecisaoDetail>(reviewKeys.detail(id), {
           ...prev,
           claimed_by: claim.claimed_by,
           claimed_at: claim.claimed_at,
@@ -144,33 +122,20 @@ export function useClaim({ kind, id }: IdArgs) {
   });
 }
 
-export function useRelease({ kind, id }: IdArgs) {
+export function useRelease(id: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => releaseReview({ kind, id }),
+    mutationFn: () => releaseDecisao(id),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: reviewKeys.all });
     },
   });
 }
 
-export function useApprove({ kind, id }: IdArgs) {
+export function useApproveDecisao(id: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: ObrigacaoReview | RecomendacaoReview) =>
-      kind === "obrigacao"
-        ? approveObrigacao(id, payload as ObrigacaoReview)
-        : approveRecomendacao(id, payload as RecomendacaoReview),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: reviewKeys.all });
-    },
-  });
-}
-
-export function useReject({ kind, id }: IdArgs) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (reviewNotes: string) => rejectReview({ kind, id }, reviewNotes),
+    mutationFn: (payload: DecisaoReviewPayload) => approveDecisao(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reviewKeys.all });
     },

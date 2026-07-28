@@ -1,43 +1,41 @@
-"""DTOs for the review API.
+"""DTOs for the decision-level review API.
 
-``ObrigacaoReview`` / ``RecomendacaoReview`` are the payload schemas for
-approvals — one reviewer-editable field per reviewer-editable column on the
-final ORM. A schema-parity test pins this mapping so that when a column is
-added to the final ORM, the DTO fails the test until it's updated (silent
-data-loss guard).
+The review unit is one decision (``NERDecisao``), which carries N entities of
+four types: multa, obrigação, recomendação, ressarcimento. The reviewer edits
+or rejects each entity, may add new ones, and approves the whole decision in
+one POST — the service persists everything in a single transaction as
+``*Staging`` audit rows.
 
 All human-facing field names stay snake_case (Pydantic convention + matches
-the stage-2 schemas in ``tools/schema.py``). The service layer translates to
-the final ORM's PascalCase Portuguese columns.
+the stage-2 schemas in ``cgad/schema.py``). The service layer translates to
+the staging ORMs' PascalCase Portuguese columns.
 """
 
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 
-Kind = Literal["obrigacao", "recomendacao"]
+Tipo = Literal["multa", "obrigacao", "recomendacao", "ressarcimento"]
 ReviewStatusStr = Literal["pending", "approved", "rejected"]
 SpanMatchStatusStr = Literal["exact", "fuzzy", "not_found"]
 
 
 class SolidarioMulta(BaseModel):
-    """One co-responsible person on a multa cominatória solidária. ``nome``
-    comes from the LLM extraction; ``documento`` is filled by the reviewer
-    (typically by picking from ``ReviewTexto.pessoas`` which lists everyone
-    associated with the process)."""
+    """One co-responsible person on a multa solidária. ``nome`` comes from the
+    LLM extraction; ``documento`` is filled by the reviewer (typically by
+    picking from ``DecisaoTexto.pessoas``)."""
 
     nome: str
     documento: Optional[str] = None
 
 
 class Pessoa(BaseModel):
-    """Person associated with the process — surfaced in ``ReviewTexto.pessoas``
-    so the form can autocomplete ``documento`` when the reviewer types or
-    picks a solidário by name."""
+    """Person associated with the process — surfaced in ``DecisaoTexto.pessoas``
+    so forms can autocomplete ``documento``."""
 
     nome: str
     documento: Optional[str] = None
@@ -53,20 +51,13 @@ def _to_utc_iso(dt: Optional[datetime]) -> Optional[str]:
     return dt.isoformat()
 
 
-# ----- Approval payloads ---------------------------------------------------
+# ----- Per-type editable fields --------------------------------------------
 
 
-class ObrigacaoReview(BaseModel):
-    """Reviewer-editable fields, one-to-one with ``ObrigacaoORM`` (minus the
-    auto-assigned ``IdObrigacao`` PK). The identity triple is accepted for
-    round-trip convenience but is ignored by the service — the final row's
-    triple is authoritative. Edited values land on the ``ObrigacaoStaging``
-    audit row, never on the final ``Obrigacao`` row.
-    """
+class ObrigacaoFields(BaseModel):
+    """Reviewer-editable fields, one-to-one with ``ObrigacaoStagingORM``."""
 
-    id_processo: Optional[int] = None
-    id_composicao_pauta: Optional[int] = None
-    id_voto_pauta: Optional[int] = None
+    tipo: Literal["obrigacao"] = "obrigacao"
 
     descricao_obrigacao: str
     de_fazer: Optional[bool] = True
@@ -84,15 +75,10 @@ class ObrigacaoReview(BaseModel):
     solidarios_multa_cominatoria: Optional[list[SolidarioMulta]] = None
 
 
-class RecomendacaoReview(BaseModel):
-    """Reviewer-editable fields, one-to-one with ``RecomendacaoORM`` (minus
-    the auto-assigned ``IdRecomendacao`` PK)."""
+class RecomendacaoFields(BaseModel):
+    tipo: Literal["recomendacao"] = "recomendacao"
 
-    id_processo: Optional[int] = None
-    id_composicao_pauta: Optional[int] = None
-    id_voto_pauta: Optional[int] = None
-
-    descricao_recomendacao: Optional[str] = None
+    descricao_recomendacao: str
     prazo_cumprimento_recomendacao: Optional[str] = None
     data_cumprimento_recomendacao: Optional[date] = None
     nome_responsavel: Optional[str] = None
@@ -102,51 +88,190 @@ class RecomendacaoReview(BaseModel):
     cancelado: Optional[bool] = None
 
 
-# ----- List / detail responses --------------------------------------------
+class MultaFields(BaseModel):
+    tipo: Literal["multa"] = "multa"
+
+    descricao_multa: str
+    valor_fixo: Optional[float] = None
+    percentual: Optional[float] = None
+    base_calculo: Optional[float] = None
+    nome_responsavel: Optional[str] = None
+    documento_responsavel: Optional[str] = None
+    e_multa_solidaria: Optional[bool] = False
+    solidarios: Optional[list[SolidarioMulta]] = None
 
 
-class ReviewListItem(BaseModel):
+class RessarcimentoFields(BaseModel):
+    tipo: Literal["ressarcimento"] = "ressarcimento"
+
+    descricao_ressarcimento: str
+    valor_dano: Optional[float] = None
+    percentual_imputado: Optional[float] = None
+    valor_imputado: Optional[float] = None
+    nome_responsavel: Optional[str] = None
+    documento_responsavel: Optional[str] = None
+
+
+EntidadeFields = Union[MultaFields, ObrigacaoFields, RecomendacaoFields, RessarcimentoFields]
+
+
+# ----- Approval payload -----------------------------------------------------
+
+
+class EntidadeReview(BaseModel):
+    """One entity inside the decision approve payload.
+
+    ``id_ner`` is the NER-row id; ``None`` means the reviewer added this
+    entity by selecting a span the extractor missed (only valid with
+    ``resultado="approved"``). Rejections carry the motive in ``observacoes``
+    (min 10 chars) and don't need ``campos``.
+    """
+
+    tipo: Tipo
+    id_ner: Optional[int] = None
+    resultado: Literal["approved", "rejected"]
+    observacoes: Optional[str] = None
+    campos: Optional[EntidadeFields] = Field(None, discriminator="tipo")
+
+    @model_validator(mode="after")
+    def _check(self) -> "EntidadeReview":
+        if self.campos is not None and self.campos.tipo != self.tipo:
+            raise ValueError("campos.tipo diverge de tipo")
+        if self.resultado == "approved" and self.campos is None:
+            raise ValueError("entidade aprovada exige campos")
+        if self.resultado == "rejected":
+            if self.id_ner is None:
+                raise ValueError("entidade adicionada não pode ser rejeitada")
+            if not self.observacoes or len(self.observacoes.strip()) < 10:
+                raise ValueError("rejeição exige observações (mínimo 10 caracteres)")
+        return self
+
+
+class DecisaoReviewPayload(BaseModel):
+    entidades: list[EntidadeReview]
+
+
+# ----- List / detail responses ----------------------------------------------
+
+
+class DecisaoListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    kind: Kind
-    status: ReviewStatusStr
-    descricao: str
+    id: int  # IdNerDecisao
     id_processo: int
     id_composicao_pauta: int
     id_voto_pauta: int
-    # Resolved from ``processo.dbo.Processos`` so the list shows the
-    # human-readable ``"<numero>/<ano>"``. Both may be ``None`` when the
-    # MSSQL lookup fails — the frontend falls back to ``id_processo``.
     numero_processo: Optional[int] = None
     ano_processo: Optional[int] = None
+    # Número do acórdão/decisão colegiada (numeroResultado/anoResultado da
+    # vw_ia_votos_acordaos_decisoes); tipo: "A" = Acórdão, "D" = Decisão.
+    numero_acordao: Optional[str] = None
+    ano_acordao: Optional[str] = None
+    tipo_acordao: Optional[str] = None
+    data_extracao: Optional[datetime] = None
+    multas: int
+    obrigacoes: int
+    recomendacoes: int
+    ressarcimentos: int
     claimed_by: Optional[str] = None
     claimed_at: Optional[datetime] = None
-    reviewer: Optional[str] = None
-    reviewed_at: Optional[datetime] = None
 
-    @field_serializer("claimed_at", "reviewed_at")
+    @field_serializer("data_extracao", "claimed_at")
     def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:
         return _to_utc_iso(v)
 
 
-class ReviewListPage(BaseModel):
-    items: list[ReviewListItem]
+class DecisaoListPage(BaseModel):
+    items: list[DecisaoListItem]
     page: int
     page_size: int
     total: int
 
 
-class AwaitingDispatchItem(BaseModel):
-    """Approved staging row awaiting downstream dispatch.
+class EntidadeOut(BaseModel):
+    """One entity of the decision as shown to the reviewer.
 
-    Fed by the union of ``ObrigacaoStaging`` + ``RecomendacaoStaging`` rows
-    with ``Status=approved``. The frontend lists these so reviewers / admins
-    can see what's been approved but not yet sent to downstream consumers.
+    ``campos`` uses the snake_case field names of the matching ``*Fields``
+    model. For obrigação/recomendação they come from the stage-2 final row
+    when it exists; multa/ressarcimento start with just the NER description
+    (stage-1 extracts no structured fields for them). Entities already
+    reviewed (``status != pending``) are rendered read-only by the frontend
+    and must not appear in the approve payload.
     """
 
-    id: int  # final-row id (IdObrigacao / IdRecomendacao)
-    kind: Kind
+    tipo: Tipo
+    id_ner: int
+    descricao: str
+    status: ReviewStatusStr
+    campos: dict[str, Any]
+    reviewer: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    observacoes: Optional[str] = None
+
+    @field_serializer("reviewed_at")
+    def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:
+        return _to_utc_iso(v)
+
+
+class DecisaoDetail(BaseModel):
+    id: int
+    id_processo: int
+    id_composicao_pauta: int
+    id_voto_pauta: int
+    data_extracao: Optional[datetime] = None
+    claimed_by: Optional[str] = None
+    claimed_at: Optional[datetime] = None
+    revisado_por: Optional[str] = None
+    data_revisao: Optional[datetime] = None
+    entidades: list[EntidadeOut]
+
+    @field_serializer("data_extracao", "claimed_at", "data_revisao")
+    def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:
+        return _to_utc_iso(v)
+
+
+class EntidadeSpan(BaseModel):
+    """Character offsets of one entity's description inside ``texto_acordao``,
+    re-derived at read time (nothing persisted). ``not_found`` → offsets are
+    ``None`` and the entity is only shown in the side panel."""
+
+    id_ner: int
+    tipo: Tipo
+    char_start: Optional[int] = None
+    char_end: Optional[int] = None
+    match_status: SpanMatchStatusStr
+
+
+class DecisaoTexto(BaseModel):
+    """Full ``texto_acordao`` plus per-entity span offsets, fetched separately
+    so the detail screen can render before the (slow) MSSQL text query
+    returns."""
+
+    texto_acordao: Optional[str] = None
+    numero_processo: Optional[int] = None
+    ano_processo: Optional[int] = None
+    numero_acordao: Optional[str] = None
+    ano_acordao: Optional[str] = None
+    tipo_acordao: Optional[str] = None
+    pessoas: list[Pessoa] = Field(default_factory=list)
+    relatorio: Optional[str] = None
+    fundamentacao_voto: Optional[str] = None
+    conclusao: Optional[str] = None
+    orgao_responsavel: Optional[str] = None
+    orgao_origem: Optional[str] = None
+    interessado: Optional[str] = None
+    spans: list[EntidadeSpan] = Field(default_factory=list)
+
+
+# ----- Awaiting dispatch -----------------------------------------------------
+
+
+class AwaitingDispatchItem(BaseModel):
+    """Approved staging row awaiting downstream dispatch — union of the four
+    ``*Staging`` tables with ``Status=approved``. ``id`` is the staging PK."""
+
+    id: int
+    tipo: Tipo
     id_processo: int
     numero_processo: Optional[int] = None
     ano_processo: Optional[int] = None
@@ -166,59 +291,7 @@ class AwaitingDispatchPage(BaseModel):
     total: int
 
 
-class ReviewDetail(BaseModel):
-    id: int  # IdObrigacao / IdRecomendacao (final-table id)
-    kind: Kind
-    status: ReviewStatusStr
-
-    id_processo: int
-    id_composicao_pauta: int
-    id_voto_pauta: int
-
-    # Currently displayed values: pending → final-row fields; approved/rejected
-    # → audit-row (reviewer-edited) fields.
-    staged: dict[str, Any]
-    # When status != pending, holds the immutable LLM extraction from the final
-    # row so reviewers can compare what they edited against the original.
-    original_payload: Optional[dict[str, Any]] = None
-
-    claimed_by: Optional[str] = None
-    claimed_at: Optional[datetime] = None
-    reviewer: Optional[str] = None
-    reviewed_at: Optional[datetime] = None
-    review_notes: Optional[str] = None
-
-    @field_serializer("claimed_at", "reviewed_at")
-    def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:
-        return _to_utc_iso(v)
-
-
-class ReviewTexto(BaseModel):
-    """Full ``texto_acordao`` plus span-match metadata, fetched separately so
-    the detail form can render before the (slow) MSSQL text query returns.
-
-    ``numero_processo`` / ``ano_processo`` come from the same MSSQL query
-    (Processos table) and are surfaced here so the reviewer-facing header can
-    show the human-readable ``"<numero>/<ano>"`` instead of the internal
-    ``IdProcesso``. Both may be ``None`` when the query fails or the row is
-    missing — the frontend falls back to ``id_processo`` from ``ReviewDetail``.
-    """
-
-    texto_acordao: Optional[str] = None
-    matched_span: Optional[str] = None
-    span_match_status: SpanMatchStatusStr
-    numero_processo: Optional[int] = None
-    ano_processo: Optional[int] = None
-    pessoas: list[Pessoa] = Field(default_factory=list)
-    relatorio: Optional[str] = None
-    fundamentacao_voto: Optional[str] = None
-    conclusao: Optional[str] = None
-    orgao_responsavel: Optional[str] = None
-    orgao_origem: Optional[str] = None
-    interessado: Optional[str] = None
-
-
-# ----- Claim / reject -----------------------------------------------------
+# ----- Claim ------------------------------------------------------------------
 
 
 class ClaimResponse(BaseModel):
@@ -229,7 +302,3 @@ class ClaimResponse(BaseModel):
     @field_serializer("claimed_at", "expires_at")
     def _ser_dt(self, v: datetime) -> str:
         return _to_utc_iso(v)  # type: ignore[return-value]
-
-
-class RejectRequest(BaseModel):
-    review_notes: str = Field(min_length=10)

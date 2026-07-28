@@ -1,13 +1,14 @@
-"""Review business logic.
+"""Decision-level review business logic.
 
-Pendente = a final-table row (``Obrigacao`` / ``Recomendacao``) without a
-matching ``*Staging`` audit row. Approve/reject INSERTs the audit row keyed
-to the final row by FK; claim state lives on the final row.
+The review unit is one ``NERDecisao``. Pendente = ``RevisadoPor IS NULL`` and
+at least one NER child. Approving inserts ``*Staging`` audit rows for every
+entity (all four types) in a single transaction and stamps
+``RevisadoPor``/``DataRevisao`` on the decision — final tables are never
+mutated (audit-only model).
 
 The atomic claim uses a conditional ``UPDATE`` guarded by the current claim
 state, which is MSSQL-compatible (no ``SELECT … FOR UPDATE SKIP LOCKED``):
-exactly one concurrent caller's WHERE clause matches, so exactly one
-succeeds.
+exactly one concurrent caller's WHERE clause matches, so exactly one succeeds.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select, text, update
@@ -24,13 +25,22 @@ from sqlalchemy.orm import Session
 
 from app.cgad.review import schemas
 from cgad.etl.staging import (
+    MultaStagingORM,
     ObrigacaoStagingORM,
     RecomendacaoStagingORM,
+    RessarcimentoStagingORM,
     ReviewStatus,
 )
-from cgad.etl.text_alignment import find_span_with_status
+from cgad.etl.text_alignment import find_span_offsets
 from cgad.models import (
+    NERDecisaoORM,
+    NERMultaORM,
+    NERObrigacaoORM,
+    NERRecomendacaoORM,
+    NERRessarcimentoORM,
     ObrigacaoORM,
+    ProcessedObrigacaoORM,
+    ProcessedRecomendacaoORM,
     RecomendacaoORM,
     UserORM,
 )
@@ -41,75 +51,55 @@ logger = logging.getLogger(__name__)
 
 CLAIM_TTL = timedelta(minutes=15)
 
-Kind = Literal["obrigacao", "recomendacao"]
+TIPOS: tuple[schemas.Tipo, ...] = ("multa", "obrigacao", "recomendacao", "ressarcimento")
+
+_NER_ORM = {
+    "multa": NERMultaORM,
+    "obrigacao": NERObrigacaoORM,
+    "recomendacao": NERRecomendacaoORM,
+    "ressarcimento": NERRessarcimentoORM,
+}
+_NER_PK = {
+    "multa": NERMultaORM.IdNerMulta,
+    "obrigacao": NERObrigacaoORM.IdNerObrigacao,
+    "recomendacao": NERRecomendacaoORM.IdNerRecomendacao,
+    "ressarcimento": NERRessarcimentoORM.IdNerRessarcimento,
+}
+_NER_DESCRICAO_ATTR = {
+    "multa": "DescricaoMulta",
+    "obrigacao": "DescricaoObrigacao",
+    "recomendacao": "DescricaoRecomendacao",
+    "ressarcimento": "DescricaoRessarcimento",
+}
+_STAGING_ORM = {
+    "multa": MultaStagingORM,
+    "obrigacao": ObrigacaoStagingORM,
+    "recomendacao": RecomendacaoStagingORM,
+    "ressarcimento": RessarcimentoStagingORM,
+}
+_STAGING_NER_FK = {
+    "multa": MultaStagingORM.IdNerMulta,
+    "obrigacao": ObrigacaoStagingORM.IdNerObrigacao,
+    "recomendacao": RecomendacaoStagingORM.IdNerRecomendacao,
+    "ressarcimento": RessarcimentoStagingORM.IdNerRessarcimento,
+}
 
 
-# ----- helpers -------------------------------------------------------------
+def _ner_id(ner_row) -> int:
+    for attr in ("IdNerMulta", "IdNerObrigacao", "IdNerRecomendacao", "IdNerRessarcimento"):
+        value = getattr(ner_row, attr, None)
+        if value is not None:
+            return value
+    raise ValueError("NER row without id")
 
 
-def _final_orm(kind: Kind):
-    return ObrigacaoORM if kind == "obrigacao" else RecomendacaoORM
-
-
-def _final_pk(kind: Kind):
-    orm = _final_orm(kind)
-    return orm.IdObrigacao if kind == "obrigacao" else orm.IdRecomendacao
-
-
-def _staging_orm(kind: Kind):
-    return ObrigacaoStagingORM if kind == "obrigacao" else RecomendacaoStagingORM
-
-
-def _staging_fk(kind: Kind):
-    """Column on the staging audit table that links to the final-table PK."""
-    orm = _staging_orm(kind)
-    return orm.IdObrigacao if kind == "obrigacao" else orm.IdRecomendacao
-
-
-def _staging_pk(kind: Kind):
-    orm = _staging_orm(kind)
-    return orm.IdObrigacaoStaging if kind == "obrigacao" else orm.IdRecomendacaoStaging
-
-
-def _load_final(session: Session, kind: Kind, id: int):
-    row = session.get(_final_orm(kind), id)
-    if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="review not found"
-        )
-    return row
-
-
-def _load_audit(session: Session, kind: Kind, final_id: int):
-    """Return the (single) audit row linked to the given final-table row, or None."""
-    stmt = select(_staging_orm(kind)).where(_staging_fk(kind) == final_id)
-    return session.execute(stmt).scalar_one_or_none()
-
-
-def _has_active_claim_by(final_row, user: UserORM) -> bool:
-    if final_row.ReservadoPor != user.NomeUsuario:
-        return False
-    if final_row.DataReserva is None:
-        return False
-    return final_row.DataReserva >= datetime.utcnow() - CLAIM_TTL
-
-
-def _final_descricao(final_row, kind: Kind) -> str:
-    if kind == "obrigacao":
-        return final_row.DescricaoObrigacao or ""
-    return final_row.DescricaoRecomendacao or ""
-
-
-def _final_id(final_row, kind: Kind) -> int:
-    return final_row.IdObrigacao if kind == "obrigacao" else final_row.IdRecomendacao
+# ----- shared helpers (unchanged from the per-entity flow) ------------------
 
 
 def _coerce_solidarios(raw: Any) -> Optional[list[dict[str, Any]]]:
-    """Normalize stored ``SolidariosMultaCominatoria`` to the new
-    ``[{nome, documento}]`` shape. Legacy rows wrote a flat ``list[str]`` of
-    names — coerce those to objects with ``documento=None`` so the form can
-    render uniformly.
-    """
+    """Normalize stored solidários JSON to ``[{nome, documento}]``. Legacy rows
+    wrote a flat ``list[str]`` of names — coerce those to objects with
+    ``documento=None`` so the form can render uniformly."""
     if raw is None:
         return None
     if not isinstance(raw, list):
@@ -126,107 +116,6 @@ def _coerce_solidarios(raw: Any) -> Optional[list[dict[str, Any]]]:
                 }
             )
     return out
-
-
-def _final_fields(final_row, kind: Kind) -> dict[str, Any]:
-    if kind == "obrigacao":
-        return {
-            "descricao_obrigacao": final_row.DescricaoObrigacao,
-            "de_fazer": final_row.DeFazer,
-            "prazo": final_row.Prazo,
-            "data_cumprimento": final_row.DataCumprimento,
-            "orgao_responsavel": final_row.OrgaoResponsavel,
-            "id_orgao_responsavel": final_row.IdOrgaoResponsavel,
-            "tem_multa_cominatoria": final_row.TemMultaCominatoria,
-            "nome_responsavel_multa_cominatoria": final_row.NomeResponsavelMultaCominatoria,
-            "documento_responsavel_multa_cominatoria": final_row.DocumentoResponsavelMultaCominatoria,
-            "id_pessoa_multa_cominatoria": final_row.IdPessoaMultaCominatoria,
-            "valor_multa_cominatoria": final_row.ValorMultaCominatoria,
-            "periodo_multa_cominatoria": final_row.PeriodoMultaCominatoria,
-            "e_multa_cominatoria_solidaria": final_row.EMultaCominatoriaSolidaria,
-            "solidarios_multa_cominatoria": _coerce_solidarios(
-                final_row.SolidariosMultaCominatoria
-            ),
-        }
-    return {
-        "descricao_recomendacao": final_row.DescricaoRecomendacao,
-        "prazo_cumprimento_recomendacao": final_row.PrazoCumprimentoRecomendacao,
-        "data_cumprimento_recomendacao": final_row.DataCumprimentoRecomendacao,
-        "nome_responsavel": final_row.NomeResponsavel,
-        "id_pessoa_responsavel": final_row.IdPessoaResponsavel,
-        "orgao_responsavel": final_row.OrgaoResponsavel,
-        "id_orgao_responsavel": final_row.IdOrgaoResponsavel,
-        "cancelado": final_row.Cancelado,
-    }
-
-
-def _audit_fields(audit_row, kind: Kind) -> dict[str, Any]:
-    """Reviewer-edited values stored on the audit row."""
-    if kind == "obrigacao":
-        return {
-            "descricao_obrigacao": audit_row.DescricaoObrigacao,
-            "de_fazer": audit_row.DeFazer,
-            "prazo": audit_row.Prazo,
-            "data_cumprimento": audit_row.DataCumprimento,
-            "orgao_responsavel": audit_row.OrgaoResponsavel,
-            "id_orgao_responsavel": audit_row.IdOrgaoResponsavel,
-            "tem_multa_cominatoria": audit_row.TemMultaCominatoria,
-            "nome_responsavel_multa_cominatoria": audit_row.NomeResponsavelMultaCominatoria,
-            "documento_responsavel_multa_cominatoria": audit_row.DocumentoResponsavelMultaCominatoria,
-            "id_pessoa_multa_cominatoria": audit_row.IdPessoaMultaCominatoria,
-            "valor_multa_cominatoria": audit_row.ValorMultaCominatoria,
-            "periodo_multa_cominatoria": audit_row.PeriodoMultaCominatoria,
-            "e_multa_cominatoria_solidaria": audit_row.EMultaCominatoriaSolidaria,
-            "solidarios_multa_cominatoria": _coerce_solidarios(
-                audit_row.SolidariosMultaCominatoria
-            ),
-        }
-    return {
-        "descricao_recomendacao": audit_row.DescricaoRecomendacao,
-        "prazo_cumprimento_recomendacao": audit_row.PrazoCumprimentoRecomendacao,
-        "data_cumprimento_recomendacao": audit_row.DataCumprimentoRecomendacao,
-        "nome_responsavel": audit_row.NomeResponsavel,
-        "id_pessoa_responsavel": audit_row.IdPessoaResponsavel,
-        "orgao_responsavel": audit_row.OrgaoResponsavel,
-        "id_orgao_responsavel": audit_row.IdOrgaoResponsavel,
-        "cancelado": audit_row.Cancelado,
-    }
-
-
-def _to_list_item(
-    final_row,
-    audit_row,
-    kind: Kind,
-    numero_ano: tuple[Optional[int], Optional[int]] = (None, None),
-) -> schemas.ReviewListItem:
-    if audit_row is None:
-        status_value = ReviewStatus.pending.value
-        reviewer = None
-        reviewed_at = None
-    else:
-        status_value = (
-            audit_row.Status.value
-            if isinstance(audit_row.Status, ReviewStatus)
-            else str(audit_row.Status)
-        )
-        reviewer = audit_row.Revisor
-        reviewed_at = audit_row.DataRevisao
-    numero, ano = numero_ano
-    return schemas.ReviewListItem(
-        id=_final_id(final_row, kind),
-        kind=kind,
-        status=status_value,
-        descricao=_final_descricao(final_row, kind),
-        id_processo=final_row.IdProcesso,
-        id_composicao_pauta=final_row.IdComposicaoPauta,
-        id_voto_pauta=final_row.IdVotoPauta,
-        numero_processo=numero,
-        ano_processo=ano,
-        claimed_by=final_row.ReservadoPor,
-        claimed_at=final_row.DataReserva,
-        reviewer=reviewer,
-        reviewed_at=reviewed_at,
-    )
 
 
 def _load_processo_numero_ano(
@@ -262,9 +151,7 @@ def _load_processo_numero_ano(
             )
         return out
     except Exception as exc:
-        logger.exception(
-            "failed to resolve numero/ano for %d processos: %s", len(unique), exc
-        )
+        logger.exception("failed to resolve numero/ano for %d processos: %s", len(unique), exc)
         return {}
 
 
@@ -298,15 +185,11 @@ def _resolve_processo_ids(processo: str) -> list[int]:
         return []
 
 
-def _load_decisao_context(
-    id_processo: int, id_composicao: int, id_voto: int
-) -> dict[str, Any]:
+def _load_decisao_context(id_processo: int, id_composicao: int, id_voto: int) -> dict[str, Any]:
     """Read ``texto_acordao`` plus ``numero_processo`` / ``ano_processo`` via
-    ``sql/decisions_full_text.sql``. Returns a dict with all three keys
-    (values may be None) so the detail endpoint degrades gracefully when the
-    query can't run (e.g. in tests without a real MSSQL backend) — the
-    frontend then falls back to ``id_processo`` and ``span_match_status``
-    handles the missing text.
+    ``sql/decisions_full_text.sql``. Returns a dict with all keys (values may
+    be None) so the texto endpoint degrades gracefully when the query can't
+    run (e.g. in tests without a real MSSQL backend).
     """
     empty: dict[str, Any] = {
         "texto_acordao": None,
@@ -319,6 +202,9 @@ def _load_decisao_context(
         "orgao_responsavel": None,
         "orgao_origem": None,
         "interessado": None,
+        "numero_acordao": None,
+        "ano_acordao": None,
+        "tipo_acordao": None,
     }
     try:
         with open(os.path.join(SQL_DIR, "decisions_full_text.sql")) as f:
@@ -368,6 +254,10 @@ def _load_decisao_context(
             "orgao_origem": getattr(head, "orgao_origem", None),
             # interessado é char(255) no MSSQL — vem com padding à direita
             "interessado": (getattr(head, "interessado", None) or "").strip() or None,
+            # numeroResultado é char no MSSQL — idem
+            "numero_acordao": (str(getattr(head, "numero_resultado", "") or "")).strip() or None,
+            "ano_acordao": (str(getattr(head, "ano_resultado", "") or "")).strip() or None,
+            "tipo_acordao": (str(getattr(head, "resultado_tipo", "") or "")).strip() or None,
         }
     except Exception as exc:
         logger.exception(
@@ -391,77 +281,455 @@ def _split_processo(processo: str | None) -> tuple[int | None, int | None]:
         return None, None
 
 
-def _to_detail(
-    session: Session, final_row, audit_row, kind: Kind
-) -> schemas.ReviewDetail:
-    """Detail without ``texto_acordao`` — fast, no MSSQL hit on the heavy text
-    column. The frontend fetches the text separately via
-    ``GET /reviews/{kind}/{id}/texto-acordao``.
+# ----- decision loading -----------------------------------------------------
+
+
+def _load_decisao(session: Session, id: int) -> NERDecisaoORM:
+    row = session.get(NERDecisaoORM, id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="decisao not found")
+    return row
+
+
+def _ner_children(session: Session, id_ner_decisao: int) -> dict[str, list]:
+    out: dict[str, list] = {}
+    for tipo in TIPOS:
+        orm = _NER_ORM[tipo]
+        rows = (
+            session.execute(
+                select(orm).where(orm.IdNerDecisao == id_ner_decisao).order_by(orm.Ordem.asc())
+            )
+            .scalars()
+            .all()
+        )
+        out[tipo] = list(rows)
+    return out
+
+
+def _staging_by_ner(session: Session, tipo: str, ner_ids: list[int]) -> dict[int, Any]:
+    """Staging audit rows keyed by NER id (new decision-level flow)."""
+    if not ner_ids:
+        return {}
+    fk = _STAGING_NER_FK[tipo]
+    rows = session.execute(select(_STAGING_ORM[tipo]).where(fk.in_(ner_ids))).scalars().all()
+    return {getattr(row, fk.key): row for row in rows}
+
+
+def _final_and_legacy_staging(
+    session: Session, tipo: str, ner_ids: list[int]
+) -> tuple[dict[int, Any], dict[int, Any]]:
+    """For obrigação/recomendação: resolve stage-2 final rows via the
+    ``Processed*`` bridges, plus legacy staging rows keyed by the final-row FK
+    (written by the old per-entity flow, which didn't fill ``IdNer*``).
+    Returns ``({id_ner: final_row}, {id_ner: staging_row})``.
     """
-    if audit_row is None:
-        staged = _final_fields(final_row, kind)
-        original_payload = None
+    if not ner_ids or tipo not in ("obrigacao", "recomendacao"):
+        return {}, {}
+    if tipo == "obrigacao":
+        stmt = (
+            select(ProcessedObrigacaoORM.IdNerObrigacao, ObrigacaoORM, ObrigacaoStagingORM)
+            .join(
+                ObrigacaoORM,
+                ObrigacaoORM.IdObrigacao == ProcessedObrigacaoORM.IdObrigacao,
+            )
+            .outerjoin(
+                ObrigacaoStagingORM,
+                ObrigacaoStagingORM.IdObrigacao == ObrigacaoORM.IdObrigacao,
+            )
+            .where(ProcessedObrigacaoORM.IdNerObrigacao.in_(ner_ids))
+        )
+    else:
+        stmt = (
+            select(
+                ProcessedRecomendacaoORM.IdNerRecomendacao,
+                RecomendacaoORM,
+                RecomendacaoStagingORM,
+            )
+            .join(
+                RecomendacaoORM,
+                RecomendacaoORM.IdRecomendacao == ProcessedRecomendacaoORM.IdRecomendacao,
+            )
+            .outerjoin(
+                RecomendacaoStagingORM,
+                RecomendacaoStagingORM.IdRecomendacao == RecomendacaoORM.IdRecomendacao,
+            )
+            .where(ProcessedRecomendacaoORM.IdNerRecomendacao.in_(ner_ids))
+        )
+    finals: dict[int, Any] = {}
+    legacy: dict[int, Any] = {}
+    for id_ner, final_row, staging_row in session.execute(stmt).all():
+        finals[id_ner] = final_row
+        if staging_row is not None:
+            legacy[id_ner] = staging_row
+    return finals, legacy
+
+
+def _default_campos(tipo: str, descricao: str) -> dict[str, Any]:
+    if tipo == "multa":
+        return {
+            "descricao_multa": descricao,
+            "valor_fixo": None,
+            "percentual": None,
+            "base_calculo": None,
+            "nome_responsavel": None,
+            "documento_responsavel": None,
+            "e_multa_solidaria": False,
+            "solidarios": None,
+        }
+    if tipo == "ressarcimento":
+        return {
+            "descricao_ressarcimento": descricao,
+            "valor_dano": None,
+            "percentual_imputado": None,
+            "valor_imputado": None,
+            "nome_responsavel": None,
+            "documento_responsavel": None,
+        }
+    if tipo == "obrigacao":
+        return {
+            "descricao_obrigacao": descricao,
+            "de_fazer": True,
+            "prazo": None,
+            "data_cumprimento": None,
+            "orgao_responsavel": None,
+            "id_orgao_responsavel": None,
+            "tem_multa_cominatoria": False,
+            "nome_responsavel_multa_cominatoria": None,
+            "documento_responsavel_multa_cominatoria": None,
+            "id_pessoa_multa_cominatoria": None,
+            "valor_multa_cominatoria": None,
+            "periodo_multa_cominatoria": None,
+            "e_multa_cominatoria_solidaria": False,
+            "solidarios_multa_cominatoria": None,
+        }
+    return {
+        "descricao_recomendacao": descricao,
+        "prazo_cumprimento_recomendacao": None,
+        "data_cumprimento_recomendacao": None,
+        "nome_responsavel": None,
+        "id_pessoa_responsavel": None,
+        "orgao_responsavel": None,
+        "id_orgao_responsavel": None,
+        "cancelado": None,
+    }
+
+
+def _obrigacao_campos_from_row(row) -> dict[str, Any]:
+    """Fields dict from either the final ``Obrigacao`` row or a staging row —
+    both share the column names."""
+    return {
+        "descricao_obrigacao": row.DescricaoObrigacao,
+        "de_fazer": row.DeFazer,
+        "prazo": row.Prazo,
+        "data_cumprimento": row.DataCumprimento,
+        "orgao_responsavel": row.OrgaoResponsavel,
+        "id_orgao_responsavel": row.IdOrgaoResponsavel,
+        "tem_multa_cominatoria": row.TemMultaCominatoria,
+        "nome_responsavel_multa_cominatoria": row.NomeResponsavelMultaCominatoria,
+        "documento_responsavel_multa_cominatoria": row.DocumentoResponsavelMultaCominatoria,
+        "id_pessoa_multa_cominatoria": row.IdPessoaMultaCominatoria,
+        "valor_multa_cominatoria": row.ValorMultaCominatoria,
+        "periodo_multa_cominatoria": row.PeriodoMultaCominatoria,
+        "e_multa_cominatoria_solidaria": row.EMultaCominatoriaSolidaria,
+        "solidarios_multa_cominatoria": _coerce_solidarios(row.SolidariosMultaCominatoria),
+    }
+
+
+def _recomendacao_campos_from_row(row) -> dict[str, Any]:
+    return {
+        "descricao_recomendacao": row.DescricaoRecomendacao,
+        "prazo_cumprimento_recomendacao": row.PrazoCumprimentoRecomendacao,
+        "data_cumprimento_recomendacao": row.DataCumprimentoRecomendacao,
+        "nome_responsavel": row.NomeResponsavel,
+        "id_pessoa_responsavel": row.IdPessoaResponsavel,
+        "orgao_responsavel": row.OrgaoResponsavel,
+        "id_orgao_responsavel": row.IdOrgaoResponsavel,
+        "cancelado": row.Cancelado,
+    }
+
+
+def _multa_campos_from_staging(row) -> dict[str, Any]:
+    return {
+        "descricao_multa": row.DescricaoMulta,
+        "valor_fixo": row.ValorFixo,
+        "percentual": row.Percentual,
+        "base_calculo": row.BaseCalculo,
+        "nome_responsavel": row.NomeResponsavel,
+        "documento_responsavel": row.DocumentoResponsavel,
+        "e_multa_solidaria": row.EMultaSolidaria,
+        "solidarios": _coerce_solidarios(row.Solidarios),
+    }
+
+
+def _ressarcimento_campos_from_staging(row) -> dict[str, Any]:
+    return {
+        "descricao_ressarcimento": row.DescricaoRessarcimento,
+        "valor_dano": row.ValorDano,
+        "percentual_imputado": row.PercentualImputado,
+        "valor_imputado": row.ValorImputado,
+        "nome_responsavel": row.NomeResponsavel,
+        "documento_responsavel": row.DocumentoResponsavel,
+    }
+
+
+def _status_str(raw) -> str:
+    return raw.value if isinstance(raw, ReviewStatus) else str(raw)
+
+
+def _to_entidade_out(tipo: str, ner_row, staging_row, final_row) -> schemas.EntidadeOut:
+    descricao = getattr(ner_row, _NER_DESCRICAO_ATTR[tipo]) or ""
+
+    if staging_row is not None:
+        status_value = _status_str(staging_row.Status)
+        reviewer = staging_row.Revisor
+        reviewed_at = staging_row.DataRevisao
+        observacoes = staging_row.ObservacoesRevisao
+        if tipo == "obrigacao":
+            campos = _obrigacao_campos_from_row(staging_row)
+        elif tipo == "recomendacao":
+            campos = _recomendacao_campos_from_row(staging_row)
+        elif tipo == "multa":
+            campos = _multa_campos_from_staging(staging_row)
+        else:
+            campos = _ressarcimento_campos_from_staging(staging_row)
+    else:
         status_value = ReviewStatus.pending.value
         reviewer = None
         reviewed_at = None
-        review_notes = None
-    else:
-        staged = _audit_fields(audit_row, kind)
-        original_payload = _final_fields(final_row, kind)
-        status_value = (
-            audit_row.Status.value
-            if isinstance(audit_row.Status, ReviewStatus)
-            else str(audit_row.Status)
-        )
-        reviewer = audit_row.Revisor
-        reviewed_at = audit_row.DataRevisao
-        review_notes = audit_row.ObservacoesRevisao
+        observacoes = None
+        if tipo == "obrigacao" and final_row is not None:
+            campos = _obrigacao_campos_from_row(final_row)
+        elif tipo == "recomendacao" and final_row is not None:
+            campos = _recomendacao_campos_from_row(final_row)
+        else:
+            campos = _default_campos(tipo, descricao)
 
-    return schemas.ReviewDetail(
-        id=_final_id(final_row, kind),
-        kind=kind,
-        status=status_value,
-        id_processo=final_row.IdProcesso,
-        id_composicao_pauta=final_row.IdComposicaoPauta,
-        id_voto_pauta=final_row.IdVotoPauta,
-        staged=staged,
-        original_payload=original_payload,
-        claimed_by=final_row.ReservadoPor,
-        claimed_at=final_row.DataReserva,
+    return schemas.EntidadeOut(
+        tipo=tipo,  # type: ignore[arg-type]
+        id_ner=_ner_id(ner_row),
+        descricao=descricao,
+        status=status_value,  # type: ignore[arg-type]
+        campos=campos,
         reviewer=reviewer,
         reviewed_at=reviewed_at,
-        review_notes=review_notes,
+        observacoes=observacoes,
     )
 
 
-def get_review_texto(
-    session: Session, *, kind: Kind, id: int, current_user: UserORM
-) -> schemas.ReviewTexto:
-    """Fetch ``texto_acordao`` and the matched span for a single review item."""
-    final_row = _load_final(session, kind, id)
-    audit_row = _load_audit(session, kind, id)
+def _gather_entidades(
+    session: Session, decisao: NERDecisaoORM
+) -> dict[str, list[tuple[Any, Any, Any]]]:
+    """Per tipo, list of ``(ner_row, staging_row_or_None, final_row_or_None)``.
 
-    if audit_row is None:
-        descricao = _final_descricao(final_row, kind)
-    else:
-        edited = _audit_fields(audit_row, kind)
-        descricao = edited.get(
-            "descricao_obrigacao" if kind == "obrigacao" else "descricao_recomendacao"
-        ) or _final_descricao(final_row, kind)
+    Staging is matched first by ``IdNer*`` (decision-level flow) and, for
+    obrigação/recomendação, falls back to the legacy per-entity rows keyed by
+    the final-table FK.
+    """
+    children = _ner_children(session, decisao.IdNerDecisao)
+    out: dict[str, list[tuple[Any, Any, Any]]] = {}
+    for tipo in TIPOS:
+        rows = children[tipo]
+        ner_ids = [_ner_id(r) for r in rows]
+        staged = _staging_by_ner(session, tipo, ner_ids)
+        finals, legacy = _final_and_legacy_staging(session, tipo, ner_ids)
+        out[tipo] = [
+            (
+                ner_row,
+                staged.get(id_ner) or legacy.get(id_ner),
+                finals.get(id_ner),
+            )
+            for ner_row, id_ner in zip(rows, ner_ids)
+        ]
+    return out
 
-    ctx = _load_decisao_context(
-        final_row.IdProcesso,
-        final_row.IdComposicaoPauta,
-        final_row.IdVotoPauta,
+
+# ----- list / detail / texto -------------------------------------------------
+
+
+def _load_acordao_por_decisao(
+    triples: list[tuple[int, int, int]],
+) -> dict[tuple[int, int, int], tuple[Optional[str], Optional[str], Optional[str]]]:
+    """Batch-resolve o número do acórdão/decisão de cada triple via
+    ``vw_ia_votos_acordaos_decisoes`` → ``(numeroResultado, anoResultado,
+    resultadoTipo)``. Colunas char no MSSQL vêm com padding — trimmed aqui.
+    Retorna ``{}`` em falha para a lista nunca quebrar por causa do MSSQL.
+    """
+    unique = sorted(set(triples))
+    if not unique:
+        return {}
+    conds = []
+    params: dict[str, int] = {}
+    for i, (idp, idc, idv) in enumerate(unique):
+        conds.append(
+            f"(d.IdProcesso = :p{i} AND d.IdComposicaoPauta = :c{i} AND d.idVotoPauta = :v{i})"
+        )
+        params.update({f"p{i}": idp, f"c{i}": idc, f"v{i}": idv})
+    sql = (
+        "SELECT d.IdProcesso AS idp, d.IdComposicaoPauta AS idc, d.idVotoPauta AS idv, "
+        "d.numeroResultado AS numero, d.anoResultado AS ano, d.resultadoTipo AS tipo "
+        "FROM processo.dbo.vw_ia_votos_acordaos_decisoes d "
+        f"WHERE {' OR '.join(conds)}"
     )
-    texto_acordao = ctx["texto_acordao"]
-    span, match_status = find_span_with_status(descricao or "", texto_acordao or "")
-    return schemas.ReviewTexto(
-        texto_acordao=texto_acordao,
-        matched_span=span,
-        span_match_status=match_status,
+    try:
+        with get_connection(DB_PROCESSOS).connect() as conn:
+            rows = conn.execute(text(sql), params).all()
+        out: dict[tuple[int, int, int], tuple[Optional[str], Optional[str], Optional[str]]] = {}
+        for row in rows:
+            key = (int(row.idp), int(row.idc), int(row.idv))
+            out[key] = (
+                (str(row.numero or "")).strip() or None,
+                (str(row.ano or "")).strip() or None,
+                (str(row.tipo or "")).strip() or None,
+            )
+        return out
+    except Exception:
+        logger.exception("failed to resolve acordao for %d decisoes", len(unique))
+        return {}
+
+
+def list_decisoes(
+    session: Session,
+    *,
+    page: int,
+    page_size: int,
+    current_user: UserORM,
+    processo: Optional[str] = None,
+) -> schemas.DecisaoListPage:
+    cutoff = datetime.utcnow() - CLAIM_TTL
+    me = current_user.NomeUsuario
+
+    counts = {
+        tipo: (
+            select(func.count())
+            .where(_NER_ORM[tipo].IdNerDecisao == NERDecisaoORM.IdNerDecisao)
+            .correlate(NERDecisaoORM)
+            .scalar_subquery()
+        )
+        for tipo in TIPOS
+    }
+
+    stmt = (
+        select(
+            NERDecisaoORM,
+            counts["multa"].label("multas"),
+            counts["obrigacao"].label("obrigacoes"),
+            counts["recomendacao"].label("recomendacoes"),
+            counts["ressarcimento"].label("ressarcimentos"),
+        )
+        .where(NERDecisaoORM.RevisadoPor.is_(None))
+        .where(
+            counts["multa"] + counts["obrigacao"] + counts["recomendacao"] + counts["ressarcimento"]
+            > 0
+        )
+        .where(
+            or_(
+                NERDecisaoORM.ReservadoPor.is_(None),
+                NERDecisaoORM.ReservadoPor == me,
+                NERDecisaoORM.DataReserva < cutoff,
+            )
+        )
+    )
+
+    if processo and processo.strip():
+        stmt = stmt.where(NERDecisaoORM.IdProcesso.in_(_resolve_processo_ids(processo)))
+
+    total = session.execute(
+        select(func.count()).select_from(stmt.order_by(None).subquery())
+    ).scalar_one()
+
+    rows = session.execute(
+        stmt.order_by(NERDecisaoORM.IdNerDecisao.asc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    ).all()
+
+    numero_ano_by_id = _load_processo_numero_ano([row[0].IdProcesso for row in rows])
+    acordao_by_triple = _load_acordao_por_decisao(
+        [(row[0].IdProcesso, row[0].IdComposicaoPauta, row[0].IdVotoPauta) for row in rows]
+    )
+
+    items = []
+    for decisao, multas, obrigacoes, recomendacoes, ressarcimentos in rows:
+        numero, ano = numero_ano_by_id.get(decisao.IdProcesso, (None, None))
+        numero_acordao, ano_acordao, tipo_acordao = acordao_by_triple.get(
+            (decisao.IdProcesso, decisao.IdComposicaoPauta, decisao.IdVotoPauta),
+            (None, None, None),
+        )
+        items.append(
+            schemas.DecisaoListItem(
+                id=decisao.IdNerDecisao,
+                id_processo=decisao.IdProcesso,
+                id_composicao_pauta=decisao.IdComposicaoPauta,
+                id_voto_pauta=decisao.IdVotoPauta,
+                numero_processo=numero,
+                ano_processo=ano,
+                numero_acordao=numero_acordao,
+                ano_acordao=ano_acordao,
+                tipo_acordao=tipo_acordao,
+                data_extracao=decisao.DataExtracao,
+                multas=multas,
+                obrigacoes=obrigacoes,
+                recomendacoes=recomendacoes,
+                ressarcimentos=ressarcimentos,
+                claimed_by=decisao.ReservadoPor,
+                claimed_at=decisao.DataReserva,
+            )
+        )
+
+    return schemas.DecisaoListPage(items=items, page=page, page_size=page_size, total=total)
+
+
+def get_decisao(session: Session, *, id: int, current_user: UserORM) -> schemas.DecisaoDetail:
+    decisao = _load_decisao(session, id)
+    gathered = _gather_entidades(session, decisao)
+    entidades = [
+        _to_entidade_out(tipo, ner_row, staging_row, final_row)
+        for tipo in TIPOS
+        for ner_row, staging_row, final_row in gathered[tipo]
+    ]
+    return schemas.DecisaoDetail(
+        id=decisao.IdNerDecisao,
+        id_processo=decisao.IdProcesso,
+        id_composicao_pauta=decisao.IdComposicaoPauta,
+        id_voto_pauta=decisao.IdVotoPauta,
+        data_extracao=decisao.DataExtracao,
+        claimed_by=decisao.ReservadoPor,
+        claimed_at=decisao.DataReserva,
+        revisado_por=decisao.RevisadoPor,
+        data_revisao=decisao.DataRevisao,
+        entidades=entidades,
+    )
+
+
+def get_decisao_texto(session: Session, *, id: int, current_user: UserORM) -> schemas.DecisaoTexto:
+    """Fetch ``texto_acordao`` and per-entity span offsets for one decision."""
+    decisao = _load_decisao(session, id)
+    ctx = _load_decisao_context(decisao.IdProcesso, decisao.IdComposicaoPauta, decisao.IdVotoPauta)
+    texto_acordao = ctx["texto_acordao"] or ""
+
+    spans: list[schemas.EntidadeSpan] = []
+    children = _ner_children(session, decisao.IdNerDecisao)
+    for tipo in TIPOS:
+        for ner_row in children[tipo]:
+            descricao = getattr(ner_row, _NER_DESCRICAO_ATTR[tipo]) or ""
+            start, end, match_status = find_span_offsets(descricao, texto_acordao)
+            spans.append(
+                schemas.EntidadeSpan(
+                    id_ner=_ner_id(ner_row),
+                    tipo=tipo,  # type: ignore[arg-type]
+                    char_start=start,
+                    char_end=end,
+                    match_status=match_status,
+                )
+            )
+
+    return schemas.DecisaoTexto(
+        texto_acordao=ctx["texto_acordao"],
         numero_processo=ctx["numero_processo"],
         ano_processo=ctx["ano_processo"],
+        numero_acordao=ctx.get("numero_acordao"),
+        ano_acordao=ctx.get("ano_acordao"),
+        tipo_acordao=ctx.get("tipo_acordao"),
         pessoas=ctx.get("pessoas", []),
         relatorio=ctx.get("relatorio"),
         fundamentacao_voto=ctx.get("fundamentacao_voto"),
@@ -469,89 +737,11 @@ def get_review_texto(
         orgao_responsavel=ctx.get("orgao_responsavel"),
         orgao_origem=ctx.get("orgao_origem"),
         interessado=ctx.get("interessado"),
+        spans=spans,
     )
 
 
-# ----- list / get ----------------------------------------------------------
-
-
-def list_reviews(
-    session: Session,
-    *,
-    kind: Kind,
-    status_filter: ReviewStatus,
-    page: int,
-    page_size: int,
-    current_user: UserORM,
-    processo: Optional[str] = None,
-) -> schemas.ReviewListPage:
-    final = _final_orm(kind)
-    staging = _staging_orm(kind)
-    fk = _staging_fk(kind)
-    pk = _final_pk(kind)
-    cutoff = datetime.utcnow() - CLAIM_TTL
-    me = current_user.NomeUsuario
-
-    if status_filter == ReviewStatus.pending:
-        # LEFT JOIN final ↔ staging; pending = staging row missing.
-        # Plus claim filter: exclude rows held by another reviewer (within TTL).
-        stmt = (
-            select(final, staging)
-            .outerjoin(staging, fk == pk)
-            .where(_staging_pk(kind).is_(None))
-            .where(
-                or_(
-                    final.ReservadoPor.is_(None),
-                    final.ReservadoPor == me,
-                    final.DataReserva < cutoff,
-                )
-            )
-        )
-    else:
-        # approved / rejected → INNER JOIN with status filter.
-        stmt = (
-            select(final, staging)
-            .join(staging, fk == pk)
-            .where(staging.Status == status_filter)
-        )
-
-    if processo and processo.strip():
-        stmt = stmt.where(final.IdProcesso.in_(_resolve_processo_ids(processo)))
-
-    total = session.execute(
-        select(func.count()).select_from(stmt.order_by(None).subquery())
-    ).scalar_one()
-
-    rows = session.execute(
-        stmt.order_by(pk.asc()).offset((page - 1) * page_size).limit(page_size)
-    ).all()
-
-    numero_ano_by_id = _load_processo_numero_ano(
-        [final_row.IdProcesso for final_row, _ in rows]
-    )
-
-    return schemas.ReviewListPage(
-        items=[
-            _to_list_item(
-                final_row,
-                audit_row,
-                kind,
-                numero_ano_by_id.get(final_row.IdProcesso, (None, None)),
-            )
-            for final_row, audit_row in rows
-        ],
-        page=page,
-        page_size=page_size,
-        total=total,
-    )
-
-
-def get_review(
-    session: Session, *, kind: Kind, id: int, current_user: UserORM
-) -> schemas.ReviewDetail:
-    final_row = _load_final(session, kind, id)
-    audit_row = _load_audit(session, kind, id)
-    return _to_detail(session, final_row, audit_row, kind)
+# ----- awaiting dispatch ------------------------------------------------------
 
 
 def list_awaiting_dispatch(
@@ -561,33 +751,43 @@ def list_awaiting_dispatch(
     page_size: int,
     current_user: UserORM,
 ) -> schemas.AwaitingDispatchPage:
-    """List approved staging rows (Obrigação + Recomendação combined),
-    ordered by review date desc. These are records awaiting downstream
-    dispatch — i.e., approved but not yet sent.
-    """
-    obrig_stmt = select(
-        ObrigacaoStagingORM.IdObrigacao.label("final_id"),
-        ObrigacaoStagingORM.IdProcesso.label("id_processo"),
-        ObrigacaoStagingORM.DescricaoObrigacao.label("descricao"),
-        ObrigacaoStagingORM.Revisor.label("reviewer"),
-        ObrigacaoStagingORM.DataRevisao.label("reviewed_at"),
-    ).where(ObrigacaoStagingORM.Status == ReviewStatus.approved)
+    """Approved staging rows of all four types, ordered by review date desc."""
+    stmts = {
+        "multa": select(
+            MultaStagingORM.IdMultaStaging.label("id"),
+            MultaStagingORM.IdProcesso.label("id_processo"),
+            MultaStagingORM.DescricaoMulta.label("descricao"),
+            MultaStagingORM.Revisor.label("reviewer"),
+            MultaStagingORM.DataRevisao.label("reviewed_at"),
+        ).where(MultaStagingORM.Status == ReviewStatus.approved),
+        "obrigacao": select(
+            ObrigacaoStagingORM.IdObrigacaoStaging.label("id"),
+            ObrigacaoStagingORM.IdProcesso.label("id_processo"),
+            ObrigacaoStagingORM.DescricaoObrigacao.label("descricao"),
+            ObrigacaoStagingORM.Revisor.label("reviewer"),
+            ObrigacaoStagingORM.DataRevisao.label("reviewed_at"),
+        ).where(ObrigacaoStagingORM.Status == ReviewStatus.approved),
+        "recomendacao": select(
+            RecomendacaoStagingORM.IdRecomendacaoStaging.label("id"),
+            RecomendacaoStagingORM.IdProcesso.label("id_processo"),
+            RecomendacaoStagingORM.DescricaoRecomendacao.label("descricao"),
+            RecomendacaoStagingORM.Revisor.label("reviewer"),
+            RecomendacaoStagingORM.DataRevisao.label("reviewed_at"),
+        ).where(RecomendacaoStagingORM.Status == ReviewStatus.approved),
+        "ressarcimento": select(
+            RessarcimentoStagingORM.IdRessarcimentoStaging.label("id"),
+            RessarcimentoStagingORM.IdProcesso.label("id_processo"),
+            RessarcimentoStagingORM.DescricaoRessarcimento.label("descricao"),
+            RessarcimentoStagingORM.Revisor.label("reviewer"),
+            RessarcimentoStagingORM.DataRevisao.label("reviewed_at"),
+        ).where(RessarcimentoStagingORM.Status == ReviewStatus.approved),
+    }
 
-    recom_stmt = select(
-        RecomendacaoStagingORM.IdRecomendacao.label("final_id"),
-        RecomendacaoStagingORM.IdProcesso.label("id_processo"),
-        RecomendacaoStagingORM.DescricaoRecomendacao.label("descricao"),
-        RecomendacaoStagingORM.Revisor.label("reviewer"),
-        RecomendacaoStagingORM.DataRevisao.label("reviewed_at"),
-    ).where(RecomendacaoStagingORM.Status == ReviewStatus.approved)
-
-    obrig_rows = [
-        ("obrigacao", row) for row in session.execute(obrig_stmt).mappings().all()
+    combined = [
+        (tipo, row)
+        for tipo, stmt in stmts.items()
+        for row in session.execute(stmt).mappings().all()
     ]
-    recom_rows = [
-        ("recomendacao", row) for row in session.execute(recom_stmt).mappings().all()
-    ]
-    combined = obrig_rows + recom_rows
     # Sort by reviewed_at desc, treating None as oldest.
     combined.sort(
         key=lambda pair: pair[1]["reviewed_at"] or datetime.min,
@@ -598,14 +798,12 @@ def list_awaiting_dispatch(
     start = (page - 1) * page_size
     page_rows = combined[start : start + page_size]
 
-    numero_ano_by_id = _load_processo_numero_ano(
-        [row["id_processo"] for _, row in page_rows]
-    )
+    numero_ano_by_id = _load_processo_numero_ano([row["id_processo"] for _, row in page_rows])
 
     items = [
         schemas.AwaitingDispatchItem(
-            id=row["final_id"],
-            kind=kind,
+            id=row["id"],
+            tipo=tipo,  # type: ignore[arg-type]
             id_processo=row["id_processo"],
             numero_processo=numero_ano_by_id.get(row["id_processo"], (None, None))[0],
             ano_processo=numero_ano_by_id.get(row["id_processo"], (None, None))[1],
@@ -613,50 +811,43 @@ def list_awaiting_dispatch(
             reviewer=row["reviewer"],
             reviewed_at=row["reviewed_at"],
         )
-        for kind, row in page_rows
+        for tipo, row in page_rows
     ]
 
-    return schemas.AwaitingDispatchPage(
-        items=items,
-        page=page,
-        page_size=page_size,
-        total=total,
-    )
+    return schemas.AwaitingDispatchPage(items=items, page=page, page_size=page_size, total=total)
 
 
-# ----- claim / release ----------------------------------------------------
+# ----- claim / release --------------------------------------------------------
 
 
-def claim(
-    session: Session, *, kind: Kind, id: int, current_user: UserORM
-) -> schemas.ClaimResponse:
-    final = _final_orm(kind)
-    pk = _final_pk(kind)
+def _has_active_claim_by(decisao: NERDecisaoORM, user: UserORM) -> bool:
+    if decisao.ReservadoPor != user.NomeUsuario:
+        return False
+    if decisao.DataReserva is None:
+        return False
+    return decisao.DataReserva >= datetime.utcnow() - CLAIM_TTL
+
+
+def claim(session: Session, *, id: int, current_user: UserORM) -> schemas.ClaimResponse:
     now = datetime.utcnow()
     cutoff = now - CLAIM_TTL
     me = current_user.NomeUsuario
 
-    # Refuse if already reviewed (audit row exists).
-    audit_row = _load_audit(session, kind, id)
-    if audit_row is not None:
-        status_value = (
-            audit_row.Status.value
-            if isinstance(audit_row.Status, ReviewStatus)
-            else str(audit_row.Status)
-        )
+    decisao = _load_decisao(session, id)
+    if decisao.RevisadoPor is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"review is {status_value}, not pending",
+            detail="decisao already reviewed",
         )
 
     stmt = (
-        update(final)
+        update(NERDecisaoORM)
         .where(
-            pk == id,
+            NERDecisaoORM.IdNerDecisao == id,
             or_(
-                final.ReservadoPor.is_(None),
-                final.ReservadoPor == me,
-                final.DataReserva < cutoff,
+                NERDecisaoORM.ReservadoPor.is_(None),
+                NERDecisaoORM.ReservadoPor == me,
+                NERDecisaoORM.DataReserva < cutoff,
             ),
         )
         .values(ReservadoPor=me, DataReserva=now)
@@ -666,34 +857,24 @@ def claim(
     session.commit()
 
     if result.rowcount == 1:
-        row = session.get(final, id)
         return schemas.ClaimResponse(
-            claimed_by=row.ReservadoPor,
-            claimed_at=row.DataReserva,
-            expires_at=row.DataReserva + CLAIM_TTL,
+            claimed_by=me,
+            claimed_at=now,
+            expires_at=now + CLAIM_TTL,
         )
 
-    # rowcount == 0 → 404 vs 409.
-    row = session.get(final, id)
-    if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="review not found"
-        )
     raise HTTPException(
         status_code=status.HTTP_409_CONFLICT,
-        detail=f"claimed by {row.ReservadoPor}",
+        detail=f"claimed by {decisao.ReservadoPor}",
     )
 
 
-def release(session: Session, *, kind: Kind, id: int, current_user: UserORM) -> None:
+def release(session: Session, *, id: int, current_user: UserORM) -> None:
     """Idempotent: release the claim if it's held by the caller."""
-    final = _final_orm(kind)
-    pk = _final_pk(kind)
     me = current_user.NomeUsuario
-
     stmt = (
-        update(final)
-        .where(pk == id, final.ReservadoPor == me)
+        update(NERDecisaoORM)
+        .where(NERDecisaoORM.IdNerDecisao == id, NERDecisaoORM.ReservadoPor == me)
         .values(ReservadoPor=None, DataReserva=None)
         .execution_options(synchronize_session=False)
     )
@@ -701,195 +882,214 @@ def release(session: Session, *, kind: Kind, id: int, current_user: UserORM) -> 
     session.commit()
 
 
-# ----- approve / reject ---------------------------------------------------
+# ----- approve ------------------------------------------------------------------
 
 
-def _require_active_claim(final_row, user: UserORM) -> None:
-    if not _has_active_claim_by(final_row, user):
+def _build_staging_row(
+    entidade: schemas.EntidadeReview,
+    decisao: NERDecisaoORM,
+    *,
+    descricao_original: str,
+    final_id: Optional[int],
+    revisor: str,
+    now: datetime,
+):
+    """Build the audit ORM row for one payload entity. Rejections copy the
+    original NER description; approvals carry the reviewer-edited fields."""
+    tipo = entidade.tipo
+    approved = entidade.resultado == "approved"
+    campos = entidade.campos
+    base = dict(
+        IdProcesso=decisao.IdProcesso,
+        IdComposicaoPauta=decisao.IdComposicaoPauta,
+        IdVotoPauta=decisao.IdVotoPauta,
+        Status=ReviewStatus.approved if approved else ReviewStatus.rejected,
+        Revisor=revisor,
+        DataRevisao=now,
+        ObservacoesRevisao=entidade.observacoes,
+    )
+
+    if tipo == "multa":
+        assert campos is None or isinstance(campos, schemas.MultaFields)
+        return MultaStagingORM(
+            IdNerMulta=entidade.id_ner,
+            DescricaoMulta=campos.descricao_multa if approved else descricao_original,
+            ValorFixo=campos.valor_fixo if approved else None,
+            Percentual=campos.percentual if approved else None,
+            BaseCalculo=campos.base_calculo if approved else None,
+            NomeResponsavel=campos.nome_responsavel if approved else None,
+            DocumentoResponsavel=campos.documento_responsavel if approved else None,
+            EMultaSolidaria=campos.e_multa_solidaria if approved else None,
+            Solidarios=(
+                [s.model_dump() for s in campos.solidarios]
+                if approved and campos.solidarios
+                else None
+            ),
+            **base,
+        )
+    if tipo == "ressarcimento":
+        assert campos is None or isinstance(campos, schemas.RessarcimentoFields)
+        return RessarcimentoStagingORM(
+            IdNerRessarcimento=entidade.id_ner,
+            DescricaoRessarcimento=(
+                campos.descricao_ressarcimento if approved else descricao_original
+            ),
+            ValorDano=campos.valor_dano if approved else None,
+            PercentualImputado=campos.percentual_imputado if approved else None,
+            ValorImputado=campos.valor_imputado if approved else None,
+            NomeResponsavel=campos.nome_responsavel if approved else None,
+            DocumentoResponsavel=campos.documento_responsavel if approved else None,
+            **base,
+        )
+    if tipo == "obrigacao":
+        assert campos is None or isinstance(campos, schemas.ObrigacaoFields)
+        return ObrigacaoStagingORM(
+            IdNerObrigacao=entidade.id_ner,
+            IdObrigacao=final_id,
+            DescricaoObrigacao=(campos.descricao_obrigacao if approved else descricao_original),
+            DeFazer=campos.de_fazer if approved else None,
+            Prazo=campos.prazo if approved else None,
+            DataCumprimento=campos.data_cumprimento if approved else None,
+            OrgaoResponsavel=campos.orgao_responsavel if approved else None,
+            IdOrgaoResponsavel=campos.id_orgao_responsavel if approved else None,
+            TemMultaCominatoria=campos.tem_multa_cominatoria if approved else None,
+            NomeResponsavelMultaCominatoria=(
+                campos.nome_responsavel_multa_cominatoria if approved else None
+            ),
+            DocumentoResponsavelMultaCominatoria=(
+                campos.documento_responsavel_multa_cominatoria if approved else None
+            ),
+            IdPessoaMultaCominatoria=(campos.id_pessoa_multa_cominatoria if approved else None),
+            ValorMultaCominatoria=campos.valor_multa_cominatoria if approved else None,
+            PeriodoMultaCominatoria=(campos.periodo_multa_cominatoria if approved else None),
+            EMultaCominatoriaSolidaria=(campos.e_multa_cominatoria_solidaria if approved else None),
+            SolidariosMultaCominatoria=(
+                [s.model_dump() for s in campos.solidarios_multa_cominatoria]
+                if approved and campos.solidarios_multa_cominatoria
+                else None
+            ),
+            **base,
+        )
+    assert campos is None or isinstance(campos, schemas.RecomendacaoFields)
+    return RecomendacaoStagingORM(
+        IdNerRecomendacao=entidade.id_ner,
+        IdRecomendacao=final_id,
+        DescricaoRecomendacao=(campos.descricao_recomendacao if approved else descricao_original),
+        PrazoCumprimentoRecomendacao=(campos.prazo_cumprimento_recomendacao if approved else None),
+        DataCumprimentoRecomendacao=(campos.data_cumprimento_recomendacao if approved else None),
+        NomeResponsavel=campos.nome_responsavel if approved else None,
+        IdPessoaResponsavel=campos.id_pessoa_responsavel if approved else None,
+        OrgaoResponsavel=campos.orgao_responsavel if approved else None,
+        IdOrgaoResponsavel=campos.id_orgao_responsavel if approved else None,
+        Cancelado=campos.cancelado if approved else None,
+        **base,
+    )
+
+
+def approve_decisao(
+    session: Session,
+    *,
+    id: int,
+    payload: schemas.DecisaoReviewPayload,
+    current_user: UserORM,
+) -> schemas.DecisaoDetail:
+    decisao = _load_decisao(session, id)
+
+    if not _has_active_claim_by(decisao, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="no active claim by caller",
         )
-
-
-def _refuse_if_already_reviewed(audit_row) -> None:
-    if audit_row is None:
-        return
-    status_value = (
-        audit_row.Status.value
-        if isinstance(audit_row.Status, ReviewStatus)
-        else str(audit_row.Status)
-    )
-    raise HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail=f"review is {status_value}",
-    )
-
-
-def _clear_claim(session: Session, kind: Kind, id: int) -> None:
-    stmt = (
-        update(_final_orm(kind))
-        .where(_final_pk(kind) == id)
-        .values(ReservadoPor=None, DataReserva=None)
-        .execution_options(synchronize_session=False)
-    )
-    session.execute(stmt)
-
-
-def approve_obrigacao(
-    session: Session,
-    *,
-    id: int,
-    payload: schemas.ObrigacaoReview,
-    current_user: UserORM,
-) -> schemas.ReviewDetail:
-    final_row = _load_final(session, "obrigacao", id)
-    _require_active_claim(final_row, current_user)
-    _refuse_if_already_reviewed(_load_audit(session, "obrigacao", id))
-
-    try:
-        now = datetime.utcnow()
-        audit = ObrigacaoStagingORM(
-            IdObrigacao=final_row.IdObrigacao,
-            IdProcesso=final_row.IdProcesso,
-            IdComposicaoPauta=final_row.IdComposicaoPauta,
-            IdVotoPauta=final_row.IdVotoPauta,
-            DescricaoObrigacao=payload.descricao_obrigacao,
-            DeFazer=payload.de_fazer,
-            Prazo=payload.prazo,
-            DataCumprimento=payload.data_cumprimento,
-            OrgaoResponsavel=payload.orgao_responsavel,
-            IdOrgaoResponsavel=payload.id_orgao_responsavel,
-            TemMultaCominatoria=payload.tem_multa_cominatoria,
-            NomeResponsavelMultaCominatoria=payload.nome_responsavel_multa_cominatoria,
-            DocumentoResponsavelMultaCominatoria=payload.documento_responsavel_multa_cominatoria,
-            IdPessoaMultaCominatoria=payload.id_pessoa_multa_cominatoria,
-            ValorMultaCominatoria=payload.valor_multa_cominatoria,
-            PeriodoMultaCominatoria=payload.periodo_multa_cominatoria,
-            EMultaCominatoriaSolidaria=payload.e_multa_cominatoria_solidaria,
-            SolidariosMultaCominatoria=(
-                [s.model_dump() for s in payload.solidarios_multa_cominatoria]
-                if payload.solidarios_multa_cominatoria
-                else None
-            ),
-            Status=ReviewStatus.approved,
-            Revisor=current_user.NomeUsuario,
-            DataRevisao=now,
+    if decisao.RevisadoPor is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="decisao already reviewed",
         )
-        session.add(audit)
-        _clear_claim(session, "obrigacao", id)
-        session.commit()
-    except HTTPException:
-        raise
-    except Exception as exc:
-        session.rollback()
-        logger.exception("approval transaction failed for obrigacao %s", id)
+
+    gathered = _gather_entidades(session, decisao)
+    # Open = NER children without a staging audit row yet. Entities reviewed
+    # under the legacy per-entity flow stay closed and out of the payload.
+    open_by_tipo: dict[str, dict[int, tuple[Any, Any]]] = {
+        tipo: {
+            _ner_id(ner_row): (ner_row, final_row)
+            for ner_row, staging_row, final_row in gathered[tipo]
+            if staging_row is None
+        }
+        for tipo in TIPOS
+    }
+
+    seen: set[tuple[str, int]] = set()
+    for entidade in payload.entidades:
+        if entidade.id_ner is None:
+            continue
+        key = (entidade.tipo, entidade.id_ner)
+        if key in seen:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"entidade duplicada no payload: {key}",
+            )
+        seen.add(key)
+        if entidade.id_ner not in open_by_tipo[entidade.tipo]:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(f"entidade desconhecida ou já revisada: {key} — recarregue a página"),
+            )
+
+    missing = [
+        (tipo, id_ner)
+        for tipo in TIPOS
+        for id_ner in open_by_tipo[tipo]
+        if (tipo, id_ner) not in seen
+    ]
+    if missing:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="approval transaction failed",
-        ) from exc
-
-    session.refresh(final_row)
-    return _to_detail(session, final_row, audit, "obrigacao")
-
-
-def approve_recomendacao(
-    session: Session,
-    *,
-    id: int,
-    payload: schemas.RecomendacaoReview,
-    current_user: UserORM,
-) -> schemas.ReviewDetail:
-    final_row = _load_final(session, "recomendacao", id)
-    _require_active_claim(final_row, current_user)
-    _refuse_if_already_reviewed(_load_audit(session, "recomendacao", id))
-
-    try:
-        now = datetime.utcnow()
-        audit = RecomendacaoStagingORM(
-            IdRecomendacao=final_row.IdRecomendacao,
-            IdProcesso=final_row.IdProcesso,
-            IdComposicaoPauta=final_row.IdComposicaoPauta,
-            IdVotoPauta=final_row.IdVotoPauta,
-            DescricaoRecomendacao=payload.descricao_recomendacao,
-            PrazoCumprimentoRecomendacao=payload.prazo_cumprimento_recomendacao,
-            DataCumprimentoRecomendacao=payload.data_cumprimento_recomendacao,
-            NomeResponsavel=payload.nome_responsavel,
-            IdPessoaResponsavel=payload.id_pessoa_responsavel,
-            OrgaoResponsavel=payload.orgao_responsavel,
-            IdOrgaoResponsavel=payload.id_orgao_responsavel,
-            Cancelado=payload.cancelado,
-            Status=ReviewStatus.approved,
-            Revisor=current_user.NomeUsuario,
-            DataRevisao=now,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"entidades ausentes do payload: {missing} — recarregue a página",
         )
-        session.add(audit)
-        _clear_claim(session, "recomendacao", id)
-        session.commit()
-    except HTTPException:
-        raise
-    except Exception as exc:
-        session.rollback()
-        logger.exception("approval transaction failed for recomendacao %s", id)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="approval transaction failed",
-        ) from exc
-
-    session.refresh(final_row)
-    return _to_detail(session, final_row, audit, "recomendacao")
-
-
-def reject(
-    session: Session,
-    *,
-    kind: Kind,
-    id: int,
-    notes: str,
-    current_user: UserORM,
-) -> schemas.ReviewDetail:
-    final_row = _load_final(session, kind, id)
-    _require_active_claim(final_row, current_user)
-    _refuse_if_already_reviewed(_load_audit(session, kind, id))
 
     try:
         now = datetime.utcnow()
-        if kind == "obrigacao":
-            audit = ObrigacaoStagingORM(
-                IdObrigacao=final_row.IdObrigacao,
-                IdProcesso=final_row.IdProcesso,
-                IdComposicaoPauta=final_row.IdComposicaoPauta,
-                IdVotoPauta=final_row.IdVotoPauta,
-                DescricaoObrigacao=final_row.DescricaoObrigacao,
-                Status=ReviewStatus.rejected,
-                Revisor=current_user.NomeUsuario,
-                DataRevisao=now,
-                ObservacoesRevisao=notes,
+        for entidade in payload.entidades:
+            if entidade.id_ner is not None:
+                ner_row, final_row = open_by_tipo[entidade.tipo][entidade.id_ner]
+                descricao_original = getattr(ner_row, _NER_DESCRICAO_ATTR[entidade.tipo]) or ""
+                final_id = (
+                    (
+                        final_row.IdObrigacao
+                        if entidade.tipo == "obrigacao"
+                        else final_row.IdRecomendacao
+                    )
+                    if final_row is not None and entidade.tipo in ("obrigacao", "recomendacao")
+                    else None
+                )
+            else:
+                descricao_original = ""
+                final_id = None
+            session.add(
+                _build_staging_row(
+                    entidade,
+                    decisao,
+                    descricao_original=descricao_original,
+                    final_id=final_id,
+                    revisor=current_user.NomeUsuario,
+                    now=now,
+                )
             )
-        else:
-            audit = RecomendacaoStagingORM(
-                IdRecomendacao=final_row.IdRecomendacao,
-                IdProcesso=final_row.IdProcesso,
-                IdComposicaoPauta=final_row.IdComposicaoPauta,
-                IdVotoPauta=final_row.IdVotoPauta,
-                DescricaoRecomendacao=final_row.DescricaoRecomendacao,
-                Status=ReviewStatus.rejected,
-                Revisor=current_user.NomeUsuario,
-                DataRevisao=now,
-                ObservacoesRevisao=notes,
-            )
-        session.add(audit)
-        _clear_claim(session, kind, id)
+
+        decisao.RevisadoPor = current_user.NomeUsuario
+        decisao.DataRevisao = now
+        decisao.ReservadoPor = None
+        decisao.DataReserva = None
         session.commit()
     except HTTPException:
         raise
     except Exception as exc:
         session.rollback()
-        logger.exception("reject transaction failed for %s %s", kind, id)
+        logger.exception("approve transaction failed for decisao %s", id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="reject transaction failed",
+            detail="approve transaction failed",
         ) from exc
 
-    session.refresh(final_row)
-    return _to_detail(session, final_row, audit, kind)
+    session.refresh(decisao)
+    return get_decisao(session, id=id, current_user=current_user)

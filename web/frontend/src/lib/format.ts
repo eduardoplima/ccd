@@ -70,6 +70,18 @@ export function formatProcesso(
   return fallbackId != null ? String(fallbackId) : "—";
 }
 
+// numeroResultado/anoResultado da vw_ia_votos_acordaos_decisoes;
+// tipo "A" = Acórdão, "D" = Decisão.
+export function formatAcordao(
+  numero: string | null | undefined,
+  ano: string | null | undefined,
+  tipo: string | null | undefined,
+): string {
+  if (!numero) return "—";
+  const label = tipo === "A" ? "Acórdão" : tipo === "D" ? "Decisão" : "Resultado";
+  return ano ? `${label} ${numero}/${ano}` : `${label} ${numero}`;
+}
+
 export function formatPercent(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return "—";
   return `${(value * 100).toFixed(1).replace(".", ",")}%`;

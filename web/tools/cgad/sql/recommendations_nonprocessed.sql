@@ -67,9 +67,10 @@ WHERE NOT EXISTS (
   AND NOT EXISTS (
         SELECT 1
         FROM BdDIP.dbo.RecomendacaoStaging rs
-        WHERE rs.IdProcesso            = nd.IdProcesso
-          AND rs.IdComposicaoPauta     = nd.IdComposicaoPauta
-          AND rs.IdVotoPauta           = nd.IdVotoPauta
-          AND rs.DescricaoRecomendacao = r.DescricaoRecomendacao
-          AND rs.status IN ('pending', 'approved')
+        WHERE rs.IdNerRecomendacao = r.IdNerRecomendacao
+           OR (rs.IdNerRecomendacao IS NULL
+               AND rs.IdProcesso            = nd.IdProcesso
+               AND rs.IdComposicaoPauta     = nd.IdComposicaoPauta
+               AND rs.IdVotoPauta           = nd.IdVotoPauta
+               AND rs.DescricaoRecomendacao = r.DescricaoRecomendacao)
     )
