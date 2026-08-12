@@ -230,3 +230,9 @@ scripts/docs/extratos_700000_6/
 .gitnexus/lbug.wal
 # Dados de pagamento (CPF do pagador, txid PIX, retorno da API do BB)
 scripts/docs/info_pix_cartao_042026.csv
+
+# Planilhas e pickles de dados sob scripts/ — entrada dos notebooks, cheia de
+# dado pessoal (folha, consignações, lista eleitoral). Fica no disco, fora do git.
+scripts/**/*.xlsx
+scripts/**/*.xls
+scripts/**/*.pkl
