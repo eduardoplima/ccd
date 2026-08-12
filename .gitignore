@@ -197,12 +197,17 @@ vault/.trash/
 # repos/ = clones de referência (frap-controle, decicontas.app) com .git próprio.
 repos/
 
-# processos/ = versionar só o código (gerar_informacao.py) e os modelos.
-# As informações geradas (.docx/.pdf) e os backups timestamped ficam de fora.
+# processos/ = versionar só os drivers compartilhados (gerar_informacoes_*.py) e os
+# modelos. Os scripts por processo trazem nome+CPF do responsável no texto da
+# informação (dado pessoal), e as informações geradas (.docx/.pdf) ficam de fora.
 processos/**/*.doc
+scripts/processos/**/*.doc
 processos/**/*.docx
+scripts/processos/**/*.docx
 processos/**/*.pdf
+scripts/processos/**/*.pdf
 processos/**/*.tmp
+processos/*/gerar_informacao.py
 !processos/modelos/*.doc
 !processos/modelos/*.docx
 processos/modelos/*_20??????_??????.docx
@@ -216,9 +221,12 @@ scratch/
 
 # Dados brutos locais (extratos bancários, dumps de sistemas)
 extratos/
+scripts/analise/db/extratos/
 decicontas/
 scripts/docs/extratos_700000_6/
 
 # Índice binário do GitNexus (dezenas de MB; regenerável com `node .gitnexus/run.cjs analyze`)
 .gitnexus/lbug
 .gitnexus/lbug.wal
+# Dados de pagamento (CPF do pagador, txid PIX, retorno da API do BB)
+scripts/docs/info_pix_cartao_042026.csv

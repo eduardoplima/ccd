@@ -6,7 +6,7 @@ processo.dbo.Registro_AtoPessoal.DataDoeEstado, registrada no processo de ORIGEM
 manualmente: 004599/2016 -> 11/12/2014 (exec 003677/2022); 003603/2016 -> 03/12/2014
 (exec 000131/2022).
 
-Recorte: débitos ATIVOS (não cancelados) de NEREU BATISTA LINHARES (CPF ***CPF-REMOVIDO***),
+Recorte: débitos ATIVOS (não cancelados) de NEREU BATISTA LINHARES,
 head do débito (IdDebitoAnterior IS NULL). Saída: uma linha por processo de execução.
 """
 from __future__ import annotations
@@ -16,9 +16,10 @@ from pathlib import Path
 
 import pandas as pd
 
+from ccd.config import cpf
 from ccd.db import run_query_df
 
-CPF_NEREU = "***CPF-REMOVIDO***"
+CPF_NEREU = cpf("NEREU")
 CORTE = "2014-07-15"  # estritamente antes
 
 # MIN(DataDoeEstado) por processo de origem: se a origem tem mais de um ato, pega o mais

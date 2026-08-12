@@ -14,6 +14,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from ccd.config import cpf
 from ccd.processo import get_informacoes_processo
 
 load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
@@ -35,8 +36,8 @@ PROCESSOS_LUZENILDO = [
     "023625/2016",
 ]
 
-# Nomes que o banco pode usar para Luzenildo (CPF ***CPF-REMOVIDO***)
-LUIZENILDO_CPF = "***CPF-REMOVIDO***"
+# Nomes que o banco pode usar para Luzenildo
+LUIZENILDO_CPF = cpf("LUZENILDO")
 
 
 def revisar_texto(texto: str) -> dict[str, Any]:

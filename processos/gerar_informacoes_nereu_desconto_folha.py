@@ -19,14 +19,14 @@ from pathlib import Path
 from docxtpl import DocxTemplate
 from num2words import num2words
 
-from ccd.config import REPO_ROOT
+from ccd.config import REPO_ROOT, cpf
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 
 TEMPLATE = str(REPO_ROOT / "scripts/automacao/templates/desconto_folha.docx")
 DESTINO = Path(__file__).parent / "nereu_desconto_folha"
 
-CPF = "***CPF-REMOVIDO***"
+CPF = cpf("NEREU")
 ORGAO = "SECRETARIA DE ADMINISTRAÇÃO DO ESTADO (SEAD)"
 PROCESSOS = [  # 000130/2023 saiu: desconto já implementado
     "000101/2022", "000133/2022", "000142/2023", "002062/2024",

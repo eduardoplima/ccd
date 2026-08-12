@@ -58,3 +58,18 @@ def informacoes_dir() -> Path:
     """Resolve the Ata_Informacao PDF share path (env var or default)."""
     load_env()
     return Path(os.getenv("CCD_INFORMACOES_DIR", DEFAULT_INFORMACOES_DIR))
+
+
+def cpf(chave: str) -> str:
+    """CPF de terceiro usado como chave de consulta — vem do .env, não do código.
+
+    `cpf("NEREU")` lê `CPF_NEREU`. Dado pessoal não é versionado (LGPD); falha
+    alto e cedo se a variável não estiver no .env, para nenhuma consulta rodar
+    com string vazia e devolver resultado errado em silêncio.
+    """
+    load_env()
+    nome = f"CPF_{chave.upper()}"
+    valor = os.getenv(nome)
+    if not valor:
+        raise RuntimeError(f"{nome} não definido — acrescente ao scripts/.env")
+    return valor

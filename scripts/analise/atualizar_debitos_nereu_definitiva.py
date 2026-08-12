@@ -23,6 +23,7 @@ from pathlib import Path
 import openpyxl
 import pandas as pd
 
+from ccd.config import cpf
 from ccd.db import get_connection
 
 # gpt-4o (que o notebook usava) não está deployado neste recurso Azure, e o endpoint
@@ -30,7 +31,7 @@ from ccd.db import get_connection
 # base_url, não AzureChatOpenAI. gpt-4.1 é o deployment disponível equivalente.
 DEFAULT_LLM_MODEL = "gpt-4.1"
 
-CPF_NEREU = "***CPF-REMOVIDO***"
+CPF_NEREU = cpf("NEREU")
 DOCS = Path(__file__).resolve().parent / "docs"
 XLSX = DOCS / "analise_debitos_nereu_definitiva.xlsx"
 DATA_SHEETS = ["TodosDebitos", "SesapVerbaTransitoria", "SesapOutrosAssuntos", "OutrosOrgaos"]

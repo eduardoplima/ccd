@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from ccd.config import REPO_ROOT, load_env
+from ccd.config import REPO_ROOT, cpf, load_env
 from ccd.db import get_connection, run_query_df
 
 load_env()
@@ -26,7 +26,7 @@ PROCESSOS = [
         aba="002013_2025",
         processo="002013/2025",
         nome="SERGIO EDUARDO BEZERRA TEODORO",
-        cpf="***CPF-REMOVIDO***",
+        cpf=cpf("SERGIO_TEODORO"),
         orgao="SECRETARIA DE ESTADO DA EDUCACAO (SEEC)",
         debito=21712,
         origem="001151/2021",
@@ -41,7 +41,7 @@ PROCESSOS = [
         aba="003045_2025",
         processo="003045/2025",
         nome="ROSALBA CIARLINI ROSADO",
-        cpf="***CPF-REMOVIDO***",
+        cpf=cpf("ROSALBA_ROSADO"),
         orgao="INSTITUTO DE PREVIDENCIA DOS SERVIDORES DO RN (IPERN)",
         debito=20625,
         origem="005528/2020",
@@ -55,7 +55,7 @@ PROCESSOS = [
         aba="000407_2025",
         processo="000407/2025",
         nome="FELIPE FERREIRA MENEZES ARAUJO",
-        cpf="***CPF-REMOVIDO***",
+        cpf=cpf("FELIPE_ARAUJO"),
         orgao="PREFEITURA MUNICIPAL DE LAJES",
         debito=27512,
         origem="200042/2023",
@@ -69,7 +69,7 @@ PROCESSOS = [
         aba="003665_2025",
         processo="003665/2025",
         nome="FABIO BEZERRA DE OLIVEIRA",
-        cpf="***CPF-REMOVIDO***",
+        cpf=cpf("FABIO_OLIVEIRA"),
         orgao="PREFEITURA MUNICIPAL DE SERRA DO MEL",
         debito=28314,
         origem="007603/2019",

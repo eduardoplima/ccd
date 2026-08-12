@@ -23,12 +23,12 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import bindparam, text
 
-from ccd.config import load_env
+from ccd.config import cpf, load_env
 from ccd.db import get_connection
 
 load_env()
 
-CPF_NEREU = "***CPF-REMOVIDO***"
+CPF_NEREU = cpf("NEREU")
 BASE = Path(__file__).resolve().parent / "docs" / "checagem_planilhas_desconto_folha"
 MON = BASE / "Monitoramento Desconto em Folha.xlsx"
 FRAP = Path(__file__).resolve().parent / "docs" / "debitos_conciliados_nereu.xlsx"

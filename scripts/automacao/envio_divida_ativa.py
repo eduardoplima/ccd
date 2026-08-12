@@ -17,13 +17,13 @@ import pandas as pd
 from docxtpl import DocxTemplate
 from sqlalchemy import bindparam, text
 
-from ccd.config import REPO_ROOT, load_env
+from ccd.config import REPO_ROOT, cpf, load_env
 from ccd.db import get_connection
 from ccd.pdf import extract_text_from_pdf
 from ccd.processo import get_info_file_path
 
 load_env()
-CPF = "***CPF-REMOVIDO***"
+CPF = cpf("NEREU")
 MARCADOR = "DESCONTO EM FOLHA - Implementar Nereu"
 TEMPLATE = Path(__file__).resolve().parent / "templates" / "nereu_divida_ativa.docx"
 SAIDA = REPO_ROOT / "saidas" / "automacao" / "divida_ativa"

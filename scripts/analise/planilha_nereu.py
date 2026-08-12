@@ -2,7 +2,7 @@ import locale
 
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
-from ccd.config import load_env
+from ccd.config import cpf, load_env
 
 load_env()
 
@@ -14,7 +14,7 @@ from langchain_openai import AzureChatOpenAI
 
 llm_mini = AzureChatOpenAI(model='gpt-5.4-mini')
 
-CPF_NEREU = '***CPF-REMOVIDO***'
+CPF_NEREU = cpf("NEREU")
 # Nereu é presidente do IPERN; citações ao IPERN contam como dele. O IPERN tem mais de um
 # cadastro/estabelecimento (ex.: 08242034000102 e 08242034000285) — casamos pela RAIZ do CNPJ.
 CNPJ_IPERN_RAIZ = '08242034'
@@ -221,7 +221,7 @@ if not _ccd_cached:
     class NotificacaoNereu(BaseModel):
         eh_notificacao_desconto_folha_nereu: bool = Field(
             description='True se o texto for uma notificação de desconto em folha '
-                        'endereçada a NEREU BATISTA LINHARES (CPF ***CPF-REMOVIDO***).')
+                        f'endereçada a NEREU BATISTA LINHARES (CPF {CPF_NEREU}).')
         justificativa: str = Field(
             description='Justificativa curta (1-2 frases, pt-BR) da classificação.')
 
@@ -231,7 +231,7 @@ if not _ccd_cached:
          'Você está classificando uma informação da CCD (Coordenadoria de Controle de Decisões) '
          'do Tribunal de Contas. Responda True somente se o texto for uma NOTIFICAÇÃO DE '
          'DESCONTO EM FOLHA endereçada especificamente a NEREU BATISTA LINHARES '
-         '(CPF ***CPF-REMOVIDO***). Responda False para qualquer outro assunto (deliberação, baixa, '
+         f'(CPF {CPF_NEREU}). Responda False para qualquer outro assunto (deliberação, baixa, '
          'cumprimento, etc.) ou se a notificação for para outra pessoa. Responda em pt-BR.'),
         ('human', 'Texto da informação CCD:\n\n{texto}'),
     ])

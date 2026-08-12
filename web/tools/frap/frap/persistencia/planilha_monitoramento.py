@@ -24,7 +24,8 @@ from typing import Any
 from openpyxl import load_workbook
 from sqlalchemy import Engine, bindparam, text
 
-CPF_NEREU = "***CPF-REMOVIDO***"
+from frap.config import cpf_nereu
+
 NOME_NEREU = "NEREU BATISTA LINHARES"
 SIGLA_NEREU_ORGAO = "IPERN"
 
@@ -654,7 +655,7 @@ def importar_nereu(
     # Resolve órgão IPERN
     orgao = resolver_orgao_por_nome(engine, SIGLA_NEREU_ORGAO)
     if orgao is None:
-        erros.append({"cpf": CPF_NEREU, "motivo": "orgao IPERN não resolvido"})
+        erros.append({"cpf": cpf_nereu(), "motivo": "orgao IPERN não resolvido"})
         return 0, 0, erros
     id_org, nome_org = orgao
 
@@ -663,13 +664,13 @@ def importar_nereu(
 
     with engine.begin() as conn:
         # Verifica se já existe cadastro
-        row = conn.execute(text(_SQL_FRAPDF_BY_CPF), {"cpf": CPF_NEREU}).first()
+        row = conn.execute(text(_SQL_FRAPDF_BY_CPF), {"cpf": cpf_nereu()}).first()
         if row is None:
             valor_total = sum(r["valor"] for r in registros)
             id_pai = conn.execute(
                 text(_SQL_INSERT_DESCONTO_M),
                 {
-                    "cpf": CPF_NEREU,
+                    "cpf": cpf_nereu(),
                     "nome": NOME_NEREU,
                     "id_orgao": id_org,
                     "nome_orgao": nome_org,
@@ -791,7 +792,7 @@ def importar_nereu(
                 ).scalar_one_or_none()
                 if hit is None:
                     erros.append(
-                        {"cpf": CPF_NEREU, "motivo": f"lancamento não encontrado: doc={doc}"}
+                        {"cpf": cpf_nereu(), "motivo": f"lancamento não encontrado: doc={doc}"}
                     )
                     continue
                 lanc_id = int(hit)
@@ -811,7 +812,7 @@ def importar_nereu(
                         """
                     ),
                     {
-                        "cpf": CPF_NEREU,
+                        "cpf": cpf_nereu(),
                         "valor": r["valor"],
                         "ini": ini,
                         "fim": fim,
@@ -820,7 +821,7 @@ def importar_nereu(
                 if not candidatos:
                     erros.append(
                         {
-                            "cpf": CPF_NEREU,
+                            "cpf": cpf_nereu(),
                             "motivo": f"OK sem doc: nenhum lançamento bate valor/mês ({r['mes']:02d}/{r['ano']} R${r['valor']:.2f})",
                         }
                     )
@@ -828,7 +829,7 @@ def importar_nereu(
                 if len(candidatos) > 1:
                     erros.append(
                         {
-                            "cpf": CPF_NEREU,
+                            "cpf": cpf_nereu(),
                             "motivo": f"OK sem doc: {len(candidatos)} candidatos ambíguos para {r['mes']:02d}/{r['ano']} R${r['valor']:.2f}",
                         }
                     )
@@ -907,7 +908,7 @@ def importar_planilha(
 
     if incluir_nereu or rodar_tudo:
         if id_usuario is None and not dry_run:
-            res.erros.append({"cpf": CPF_NEREU, "motivo": "id_usuario obrigatório p/ Nereu"})
+            res.erros.append({"cpf": cpf_nereu(), "motivo": "id_usuario obrigatório p/ Nereu"})
         else:
             nereu = parse_monitoramento_nereu(arquivo)
             cads, matches, errs = importar_nereu(engine, nereu, id_usuario or 0, dry_run=dry_run)

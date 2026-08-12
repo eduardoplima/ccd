@@ -25,11 +25,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from sqlalchemy import bindparam, text
 
+from ccd.config import cpf
 from ccd.notebook import setup
 from ccd.pdf import extract_text_from_pdf
 from ccd.processo import get_info_file_path
 
-CPF = "***CPF-REMOVIDO***"
+CPF = cpf("NEREU")
 OUT = Path(__file__).resolve().parent / "docs" / "processos_parados_nereu.xlsx"
 
 

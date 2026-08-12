@@ -44,6 +44,19 @@ def cnpjs_estado_rn() -> tuple[str, ...]:
     return tuple(out)
 
 
+def cpf_nereu() -> str:
+    """CPF do responsável monitorado individualmente — vem do `.env`, não do código.
+
+    Dado pessoal não é versionado (LGPD). Falha alto se ausente: uma string vazia
+    aqui faria as consultas de monitoramento devolverem nada em silêncio.
+    """
+    load_dotenv()
+    valor = os.environ.get("CPF_NEREU", "")
+    if not valor:
+        raise RuntimeError("CPF_NEREU não definido no .env")
+    return valor
+
+
 @lru_cache(maxsize=1)
 def load_dotenv() -> None:
     """Carrega `.env` da raiz do repo. Idempotente (cache=1)."""

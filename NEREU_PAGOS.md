@@ -1,7 +1,7 @@
 # Processos do Nereu com débitos pagos e conciliados
 
 Levantamento em 31/07/2026. Recorte: débitos em que NEREU BATISTA LINHARES
-(CPF ***CPF-REMOVIDO***) figura em `Exe_DebitoPessoa`, com `IdDebitoAnterior IS NULL`.
+(CPF ***.064.444-**) figura em `Exe_DebitoPessoa`, com `IdDebitoAnterior IS NULL`.
 
 Todos os casos abaixo têm registro em `Exe_HistoricoDebito` com a narrativa
 "Desconto em folha efetuado em <mês>/2025 ... Transferência para o FRAP
@@ -41,7 +41,7 @@ status da dívida:
 - O pagamento **não** está em `Exe_DebitoBoleto.DataPagamento` nem em
   `Exe_Retorno_Boleto` (ambos vazios), e **não** há vínculo por `IdDebito` em
   `FRAPMatchGuia` / `FRAPMatchPessoa` / `FRAPDescontoFolha`. A conciliação foi
-  registrada manualmente no histórico do débito (usuário ***CPF-REMOVIDO***, mai/2026).
+  registrada manualmente no histórico do débito (usuário ***.662.102-**, mai/2026).
 - O panorama geral dos débitos do Nereu: 422 Em Aberto, 193 Suspenso, 85
   cancelados, 2 Pago Integralmente, 6 Pago parcialmente.
 

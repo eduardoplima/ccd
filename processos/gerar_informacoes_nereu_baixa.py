@@ -1,4 +1,4 @@
-"""Informações de pagamento dos débitos de NEREU BATISTA LINHARES (CPF ***CPF-REMOVIDO***).
+"""Informações de pagamento dos débitos de NEREU BATISTA LINHARES.
 
 Dez processos de execução em que a multa foi paga por desconto em folha (2025) e a
 transferência ao FRAP foi conciliada no histórico do débito. A informação comunica o
@@ -33,6 +33,7 @@ from pathlib import Path
 
 from docxtpl import DocxTemplate
 
+from ccd.config import cpf
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 
@@ -41,7 +42,8 @@ TEMPLATE = str(BASE / "modelos" / "nereu_baixa.docx")
 DESTINO = BASE / "nereu_baixa"
 
 RESPONSAVEL = "Nereu Batista Linhares"
-CPF = "***CPF-REMOVIDO***"
+_cpf = cpf("NEREU")
+CPF = f"{_cpf[:3]}.{_cpf[3:6]}.{_cpf[6:9]}-{_cpf[9:]}"
 DESTINATARIO = "ao Conselheiro Relator"  # Carlos Thompson Costa Fernandes em todos
 
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",

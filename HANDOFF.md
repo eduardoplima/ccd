@@ -158,8 +158,8 @@ arquivamento (art. 209, V, RITCE).
 
 Estado do CGAD (conferido no banco): `Exe_Debito` **IdDebito 6815**, R$ 2.260,00,
 **em aberto** e no nome **errado** — Maria de Fátima **Cordeiro da Silva** Medeiros
-(CPF ***CPF-REMOVIDO***); a correta é Maria de Fátima **Américo de Lima** Medeiros
-(CPF ***CPF-REMOVIDO***).
+(CPF ***.828.904-**); a correta é Maria de Fátima **Américo de Lima** Medeiros
+(CPF ***.111.114-**).
 
 A fazer:
 1. Registrar a decisão no CGAD e **dar baixa** do débito 6815 (motivo: prescrição
@@ -180,7 +180,7 @@ de Souza); só d)–f) batem com o voto. Suscitar o erro material à Relatoria/S
 # 📌 ABRIR SEGUNDA 10/08/2026 — Desconto em folha (Nereu): 9 processos aguardando tramitação
 
 Em **07/08/2026** as informações de desconto em folha do Sr. **Nereu Batista Linhares**
-(CPF ***CPF-REMOVIDO***) foram geradas, cadastradas e **assinadas** na Área Restrita.
+(CPF ***.064.444-**) foram geradas, cadastradas e **assinadas** na Área Restrita.
 **Nada foi tramitado** — é o que fica para segunda.
 
 Gerador: `processos/gerar_informacoes_nereu_desconto_folha.py`

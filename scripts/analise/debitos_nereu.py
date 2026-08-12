@@ -1,6 +1,6 @@
 """Débitos do Nereu — total, por tipo e por situação.
 
-Recorte: todos os débitos em que NEREU BATISTA LINHARES (CPF ***CPF-REMOVIDO***)
+Recorte: todos os débitos em que NEREU BATISTA LINHARES
 figura como parte em Exe_DebitoPessoa, sem filtrar por CodigoStatusDivida
 — para que o quadro mostre todas as situações (ativa, quitada, parcelada,
 suspensa, etc.). Usa e.IdDebitoAnterior IS NULL para pegar apenas o
@@ -23,9 +23,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+from ccd.config import cpf
 from ccd.db import run_query_df
 
-CPF_NEREU = "***CPF-REMOVIDO***"
+CPF_NEREU = cpf("NEREU")
 
 SQL_DEBITOS_NEREU = """
 SELECT

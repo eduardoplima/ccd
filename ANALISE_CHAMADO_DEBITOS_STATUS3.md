@@ -105,7 +105,7 @@ Legenda de status usada abaixo (`Exe_StatusDivida`): 1 Em Aberto · 2 Pago Integ
 21 Cancelado por duplicidade.
 
 ### Caso 1 — Processo 012990/2010 · débitos **8031** e **8032**
-**João Valdivino da Costa** (CPF ***CPF-REMOVIDO***) · R$ 3.629,86 cada
+**João Valdivino da Costa** (CPF ***.902.798-**) · R$ 3.629,86 cada
 
 Um **único** pagamento (22/06/2015, transferência bancária) foi registrado **quatro vezes** no
 pai 8029, criando 8030, 8031, 8032 e 8033 — todos com o mesmo valor original (R$ 3.629,8578),
@@ -120,7 +120,7 @@ A dívida real desse processo correu por uma **cadeia paralela**: 8034 → 8035 
 > ao irmão 8030). Sem impacto financeiro: a dívida está quitada.
 
 ### Caso 2 — Processo 002743/2008 · débitos **8586** e **8591**
-**João de Deus Garcia de Araújo** (CPF ***CPF-REMOVIDO***) · R$ 2.668,11 e R$ 2.492,12
+**João de Deus Garcia de Araújo** (CPF ***.559.414-**) · R$ 2.668,11 e R$ 2.492,12
 
 Confirma a leitura do chamado ("dois débitos fora da hierarquia"), com uma correção: não é erro
 de cadastro genérico, são **duas guias registradas no débito errado**.
@@ -139,7 +139,7 @@ seja, não reduziram saldo nenhum. A cadeia seguiu 8585 → 8589 → 8592 → �
 > cancelamento.
 
 ### Caso 3 — Processo 018127/2000 · débito **12258**
-**Pedro Lopes de Moura** (CPF ***CPF-REMOVIDO***) · R$ 294,54
+**Pedro Lopes de Moura** (CPF ***.135.604-**) · R$ 294,54
 
 **Corrige a hipótese do chamado** ("verificar se na verdade foi quitado integralmente"): **não
 foi**. Dois depósitos distintos (05/03/2009, "Comprovante de depósito"; e 10/03/2009, "depósito
@@ -155,7 +155,7 @@ processo.
 > 15 – erro de cadastro. Não tratar como quitação.
 
 ### Caso 4 — Processo 005337/2010 · débitos **14527**, **14528**, **14529** e **14530**
-**Daize Florencio da Costa Correia** (CPF ***CPF-REMOVIDO***) · ~R$ 27.330 cada
+**Daize Florencio da Costa Correia** (CPF ***.186.134-**) · ~R$ 27.330 cada
 
 Confirma a leitura do chamado ("quatro débitos originados do mesmo débito"). O histórico do pai
 14525 tem cinco linhas — PARCELA 7, 8, 9, 10 e 11 — lançadas em 09/08/2018 entre 13:39:51 e
@@ -178,7 +178,7 @@ Integralmente)**, baixado em 20/10/2020.
 > indica que sim.
 
 ### Caso 5 — Processo 701054/2012 · débito **15555**
-**João Batista de Pontes** (CPF ***CPF-REMOVIDO***) · R$ 6.943,98
+**João Batista de Pontes** (CPF ***.340.814-**) · R$ 6.943,98
 
 **Corrige a sugestão do chamado** ("manter o 15554 cancelado e registrar o 15555 como débito
 anterior do próximo da sequência"). O mesmo pagamento (20/07/2018, justificativa "parcelado")
@@ -190,7 +190,7 @@ foi registrado duas vezes no pai 14475, criando 15554 e 15555. **15554, embora c
 > 15554 → 15556, e religar o órfão criaria um segundo ramo.
 
 ### Caso 6 — Processo 005337/2010 · débito **15601** ⚠️
-**Daize Florencio da Costa Correia** (CPF ***CPF-REMOVIDO***) · R$ 21.780,58
+**Daize Florencio da Costa Correia** (CPF ***.186.134-**) · R$ 21.780,58
 
 Confirma a leitura do chamado ("co-irmão 15600 com a mesma configuração"). Duas parcelas
 distintas (31/07/2018 e 23/08/2018, ambas "parcelado") foram registradas no pai 14535, criando
@@ -208,7 +208,7 @@ registradas**. A cadeia seguiu por 15600 → 15602 (R$ 20.876,85, −R$ 903,73).
 > parcelamento.
 
 ### Caso 7 — Processo 700985/2012 · débito **15607**
-**José de Arimateia Braz** (CPF ***CPF-REMOVIDO***) · R$ 27.341,73
+**José de Arimateia Braz** (CPF ***.776.084-**) · R$ 27.341,73
 
 Confirma a sugestão do chamado ("origina-se de cadeia já cancelada"). Dois pagamentos
 (26/10/2017 e 21/11/2017, "parcelado") registrados no pai 4988 criaram 15606 e 15607.
@@ -222,7 +222,7 @@ antiga que escapou do cancelamento em massa.**
 > cadeia. Sem impacto financeiro: o débito vigente é o 27106.
 
 ### Caso 8 — Processo 700722/2011 · débito **16089**
-**Josiano Ribeiro Bilro da Silva** (CPF ***CPF-REMOVIDO***) · R$ 12.531,21
+**Josiano Ribeiro Bilro da Silva** (CPF ***.888.904-**) · R$ 12.531,21
 
 Confirma a sugestão do chamado ("16087 já representa a hierarquia correta"). "PAGAMENTO
 PARCELADO – PARCELA 2" e "PARCELA 3" foram registradas no pai 16084 em 30/05/2019, com **a mesma
