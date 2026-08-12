@@ -34,6 +34,11 @@ PAGINA_SUBSTITUIR = (
     BASE + "SISTEMAS/Informacoes/SubstituirInformacao.asp"
     "?tcenet_Sistema=Administrativo&tcenet_Modulo=Informacoes"
 )
+# Administrativo > Informações > Digitar Informação
+PAGINA_DIGITAR = (
+    BASE + "SISTEMAS/Informacoes/MovDigitarInformacaoPIN.asp"
+    "?tcenet_Sistema=Administrativo&tcenet_Modulo=Informacoes"
+)
 MOTIVO_INFORMACAO_INCOMPLETA = "4"  # cmbMotivoExclusao
 MODELO_TITULO = "InformacaoInstrutiva"
 MODELO_RESUMO = "Informação instrutiva...."
@@ -166,6 +171,37 @@ class AreaRestrita:
         r = self._post(action, {**campos, **extras, "oculto": "IA"})
         print(f"  IA: {self._mensagem(r)}")
 
+    def distribuir_tecnico(self, processos: list[tuple[int, int]], cpf: str,
+                           dry_run: bool = False) -> None:
+        """Distribui os `processos` em UM lote a outro técnico do setor:
+        'Distribuição (Técnico)' (oculto=D) abre a seção com txtCpfTecnico,
+        'Iniciar Análise' (oculto=IA) confirma. Substitui a distribuição atual."""
+        chaves = [f"{numero:06d}{ano}" for numero, ano in processos]
+        r = self._get(self._pagina_setor())
+        action, campos = self._form(r)
+        selecao = {f"checkProcesso{i}": ch for i, ch in enumerate(chaves, start=1)}
+        selecao["quantidadeChk"] = str(len(chaves))
+        r = self._post(action, {**campos, **selecao, "oculto": "D"})
+        action2, campos2 = self._form(r)
+        ecoados = {v for k, v in campos2.items() if re.fullmatch(r"Processod\d+", k)}
+        faltando = sorted(set(chaves) - ecoados)
+        if "txtCpfTecnico" not in campos2 or faltando:
+            raise RuntimeError(
+                f"seção de distribuição não veio com todos os processos (faltam {faltando}): "
+                f"{self._mensagem(r)}"
+            )
+        campos2["txtCpfTecnico"] = cpf
+        print(f"  seção de distribuição com {len(chaves)} processo(s), técnico={cpf}")
+        if dry_run:
+            print("  [dry-run] oculto=IA NÃO enviado")
+            return
+        r = self._post(action2, {**campos2, "oculto": "IA"})
+        print(f"lote distribuído: {self._mensagem(r)}")
+        # verificação real: coluna 'Distribuído para' passa a ser o novo técnico
+        atuais = {f"{numero:06d}/{ano}": self._distribuido_para(numero, ano)
+                  for numero, ano in processos}
+        print("  distribuído para: " + "; ".join(f"{p}={n!r}" for p, n in atuais.items()))
+
     def _upload_pdf(self, pdf: str) -> str:
         """Sobe o PDF pelo popup de upload. Retorna o nome do arquivo no servidor."""
         r = self._get(BASE + "Upload/upload.asp?modo=PDFDigitalizado&NomeCampoDestino=txtNomeArquivo1")
@@ -261,14 +297,18 @@ class AreaRestrita:
     def substituir_informacao(self, numero: int, ano: int, autor_substituida: str,
                               resumo_substituta: str = "Informação instrutiva",
                               data_substituida: str | None = None,
+                              ordem_substituida: int | None = None,
                               dry_run: bool = False) -> None:
         """Substitui a informação de `autor_substituida` (a mais recente dele — ou,
-        se `data_substituida` for dada, a daquela data, ex. '08/07/2026') pela
-        'Informação instrutiva' mais recente, com motivo 'Informação incompleta'."""
+        se `data_substituida`/`ordem_substituida` forem dadas, a daquela data/ordem)
+        pela 'Informação instrutiva' mais recente, com motivo 'Informação incompleta'.
+        `ordem_substituida` é o desempate quando autor e data coincidem (refazer uma
+        informação do mesmo dia)."""
         action, campos, linhas = self._consultar_substituicao(numero, ano)
         alvo = autor_substituida.casefold()
         substituidas = [ln for ln in linhas if alvo in ln["autor"].casefold()
-                        and (data_substituida is None or ln["data"] == data_substituida)]
+                        and (data_substituida is None or ln["data"] == data_substituida)
+                        and (ordem_substituida is None or ln["ordem"] == ordem_substituida)]
         if not substituidas:
             raise LookupError(
                 f"nenhuma informação de {autor_substituida!r}"
@@ -309,6 +349,147 @@ class AreaRestrita:
         if any(ln["id"] == substituida["id"] for ln in depois):
             raise RuntimeError("informação substituída ainda aparece como substituível")
         print("  verificado: informação substituída saiu da lista")
+
+    def _distribuido_para(self, numero: int, ano: int) -> str:
+        """Consulta filtrada na tela do setor; retorna o conteúdo da coluna
+        'Distribuído para' (vazio = sem distribuição aberta)."""
+        r = self._get(self._pagina_setor())
+        action, campos = self._form(r)
+        campos.update(
+            txtNumeroProcesso=f"{numero:06d}",
+            txtAnoProcesso=str(ano),
+            oculto="C",
+        )
+        r = self._post(action, campos)
+        doc = lxml_html.fromstring(r.text)
+        cbs = doc.xpath(f"//input[@type='checkbox'][@value='{numero:06d}{ano}']")
+        if not cbs:
+            raise LookupError(f"processo {numero:06d}/{ano} não está na listagem do setor")
+        tds = cbs[0].xpath("ancestor::tr[1]/td")
+        # penúltima célula = 'Distribuído para' (última = juntadas após recebimento)
+        return " ".join(t.strip() for t in tds[-2].xpath(".//text()") if t.strip())
+
+    def cancelar_distribuicao(self, processos: list[tuple[int, int]],
+                              dry_run: bool = False) -> None:
+        """Cancela a distribuição dos `processos` em UM lote: 'Cancela Distribuição'
+        (oculto=CA) com a seleção montada direto no POST (checkProcesso1..N +
+        quantidadeChk, como em tramitar), depois 'Confirmar Cancelamento' (oculto=CN)."""
+        chaves = [f"{numero:06d}{ano}" for numero, ano in processos]
+        r = self._get(self._pagina_setor())
+        action, campos = self._form(r)
+        selecao = {f"checkProcesso{i}": ch for i, ch in enumerate(chaves, start=1)}
+        selecao["quantidadeChk"] = str(len(chaves))
+        # 'Cancela Distribuição' abre a seção 'Cancelar Distribuição de Processos'. Não commita.
+        r = self._post(action, {**campos, **selecao, "oculto": "CA"})
+        action2, campos2 = self._form(r)
+        ecoados = {v for k, v in campos2.items() if re.fullmatch(r"Processod\d+", k)}
+        faltando = sorted(set(chaves) - ecoados)
+        if faltando:
+            raise RuntimeError(
+                f"seção de cancelamento não veio com todos os processos (faltam {faltando}): "
+                f"{self._mensagem(r)}"
+            )
+        print(f"  seção de cancelamento com {len(chaves)} processo(s)")
+        if dry_run:
+            print("  [dry-run] oculto=CN NÃO enviado")
+            return
+        # 'Confirmar Cancelamento' (oculto=CN) efetiva o cancelamento do lote
+        r = self._post(action2, {**campos2, "oculto": "CN"})
+        print(f"lote cancelado: {self._mensagem(r)}")
+        # verificação real: coluna 'Distribuído para' deve esvaziar
+        ainda = [f"{numero:06d}/{ano}" for numero, ano in processos
+                 if self._distribuido_para(numero, ano)]
+        if ainda:
+            raise RuntimeError(f"ainda com distribuição aberta: {ainda}")
+        print(f"verificado: {len(chaves)} processo(s) sem distribuição aberta")
+
+    @staticmethod
+    def _linhas_digitar(html: str) -> list[dict]:
+        linhas = []
+        for bloco in re.findall(r'onClick="Editar\((.*?)\);"', html, re.S):
+            args = re.findall(r"'([^']*)'", bloco)
+            if len(args) < 16:
+                continue
+            linhas.append({
+                "id": args[0], "titulo_modelo": args[1], "resumo": args[2],
+                "data": args[3], "cpf_redigiu": args[4], "autor": args[8],
+                "ordem": args[10], "assinado": args[12], "publicado": args[13],
+                "arquivo": args[14], "digitalizacao": args[15],
+            })
+        return linhas
+
+    def _consultar_digitar(self, numero: int, ano: int):
+        """Consulta a tela Digitar Informação (TODAS as páginas — a listagem pagina
+        de 10 em 10). Retorna (resp, linhas); cada linha vem dos argumentos do
+        onclick Editar(...) da listagem (id, ordem, resumo, data, autor, assinado,
+        publicado, arquivo, ...)."""
+        r = self._get(PAGINA_DIGITAR)
+        action, campos = self._form(r)
+        campos.update(
+            txtNumeroProcesso=f"{numero:06d}",
+            txtAnoProcesso=str(ano),
+            oculto="C",
+        )
+        r = self._post(action, campos)
+        linhas = self._linhas_digitar(r.text)
+        doc = lxml_html.fromstring(r.text)
+        paginas = doc.xpath("(//select[@name='pagina'])[1]//option/@value")
+        for pagina in paginas[1:]:  # página 1 já veio
+            action, campos = self._form(r)
+            campos.update(NumeroPagina=pagina, Paginacao="S", oculto="C")
+            r = self._post(action, campos)
+            linhas += self._linhas_digitar(r.text)
+        if not linhas:
+            raise LookupError(f"consulta não listou informações: {self._mensagem(r)}")
+        return r, linhas
+
+    def excluir_informacao_nao_assinada(self, numero: int, ano: int,
+                                        dry_run: bool = False,
+                                        manter_data: str | None = None) -> int:
+        """Exclui (tela Digitar Informação, botão Excluir/oculto=E) TODAS as
+        informações do processo que não estão assinadas nem publicadas.
+        `manter_data` ("dd/mm/aaaa") poupa as daquele dia — usado para trocar a
+        informação antiga pela recém-cadastrada. Retorna quantas excluiu."""
+        r, linhas = self._consultar_digitar(numero, ano)
+        alvos = [ln for ln in linhas
+                 if ln["assinado"] != "Sim" and ln["publicado"] != "Sim"
+                 and ln["data"] != manter_data]
+        if not alvos:
+            print("  nenhuma informação não assinada/não publicada")
+            return 0
+        excluidas = 0
+        for alvo in alvos:
+            print(f"  excluir: ordem {alvo['ordem']} {alvo['arquivo']} "
+                  f"({alvo['data']}, {alvo['autor']}) {alvo['resumo'][:40]!r}")
+            if dry_run:
+                continue
+            action, campos = self._form(r)
+            campos.update(
+                OcultoIdInformacao=alvo["id"],
+                OcultoOrdem=alvo["ordem"],
+                txtTituloModelo=alvo["titulo_modelo"],
+                txtResumo=alvo["resumo"],
+                txtCPFRedigiu=alvo["cpf_redigiu"],
+                ocultoAssinado=alvo["assinado"],
+                oculto="E",
+            )
+            if alvo["digitalizacao"]:
+                campos["nomeArquivoAssinar"] = alvo["arquivo"]
+            r2 = self._post(action, campos)
+            print(f"  E: {self._mensagem(r2)}")
+            # verificação: a informação some da listagem da tela
+            # (listagem vazia = era a última informação do usuário no processo)
+            try:
+                r, linhas = self._consultar_digitar(numero, ano)
+            except LookupError:
+                linhas = []
+            if any(ln["id"] == alvo["id"] for ln in linhas):
+                raise RuntimeError(f"informação {alvo['id']} ainda listada após exclusão")
+            print("  verificado: excluída")
+            excluidas += 1
+        if dry_run:
+            print(f"  [dry-run] {len(alvos)} exclusão(ões) NÃO enviada(s)")
+        return excluidas
 
     def tramitar(self, processos: list[tuple[int, int]], destino: str, providencia: str,
                  dry_run: bool = False) -> None:

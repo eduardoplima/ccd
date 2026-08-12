@@ -14,6 +14,7 @@ from app.ccd.antecedentes.router import router as ccd_antecedentes_router
 from app.ccd.desconto_folha.router import router as ccd_desconto_folha_router
 from app.ccd.router import router as ccd_router
 from app.cgad.dashboards.router import router as cgad_dashboards_router
+from app.cgad.dataset.router import router as cgad_dataset_router
 from app.cgad.dataset_corrections.router import router as cgad_dataset_corrections_router
 from app.cgad.etl.router import router as cgad_etl_router
 from app.cgad.review.router import router as cgad_review_router
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     app.include_router(cgad_etl_router)
     app.include_router(cgad_dashboards_router)
     app.include_router(cgad_dataset_corrections_router)
+    app.include_router(cgad_dataset_router)
 
     return app
 

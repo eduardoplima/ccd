@@ -5,6 +5,8 @@ Uso:
     python -m scripts.automacao.area_restrita informacao 12345/2024 --pdf caminho.pdf [--dry-run]
     python -m scripts.automacao.area_restrita informacao-lote --pasta saidas/automacao/x [--dry-run]
     python -m scripts.automacao.area_restrita substituir 12345/2024 [--autor Luzenildo] [--dry-run]
+    python -m scripts.automacao.area_restrita cancelar-distribuicao 12345/2024 [--setor DIP] [--dry-run]
+    python -m scripts.automacao.area_restrita excluir-informacao 12345/2024 [--dry-run]
     python -m scripts.automacao.area_restrita tramitar 12345/2024 [--destino DIP] --relator ana [--dry-run]
 """
 
@@ -25,6 +27,9 @@ def main() -> int:
 
     p_dist = sub.add_parser("distribuir", help="distribuição própria + iniciar análise")
     p_dist.add_argument("processos", nargs="+", help="numero/ano, ex.: 12345/2024")
+    p_dist.add_argument("--tecnico", metavar="CPF",
+                        help="distribui EM LOTE a outro técnico do setor (só dígitos); "
+                             "sem ele, distribuição própria")
     p_dist.add_argument("--dry-run", action="store_true", help="só consulta; não distribui")
 
     p_info = sub.add_parser("informacao", help="cadastrar informação digitalizada (InformacaoInstrutiva)")
@@ -49,7 +54,29 @@ def main() -> int:
     p_subst.add_argument("--data", default=None,
                          help="data de digitação da informação a substituir (ex.: 08/07/2026); "
                               "sem ela, vale a mais recente do autor")
+    p_subst.add_argument("--ordem", type=int, default=None,
+                         help="ordem da informação a substituir (desempata autor+data iguais)")
     p_subst.add_argument("--dry-run", action="store_true", help="só mostra o par; não substitui")
+
+    p_excl = sub.add_parser(
+        "excluir-informacao",
+        help="excluir as informações NÃO assinadas e NÃO publicadas do processo "
+             "(tela Digitar Informação)",
+    )
+    p_excl.add_argument("processos", nargs="+", help="numero/ano, ex.: 12345/2024")
+    p_excl.add_argument("--dry-run", action="store_true", help="só lista os alvos; não exclui")
+    p_excl.add_argument("--manter-data", metavar="DD/MM/AAAA",
+                        help="poupa as informações incluídas nessa data")
+
+    p_canc = sub.add_parser(
+        "cancelar-distribuicao",
+        help="cancelar a distribuição de processos EM LOTE no setor da sessão",
+    )
+    p_canc.add_argument("processos", nargs="+", help="numero/ano, ex.: 12345/2024")
+    p_canc.add_argument("--setor", default="CCD",
+                        help="setor da sessão (combo 'Selecione o setor'; default: CCD)")
+    p_canc.add_argument("--dry-run", action="store_true",
+                        help="vai até a seção de confirmação; não confirma")
 
     p_tram = sub.add_parser("tramitar", help="tramitar processos EM LOTE do setor atual para o destino")
     p_tram.add_argument("processos", nargs="+", help="numero/ano, ex.: 12345/2024")
@@ -76,11 +103,45 @@ def main() -> int:
             print(f"{numero:06d}/{ano}:")
             try:
                 ar.substituir_informacao(numero, ano, args.autor,
-                                         data_substituida=args.data, dry_run=args.dry_run)
+                                         data_substituida=args.data,
+                                         ordem_substituida=args.ordem, dry_run=args.dry_run)
             except Exception as e:  # segue para o próximo do lote
                 print(f"  ERRO: {e}")
                 falhas += 1
         return 1 if falhas else 0
+
+    if args.tarefa == "excluir-informacao":
+        ar = AreaRestrita()
+        falhas = 0
+        for proc in args.processos:
+            try:
+                numero, ano = parse_processo(proc)
+            except ValueError as e:
+                print(e)
+                falhas += 1
+                continue
+            print(f"{numero:06d}/{ano}:")
+            try:
+                ar.excluir_informacao_nao_assinada(numero, ano, dry_run=args.dry_run,
+                                                   manter_data=args.manter_data)
+            except Exception as e:  # segue para o próximo do lote
+                print(f"  ERRO: {e}")
+                falhas += 1
+        return 1 if falhas else 0
+
+    if args.tarefa == "cancelar-distribuicao":
+        try:
+            procs = [parse_processo(proc) for proc in args.processos]
+        except ValueError as e:
+            print(e)
+            return 1
+        ar = AreaRestrita(setor=args.setor)
+        try:
+            ar.cancelar_distribuicao(procs, dry_run=args.dry_run)
+        except Exception as e:
+            print(f"ERRO: {e}")
+            return 1
+        return 0
 
     if args.tarefa == "tramitar":
         providencia = args.providencia or (
@@ -97,6 +158,20 @@ def main() -> int:
         ar = AreaRestrita(setor=args.setor)
         try:
             ar.tramitar(procs, args.destino, providencia, dry_run=args.dry_run)
+        except Exception as e:
+            print(f"ERRO: {e}")
+            return 1
+        return 0
+
+    if args.tarefa == "distribuir" and args.tecnico:
+        try:
+            procs = [parse_processo(proc) for proc in args.processos]
+        except ValueError as e:
+            print(e)
+            return 1
+        ar = AreaRestrita()
+        try:
+            ar.distribuir_tecnico(procs, args.tecnico, dry_run=args.dry_run)
         except Exception as e:
             print(f"ERRO: {e}")
             return 1

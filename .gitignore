@@ -197,6 +197,20 @@ vault/.trash/
 # repos/ = clones de referência (frap-controle, decicontas.app) com .git próprio.
 repos/
 
+# processos/ = versionar só o código (gerar_informacao.py) e os modelos.
+# As informações geradas (.docx/.pdf) e os backups timestamped ficam de fora.
+processos/**/*.doc
+processos/**/*.docx
+processos/**/*.pdf
+processos/**/*.tmp
+!processos/modelos/*.doc
+!processos/modelos/*.docx
+processos/modelos/*_20??????_??????.docx
+
+# Backups timestamped dos templates (gerados antes de sobrescrever)
+*_20??????_??????.docx
+*.bak
+
 # scratch/ = scripts e dumps one-off arquivados (fora do histórico)
 scratch/
 

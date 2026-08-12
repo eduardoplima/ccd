@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import declarative_base, relationship
@@ -305,6 +306,65 @@ class ExtracaoEventoORM(Base):
     Payload = Column(JSON, nullable=True)
 
     extracao = relationship("ExtracaoORM", back_populates="eventos")
+
+
+class DatasetDocumentoORM(Base):
+    """Um texto de decisão do conjunto de dados anotado.
+
+    ``Origem='decicontas'`` são os documentos do corpus DeciContas.br;
+    ``'ampliacao'`` são as decisões amostradas de 2024/2025.
+    """
+
+    __tablename__ = "DatasetDocumento"
+
+    IdDocumento = Column(Integer, primary_key=True, autoincrement=True)
+    IdExterno = Column(Integer, nullable=True)  # id no decicontas.json
+    IdProcesso = Column(Integer, nullable=True)
+    IdComposicaoPauta = Column(Integer, nullable=True)
+    IdVotoPauta = Column(Integer, nullable=True)
+    Processo = Column(String(20), nullable=True)
+    CodigoTipoProcesso = Column(String(3), nullable=True)
+    DataSessao = Column(DateTime, nullable=True)
+    Texto = Column(Text, nullable=False)
+    Origem = Column(String(16), nullable=False)
+    DataInclusao = Column(DateTime, nullable=False, server_default=func.now())
+
+    anotacoes = relationship(
+        "DatasetAnotacaoORM",
+        back_populates="documento",
+        cascade="all, delete-orphan",
+    )
+
+
+class DatasetAnotacaoORM(Base):
+    """A anotação de UM anotador sobre UM documento.
+
+    ``Spans`` é JSON ``[{"start": int, "end": int, "label": str}]`` — mesmo
+    formato do campo ``entities`` do ``decicontas.json``.
+    """
+
+    __tablename__ = "DatasetAnotacao"
+
+    IdAnotacao = Column(Integer, primary_key=True, autoincrement=True)
+    IdDocumento = Column(
+        Integer,
+        ForeignKey("DatasetDocumento.IdDocumento"),
+        nullable=False,
+        index=True,
+    )
+    Anotador = Column(String(150), nullable=False, index=True)
+    Status = Column(String(8), nullable=False, default="pending")
+    Spans = Column(Text, nullable=True)
+    DataInicio = Column(DateTime, nullable=True)
+    DataConclusao = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "IdDocumento", "Anotador", name="ux_datasetanotacao_documento_anotador"
+        ),
+    )
+
+    documento = relationship("DatasetDocumentoORM", back_populates="anotacoes")
 
 
 class UserORM(Base):

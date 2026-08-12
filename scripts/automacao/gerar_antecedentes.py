@@ -175,7 +175,10 @@ def _responsaveis_str(nomes: list[str]) -> str:
     return ", ".join(nomes[:-1]) + " e " + nomes[-1]
 
 
-def gerar(processos: list[str], out_dir: Path) -> list[Path]:
+def gerar(processos: list[str], out_dir: Path,
+          responsaveis: list[str] | None = None) -> list[Path]:
+    """`responsaveis` substitui a extração do LLM (despacho-fonte errado, nome a
+    mais/a menos). Só faz sentido com um processo por vez."""
     with contextlib.suppress(locale.Error):
         locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
     engine = get_connection()
@@ -189,17 +192,20 @@ def gerar(processos: list[str], out_dir: Path) -> list[Path]:
     if not info_rows:
         raise ValueError("Nenhum despacho encontrado para os processos selecionados.")
 
-    llm = build_llm()
+    llm = None if responsaveis else build_llm()
     pdfs: list[Path] = []
     for row in info_rows:
         processo = row["processo"]
         try:
-            caminho = base_dir / (row["setor"] or "").strip() / row["arquivo"]
-            texto = extract_text_from_pdf(caminho)
-            if not texto:
-                print(f"  {processo}: PDF-fonte ausente ou sem texto ({caminho})")
-                continue
-            nomes = _extrair_pessoas(llm, texto)
+            if responsaveis:
+                nomes = list(responsaveis)
+            else:
+                caminho = base_dir / (row["setor"] or "").strip() / row["arquivo"]
+                texto = extract_text_from_pdf(caminho)
+                if not texto:
+                    print(f"  {processo}: PDF-fonte ausente ou sem texto ({caminho})")
+                    continue
+                nomes = _extrair_pessoas(llm, texto)
             with engine.connect() as conn:
                 valores = [
                     _valores_pessoa(conn, nome, row["numero_processo"], row["ano_processo"])
@@ -230,7 +236,12 @@ def main() -> int:
     ap.add_argument("processos", nargs="*", help="numero/ano; vazio = descobre no CCD")
     ap.add_argument("--saida", default=str(SAIDA_DEFAULT), help=f"pasta de saída (default: {SAIDA_DEFAULT})")
     ap.add_argument("--dry-run", action="store_true", help="só lista os candidatos; não gera")
+    ap.add_argument("--responsavel", action="append", metavar="NOME",
+                    help="força o(s) responsável(is) em vez de extrair do despacho "
+                         "(repetível; exige exatamente um processo)")
     args = ap.parse_args()
+    if args.responsavel and len(args.processos) != 1:
+        ap.error("--responsavel exige exatamente um processo")
 
     engine = get_connection()
     if args.processos:
@@ -252,7 +263,7 @@ def main() -> int:
 
     out_dir = Path(args.saida)
     print(f"\nGerando em {out_dir} ...")
-    pdfs = gerar(processos, out_dir)
+    pdfs = gerar(processos, out_dir, responsaveis=args.responsavel)
     print(f"\n{len(pdfs)}/{len(processos)} PDF(s) gerado(s) em {out_dir}")
     return 0 if len(pdfs) == len(processos) else 1
 
