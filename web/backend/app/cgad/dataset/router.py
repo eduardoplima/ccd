@@ -26,6 +26,7 @@ def list_documentos(
     origem: schemas.Origem | None = Query(None),
     ano: int | None = Query(None, ge=2000, le=2100),
     com_entidades: bool | None = Query(None),
+    sem_atos_pessoal: bool | None = Query(None),
     session: Session = Depends(get_db_session),
     current_user: UserORM = Depends(get_current_user),
 ) -> schemas.DocumentoListPage:
@@ -38,6 +39,7 @@ def list_documentos(
         origem=origem,
         ano=ano,
         com_entidades=com_entidades,
+        sem_atos_pessoal=sem_atos_pessoal,
     )
 
 

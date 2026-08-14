@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, extract, func, select
+from sqlalchemy import case, extract, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
 from app.cgad.dataset import schemas
@@ -37,6 +37,28 @@ _TRECHO = 240
 # eduardo, e achou 53 que ele deixou vazios. Os spans em si nunca são devolvidos
 # ao anotador: a aba filtra a fila, a anotação segue cega.
 _FONTES_ENTIDADE = ("eduardo", "deepseek")
+
+# Códigos de atos de pessoal, apurados em processo.dbo.Tipo. São 46% do conjunto
+# (281 só de APO) e a fila fica repetitiva; o filtro esconde da lista sem tirar
+# nada do conjunto — a maioria dos que têm entidade traz multa e determinação de
+# verdade, então não dá para descartá-los do corpus.
+CODIGOS_ATOS_PESSOAL = (
+    "APO",
+    "APP",
+    "ASS",
+    "CEM",
+    "CTT",
+    "CVP",
+    "FCO",
+    "INC",
+    "INM",
+    "NCE",
+    "NOM",
+    "PDR",
+    "PEN",
+    "PEP",
+    "RBN",
+)
 
 
 # ----- helpers ---------------------------------------------------------------
@@ -114,6 +136,7 @@ def list_documentos(
     origem: Optional[str] = None,
     ano: Optional[int] = None,
     com_entidades: Optional[bool] = None,
+    sem_atos_pessoal: Optional[bool] = None,
 ) -> schemas.DocumentoListPage:
     base = (
         select(DatasetDocumentoORM, DatasetAnotacaoORM)
@@ -127,6 +150,14 @@ def list_documentos(
         base = base.where(DatasetDocumentoORM.Origem == origem)
     if ano:
         base = base.where(extract("year", DatasetDocumentoORM.DataSessao) == ano)
+    if sem_atos_pessoal:
+        # 66 documentos estão sem tipo; ficam na lista (not_in com NULL some).
+        base = base.where(
+            or_(
+                DatasetDocumentoORM.CodigoTipoProcesso.is_(None),
+                DatasetDocumentoORM.CodigoTipoProcesso.not_in(CODIGOS_ATOS_PESSOAL),
+            )
+        )
 
     contagens = dict(
         session.execute(

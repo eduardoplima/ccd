@@ -20,6 +20,7 @@ export function useDocumentos(
     origem?: string;
     ano?: number;
     comEntidades?: boolean;
+    semAtosPessoal?: boolean;
   } = {},
 ) {
   const page = args.page ?? 1;

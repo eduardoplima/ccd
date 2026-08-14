@@ -18,6 +18,7 @@ export async function listDocumentos({
   origem,
   ano,
   comEntidades,
+  semAtosPessoal,
 }: {
   page?: number;
   pageSize?: number;
@@ -25,9 +26,18 @@ export async function listDocumentos({
   origem?: string;
   ano?: number;
   comEntidades?: boolean;
+  semAtosPessoal?: boolean;
 } = {}): Promise<DocumentoListPage> {
   const response = await apiClient.get(`${BASE}/documentos`, {
-    params: { page, page_size: pageSize, status, origem, ano, com_entidades: comEntidades },
+    params: {
+      page,
+      page_size: pageSize,
+      status,
+      origem,
+      ano,
+      com_entidades: comEntidades,
+      sem_atos_pessoal: semAtosPessoal,
+    },
   });
   return documentoListPageSchema.parse(response.data);
 }

@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -31,8 +33,14 @@ const FILTROS: Record<Tab, { status?: string; comEntidades?: boolean }> = {
 export default function DatasetPage() {
   const [tab, setTab] = useState<Tab>("pending");
   const [page, setPage] = useState(1);
+  const [semAtosPessoal, setSemAtosPessoal] = useState(false);
 
-  const documentos = useDocumentos({ page, pageSize: PAGE_SIZE, ...FILTROS[tab] });
+  const documentos = useDocumentos({
+    page,
+    pageSize: PAGE_SIZE,
+    semAtosPessoal,
+    ...FILTROS[tab],
+  });
   const progresso = useProgresso();
 
   useEffect(() => {
@@ -84,6 +92,20 @@ export default function DatasetPage() {
           <TabsTrigger value="vazios">Probabilidade de ser vazio</TabsTrigger>
         </TabsList>
       </Tabs>
+
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="sem-atos-pessoal"
+          checked={semAtosPessoal}
+          onCheckedChange={(v) => {
+            setSemAtosPessoal(v === true);
+            setPage(1);
+          }}
+        />
+        <Label htmlFor="sem-atos-pessoal" className="text-sm font-normal text-muted-foreground">
+          Esconder atos de pessoal (aposentadoria, pensão, nomeação…)
+        </Label>
+      </div>
 
       <Table>
         <TableHeader>

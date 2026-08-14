@@ -232,6 +232,17 @@ def test_abas_de_probabilidade_usam_a_uniao_das_triagens(env, factory):
     assert todos["com_entidades"] == 2
 
 
+def test_filtro_esconde_atos_de_pessoal_mas_mantem_sem_tipo(env, factory):
+    with factory() as s:
+        s.get(DatasetDocumentoORM, env["doc"]).CodigoTipoProcesso = "APO"
+        s.commit()
+
+    pagina = env["client"].get(f"{BASE}/documentos", params={"sem_atos_pessoal": True}).json()
+    # o `outro` está sem tipo: não é ato de pessoal, então fica.
+    assert [i["id"] for i in pagina["items"]] == [env["outro"]]
+    assert pagina["pendentes"] == 1
+
+
 def test_lista_conta_apenas_o_proprio_progresso(env):
     client, holder = env["client"], env["holder"]
 
