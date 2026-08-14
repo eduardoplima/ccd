@@ -7,6 +7,7 @@ Base declarativa própria, separada da ``app.db.Base`` do FRAP).
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 
 import pytest
@@ -178,6 +179,57 @@ def test_documento_nao_atribuido_da_404(env, factory):
         id_alheio = alheio.IdDocumento
 
     assert env["client"].get(f"{BASE}/documentos/{id_alheio}").status_code == 404
+
+
+def test_abas_de_probabilidade_usam_a_uniao_das_triagens(env, factory):
+    with factory() as s:
+        s.add_all(
+            [
+                DatasetAnotacaoORM(
+                    IdDocumento=env["doc"],
+                    Anotador="deepseek",
+                    Status="done",
+                    Spans=json.dumps([MULTA]),
+                ),
+                DatasetAnotacaoORM(
+                    IdDocumento=env["outro"],
+                    Anotador="deepseek",
+                    Status="done",
+                    Spans="[]",
+                ),
+            ]
+        )
+        s.commit()
+
+    def abas():
+        client = env["client"]
+        com = client.get(f"{BASE}/documentos", params={"com_entidades": True}).json()
+        sem = client.get(f"{BASE}/documentos", params={"com_entidades": False}).json()
+        return (
+            [i["id"] for i in com["items"]],
+            [i["id"] for i in sem["items"]],
+            com["com_entidades"],
+        )
+
+    assert abas() == ([env["doc"]], [env["outro"]], 1)
+
+    # O eduardo marcou o que o modelo deixou passar: a união põe os dois na aba.
+    with factory() as s:
+        anot = (
+            s.query(DatasetAnotacaoORM)
+            .filter_by(IdDocumento=env["outro"], Anotador="eduardo")
+            .one()
+        )
+        anot.Spans = json.dumps([MULTA])
+        anot.Status = "done"
+        s.commit()
+
+    assert abas() == ([env["doc"], env["outro"]], [], 2)
+
+    # O cartão conta a fila inteira, não a aba aberta.
+    todos = env["client"].get(f"{BASE}/documentos").json()
+    assert len(todos["items"]) == 2
+    assert todos["com_entidades"] == 2
 
 
 def test_lista_conta_apenas_o_proprio_progresso(env):

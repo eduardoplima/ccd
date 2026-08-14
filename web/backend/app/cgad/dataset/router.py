@@ -25,6 +25,7 @@ def list_documentos(
     status: schemas.StatusAnotacao | None = Query(None),
     origem: schemas.Origem | None = Query(None),
     ano: int | None = Query(None, ge=2000, le=2100),
+    com_entidades: bool | None = Query(None),
     session: Session = Depends(get_db_session),
     current_user: UserORM = Depends(get_current_user),
 ) -> schemas.DocumentoListPage:
@@ -36,6 +37,7 @@ def list_documentos(
         status_filtro=status,
         origem=origem,
         ano=ano,
+        com_entidades=com_entidades,
     )
 
 

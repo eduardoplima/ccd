@@ -17,7 +17,9 @@ export function useDocumentos(
     page?: number;
     pageSize?: number;
     status?: string;
+    origem?: string;
     ano?: number;
+    comEntidades?: boolean;
   } = {},
 ) {
   const page = args.page ?? 1;

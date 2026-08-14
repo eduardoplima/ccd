@@ -19,13 +19,20 @@ import { messageForError } from "@/lib/error-messages";
 
 const PAGE_SIZE = 20;
 
-type Tab = "pending" | "done";
+type Tab = "pending" | "done" | "entidades" | "vazios";
+
+const FILTROS: Record<Tab, { status?: string; comEntidades?: boolean }> = {
+  pending: { status: "pending" },
+  done: { status: "done" },
+  entidades: { comEntidades: true },
+  vazios: { comEntidades: false },
+};
 
 export default function DatasetPage() {
   const [tab, setTab] = useState<Tab>("pending");
   const [page, setPage] = useState(1);
 
-  const documentos = useDocumentos({ page, pageSize: PAGE_SIZE, status: tab });
+  const documentos = useDocumentos({ page, pageSize: PAGE_SIZE, ...FILTROS[tab] });
   const progresso = useProgresso();
 
   useEffect(() => {
@@ -44,11 +51,22 @@ export default function DatasetPage() {
           Anote no texto do acórdão as multas, obrigações, recomendações e ressarcimentos. Cada
           anotador trabalha de forma independente — você não vê a anotação dos demais.
         </p>
+        <p className="text-sm text-muted-foreground">
+          As duas últimas abas são uma triagem por probabilidade: um documento cai em{" "}
+          <strong>Probabilidade de ter entidades</strong> quando a anotação de referência ou o
+          modelo encontraram alguma multa, obrigação, recomendação ou ressarcimento nele. É só uma
+          estimativa — nenhuma marcação é mostrada na tela de anotação, e os dois lados erram.
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-3">
         <Cartao titulo="Pendentes" valor={data?.pendentes ?? 0} />
         <Cartao titulo="Concluídos" valor={data?.concluidos ?? 0} />
+        <Cartao titulo="Prob. de ter entidades" valor={data?.com_entidades ?? 0} />
+        <Cartao
+          titulo="Prob. de ser vazio"
+          valor={data ? Math.max(0, data.pendentes + data.concluidos - data.com_entidades) : 0}
+        />
         <Cartao titulo="Documentos no conjunto" valor={progresso.data?.documentos ?? 0} />
       </div>
 
@@ -62,6 +80,8 @@ export default function DatasetPage() {
         <TabsList>
           <TabsTrigger value="pending">Pendentes</TabsTrigger>
           <TabsTrigger value="done">Concluídos</TabsTrigger>
+          <TabsTrigger value="entidades">Probabilidade de ter entidades</TabsTrigger>
+          <TabsTrigger value="vazios">Probabilidade de ser vazio</TabsTrigger>
         </TabsList>
       </Tabs>
 

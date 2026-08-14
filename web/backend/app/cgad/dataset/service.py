@@ -18,7 +18,7 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import case, extract, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.cgad.dataset import schemas
 from cgad.models import DatasetAnotacaoORM, DatasetDocumentoORM
@@ -30,6 +30,13 @@ _TOKEN_RE = re.compile(r"\S+")
 
 _IOU_MIN = 0.5
 _TRECHO = 240
+
+# Triagem: um documento "provavelmente tem entidade" se o eduardo (corpus
+# DeciContas.br) OU o deepseek (``cgad.dataset_pretag``) marcaram algo nele.
+# União porque os dois erram para lados diferentes — o modelo perdeu 5 dos 232 do
+# eduardo, e achou 53 que ele deixou vazios. Os spans em si nunca são devolvidos
+# ao anotador: a aba filtra a fila, a anotação segue cega.
+_FONTES_ENTIDADE = ("eduardo", "deepseek")
 
 
 # ----- helpers ---------------------------------------------------------------
@@ -54,6 +61,21 @@ def _anotacao(session: Session, *, id_documento: int, anotador: str) -> DatasetA
             detail="document not assigned to this annotator",
         )
     return row
+
+
+def _tem_entidades():
+    """``EXISTS`` de uma triagem (eduardo ou deepseek) com pelo menos um span."""
+    triagem = aliased(DatasetAnotacaoORM)
+    return (
+        select(1)
+        .where(
+            triagem.IdDocumento == DatasetDocumentoORM.IdDocumento,
+            triagem.Anotador.in_(_FONTES_ENTIDADE),
+            triagem.Spans.is_not(None),
+            triagem.Spans != "[]",
+        )
+        .exists()
+    )
 
 
 def _to_bio(text: str, spans: list[schemas.Span]) -> tuple[list[str], list[str], list[list[int]]]:
@@ -91,6 +113,7 @@ def list_documentos(
     status_filtro: Optional[str] = None,
     origem: Optional[str] = None,
     ano: Optional[int] = None,
+    com_entidades: Optional[bool] = None,
 ) -> schemas.DocumentoListPage:
     base = (
         select(DatasetDocumentoORM, DatasetAnotacaoORM)
@@ -113,9 +136,17 @@ def list_documentos(
         ).all()
     )
 
+    # Contagens dos cartões: sempre sobre a fila inteira, não sobre a aba aberta.
+    total_com_entidades = (
+        session.scalar(select(func.count()).select_from(base.where(_tem_entidades()).subquery()))
+        or 0
+    )
+
     filtrada = base
     if status_filtro:
         filtrada = filtrada.where(DatasetAnotacaoORM.Status == status_filtro)
+    if com_entidades is not None:
+        filtrada = filtrada.where(_tem_entidades() if com_entidades else ~_tem_entidades())
 
     total = session.scalar(select(func.count()).select_from(filtrada.subquery())) or 0
 
@@ -145,6 +176,7 @@ def list_documentos(
         total=total,
         pendentes=contagens.get("pending", 0),
         concluidos=contagens.get("done", 0),
+        com_entidades=total_com_entidades,
     )
 
 

@@ -17,15 +17,17 @@ export async function listDocumentos({
   status,
   origem,
   ano,
+  comEntidades,
 }: {
   page?: number;
   pageSize?: number;
   status?: string;
   origem?: string;
   ano?: number;
+  comEntidades?: boolean;
 } = {}): Promise<DocumentoListPage> {
   const response = await apiClient.get(`${BASE}/documentos`, {
-    params: { page, page_size: pageSize, status, origem, ano },
+    params: { page, page_size: pageSize, status, origem, ano, com_entidades: comEntidades },
   });
   return documentoListPageSchema.parse(response.data);
 }

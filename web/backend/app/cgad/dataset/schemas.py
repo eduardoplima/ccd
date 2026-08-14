@@ -66,6 +66,7 @@ class DocumentoListPage(BaseModel):
     total: int
     pendentes: int
     concluidos: int
+    com_entidades: int = 0
 
 
 class DocumentoDetail(BaseModel):

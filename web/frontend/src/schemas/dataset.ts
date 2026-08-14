@@ -28,6 +28,7 @@ export const documentoListPageSchema = z.object({
   total: z.number().int(),
   pendentes: z.number().int(),
   concluidos: z.number().int(),
+  com_entidades: z.number().int(),
 });
 
 export const documentoDetailSchema = z.object({
