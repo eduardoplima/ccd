@@ -270,6 +270,36 @@ def test_concluir_aponta_o_proximo_pendente(env):
     assert corpo["proximo_pendente"] == env["outro"]
 
 
+def test_concluir_segue_dentro_da_aba_de_triagem(env, factory):
+    # Só o `outro` tem entidade: quem entrou pela aba de triagem não pode ser
+    # mandado para o `doc`, que está fora dela.
+    with factory() as s:
+        s.add(
+            DatasetAnotacaoORM(
+                IdDocumento=env["outro"],
+                Anotador="deepseek",
+                Status="done",
+                Spans=json.dumps([MULTA]),
+            )
+        )
+        s.commit()
+
+    corpo = (
+        env["client"]
+        .put(
+            f"{BASE}/documentos/{env['outro']}/anotacao",
+            params={"com_entidades": True},
+            json={"spans": [MULTA], "status": "done"},
+        )
+        .json()
+    )
+    assert corpo["proximo_pendente"] is None
+
+    # Sem o filtro, a fila inteira volta a valer.
+    sem_filtro = env["client"].get(f"{BASE}/documentos/{env['outro']}").json()
+    assert sem_filtro["proximo_pendente"] == env["doc"]
+
+
 def test_rascunho_nao_conclui(env):
     corpo = (
         env["client"]

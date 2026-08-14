@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -14,10 +14,20 @@ import { Span } from "@/schemas/dataset";
 export default function AnotarPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = Number(params.id);
 
-  const documento = useDocumento(id);
-  const salvar = useSalvarAnotacao(id);
+  // A aba de origem viaja na URL: sem isso o Concluir devolve o anotador para a
+  // fila inteira, mesmo tendo entrado pela triagem.
+  const comEntidades = searchParams.get("com_entidades");
+  const filtro = {
+    comEntidades: comEntidades === null ? undefined : comEntidades === "true",
+    semAtosPessoal: searchParams.get("sem_atos_pessoal") === "true" || undefined,
+  };
+  const query = searchParams.toString() ? `?${searchParams}` : "";
+
+  const documento = useDocumento(id, filtro);
+  const salvar = useSalvarAnotacao(id, filtro);
 
   const [spans, setSpans] = useState<Span[] | null>(null);
 
@@ -50,7 +60,7 @@ export default function AnotarPage() {
         onSuccess: (atualizado) => {
           toast.success("Anotação registrada.");
           if (atualizado.proximo_pendente) {
-            router.push(`/cgad/dataset/${atualizado.proximo_pendente}`);
+            router.push(`/cgad/dataset/${atualizado.proximo_pendente}${query}`);
           } else {
             router.push("/cgad/dataset");
           }

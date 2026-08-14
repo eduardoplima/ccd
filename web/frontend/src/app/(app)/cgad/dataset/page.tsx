@@ -51,6 +51,14 @@ export default function DatasetPage() {
   const data = documentos.data;
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
 
+  // Vai junto no link: é o que mantém o botão Concluir dentro da mesma fila.
+  const contexto = new URLSearchParams();
+  if (FILTROS[tab].comEntidades !== undefined) {
+    contexto.set("com_entidades", String(FILTROS[tab].comEntidades));
+  }
+  if (semAtosPessoal) contexto.set("sem_atos_pessoal", "true");
+  const query = contexto.toString() ? `?${contexto}` : "";
+
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 p-6">
       <div>
@@ -144,7 +152,7 @@ export default function DatasetPage() {
               <TableCell className="text-right">{item.total_spans}</TableCell>
               <TableCell>
                 <Link
-                  href={`/cgad/dataset/${item.id}`}
+                  href={`/cgad/dataset/${item.id}${query}`}
                   className="text-sm font-medium text-primary hover:underline"
                 >
                   {item.status === "done" ? "Rever" : "Anotar"}

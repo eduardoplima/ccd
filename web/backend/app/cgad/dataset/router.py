@@ -43,24 +43,42 @@ def list_documentos(
     )
 
 
+# `com_entidades`/`sem_atos_pessoal` aqui não filtram o documento pedido: definem
+# de qual fila sai o `proximo_pendente`, para o botão Concluir não jogar o
+# anotador da aba de triagem de volta na fila inteira.
 @router.get("/documentos/{id}", response_model=schemas.DocumentoDetail)
 def get_documento(
     id: int,
+    com_entidades: bool | None = Query(None),
+    sem_atos_pessoal: bool | None = Query(None),
     session: Session = Depends(get_db_session),
     current_user: UserORM = Depends(get_current_user),
 ) -> schemas.DocumentoDetail:
-    return service.get_documento(session, id=id, anotador=current_user.NomeUsuario)
+    return service.get_documento(
+        session,
+        id=id,
+        anotador=current_user.NomeUsuario,
+        com_entidades=com_entidades,
+        sem_atos_pessoal=sem_atos_pessoal,
+    )
 
 
 @router.put("/documentos/{id}/anotacao", response_model=schemas.DocumentoDetail)
 def salvar_anotacao(
     id: int,
     payload: schemas.AnotacaoPayload,
+    com_entidades: bool | None = Query(None),
+    sem_atos_pessoal: bool | None = Query(None),
     session: Session = Depends(get_db_session),
     current_user: UserORM = Depends(get_current_user),
 ) -> schemas.DocumentoDetail:
     return service.salvar_anotacao(
-        session, id=id, payload=payload, anotador=current_user.NomeUsuario
+        session,
+        id=id,
+        payload=payload,
+        anotador=current_user.NomeUsuario,
+        com_entidades=com_entidades,
+        sem_atos_pessoal=sem_atos_pessoal,
     )
 
 

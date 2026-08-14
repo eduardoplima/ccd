@@ -2,7 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getDocumento, getProgresso, listDocumentos, salvarAnotacao } from "@/lib/dataset-api";
+import {
+  FiltroFila,
+  getDocumento,
+  getProgresso,
+  listDocumentos,
+  salvarAnotacao,
+} from "@/lib/dataset-api";
 import { Span } from "@/schemas/dataset";
 
 export const datasetKeys = {
@@ -32,10 +38,10 @@ export function useDocumentos(
   });
 }
 
-export function useDocumento(id: number) {
+export function useDocumento(id: number, filtro: FiltroFila = {}) {
   return useQuery({
-    queryKey: datasetKeys.documento(id),
-    queryFn: () => getDocumento(id),
+    queryKey: [...datasetKeys.documento(id), filtro],
+    queryFn: () => getDocumento(id, filtro),
     enabled: Number.isFinite(id),
   });
 }
@@ -48,10 +54,11 @@ export function useProgresso() {
   });
 }
 
-export function useSalvarAnotacao(id: number) {
+export function useSalvarAnotacao(id: number, filtro: FiltroFila = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { spans: Span[]; status: "pending" | "done" }) => salvarAnotacao(id, body),
+    mutationFn: (body: { spans: Span[]; status: "pending" | "done" }) =>
+      salvarAnotacao(id, body, filtro),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: datasetKeys.documento(id) });
       queryClient.invalidateQueries({ queryKey: ["dataset", "documentos"] });

@@ -11,6 +11,14 @@ import {
 
 const BASE = "/api/v1/cgad/dataset";
 
+// Filtro da aba aberta. Nas rotas de documento ele não escolhe o documento, e sim
+// de qual fila vem o `proximo_pendente`.
+export type FiltroFila = { comEntidades?: boolean; semAtosPessoal?: boolean };
+
+function paramsFila({ comEntidades, semAtosPessoal }: FiltroFila) {
+  return { com_entidades: comEntidades, sem_atos_pessoal: semAtosPessoal };
+}
+
 export async function listDocumentos({
   page = 1,
   pageSize = 20,
@@ -42,16 +50,19 @@ export async function listDocumentos({
   return documentoListPageSchema.parse(response.data);
 }
 
-export async function getDocumento(id: number): Promise<DocumentoDetail> {
-  const response = await apiClient.get(`${BASE}/documentos/${id}`);
+export async function getDocumento(id: number, filtro: FiltroFila = {}): Promise<DocumentoDetail> {
+  const response = await apiClient.get(`${BASE}/documentos/${id}`, { params: paramsFila(filtro) });
   return documentoDetailSchema.parse(response.data);
 }
 
 export async function salvarAnotacao(
   id: number,
   body: { spans: Span[]; status: "pending" | "done" },
+  filtro: FiltroFila = {},
 ): Promise<DocumentoDetail> {
-  const response = await apiClient.put(`${BASE}/documentos/${id}/anotacao`, body);
+  const response = await apiClient.put(`${BASE}/documentos/${id}/anotacao`, body, {
+    params: paramsFila(filtro),
+  });
   return documentoDetailSchema.parse(response.data);
 }
 

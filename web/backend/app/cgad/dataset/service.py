@@ -211,21 +211,61 @@ def list_documentos(
     )
 
 
-def get_documento(session: Session, *, id: int, anotador: str) -> schemas.DocumentoDetail:
+def _proximo_pendente(
+    session: Session,
+    *,
+    id: int,
+    anotador: str,
+    com_entidades: Optional[bool],
+    sem_atos_pessoal: Optional[bool],
+) -> Optional[int]:
+    """O próximo da fila **da aba aberta** — quem entrou pela triagem continua
+    dentro dela ao clicar em Concluir, em vez de cair na fila inteira."""
+    consulta = (
+        select(DatasetDocumentoORM.IdDocumento)
+        .join(
+            DatasetAnotacaoORM,
+            DatasetAnotacaoORM.IdDocumento == DatasetDocumentoORM.IdDocumento,
+        )
+        .where(
+            DatasetAnotacaoORM.Anotador == anotador,
+            DatasetAnotacaoORM.Status == "pending",
+            DatasetDocumentoORM.IdDocumento != id,
+        )
+        .order_by(DatasetDocumentoORM.IdDocumento)
+        .limit(1)
+    )
+    if com_entidades is not None:
+        consulta = consulta.where(_tem_entidades() if com_entidades else ~_tem_entidades())
+    if sem_atos_pessoal:
+        consulta = consulta.where(
+            or_(
+                DatasetDocumentoORM.CodigoTipoProcesso.is_(None),
+                DatasetDocumentoORM.CodigoTipoProcesso.not_in(CODIGOS_ATOS_PESSOAL),
+            )
+        )
+    return session.scalar(consulta)
+
+
+def get_documento(
+    session: Session,
+    *,
+    id: int,
+    anotador: str,
+    com_entidades: Optional[bool] = None,
+    sem_atos_pessoal: Optional[bool] = None,
+) -> schemas.DocumentoDetail:
     anot = _anotacao(session, id_documento=id, anotador=anotador)
     doc = session.get(DatasetDocumentoORM, id)
     if doc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="document not found")
 
-    proximo = session.scalar(
-        select(DatasetAnotacaoORM.IdDocumento)
-        .where(
-            DatasetAnotacaoORM.Anotador == anotador,
-            DatasetAnotacaoORM.Status == "pending",
-            DatasetAnotacaoORM.IdDocumento != id,
-        )
-        .order_by(DatasetAnotacaoORM.IdDocumento)
-        .limit(1)
+    proximo = _proximo_pendente(
+        session,
+        id=id,
+        anotador=anotador,
+        com_entidades=com_entidades,
+        sem_atos_pessoal=sem_atos_pessoal,
     )
 
     return schemas.DocumentoDetail(
@@ -251,6 +291,8 @@ def salvar_anotacao(
     id: int,
     payload: schemas.AnotacaoPayload,
     anotador: str,
+    com_entidades: Optional[bool] = None,
+    sem_atos_pessoal: Optional[bool] = None,
 ) -> schemas.DocumentoDetail:
     anot = _anotacao(session, id_documento=id, anotador=anotador)
     doc = session.get(DatasetDocumentoORM, id)
@@ -273,7 +315,13 @@ def salvar_anotacao(
     anot.DataConclusao = agora if payload.status == "done" else None
     session.commit()
 
-    return get_documento(session, id=id, anotador=anotador)
+    return get_documento(
+        session,
+        id=id,
+        anotador=anotador,
+        com_entidades=com_entidades,
+        sem_atos_pessoal=sem_atos_pessoal,
+    )
 
 
 # ----- progresso e concordância ----------------------------------------------
