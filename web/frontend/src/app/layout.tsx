@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 import { Providers } from "./providers";
 
@@ -19,11 +19,16 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // suppressHydrationWarning: o next-themes escreve a classe do tema no <html>
+  // antes da hidratação, e o servidor não tem como saber qual é.
   return (
-    <html lang="pt-BR" className={roboto.variable}>
+    <html lang="pt-BR" className={roboto.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <Providers>{children}</Providers>
-        <Toaster richColors position="top-right" />
+        <Providers>
+          {children}
+          {/* dentro do Providers: o Toaster lê o tema pelo next-themes */}
+          <Toaster richColors position="top-right" />
+        </Providers>
       </body>
     </html>
   );

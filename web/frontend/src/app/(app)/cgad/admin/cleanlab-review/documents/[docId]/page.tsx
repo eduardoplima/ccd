@@ -237,7 +237,7 @@ export default function DocumentReviewPage() {
             onAfterDecide={onAfterDecide}
           />
 
-          <div className="rounded-md border bg-white p-4">
+          <div className="rounded-md border bg-card p-4">
             <div className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
               Outras entidades neste documento
             </div>

@@ -192,7 +192,7 @@ export function GroupDecisionBar({
   const flaggedTokens = group.tokens.filter((t) => t.is_flagged);
 
   return (
-    <aside className="flex flex-col gap-4 rounded-md border bg-white p-4 shadow-sm">
+    <aside className="flex flex-col gap-4 rounded-md border bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">
           Entidade {group.gold_entity_label ?? "(livre)"} · {group.tokens.length} tokens ·{" "}
@@ -372,7 +372,7 @@ export function UnmappedDecisionBar({
   const isPending = decideMutation.isPending;
 
   return (
-    <aside className="flex flex-col gap-4 rounded-md border bg-white p-4 shadow-sm">
+    <aside className="flex flex-col gap-4 rounded-md border bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">
           Erro #{error.row_id}

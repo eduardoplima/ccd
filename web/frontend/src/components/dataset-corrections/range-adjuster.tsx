@@ -112,7 +112,7 @@ export function RangeAdjuster({
         </div>
       </div>
 
-      <div className="mt-3 max-h-24 overflow-auto rounded border bg-white p-2 font-mono text-xs leading-relaxed">
+      <div className="mt-3 max-h-24 overflow-auto rounded border bg-card p-2 font-mono text-xs leading-relaxed">
         {docTokens.slice(previewStart, previewEnd + 1).map((tok) => {
           const inRange = tok.token_idx_in_doc >= firstIdx && tok.token_idx_in_doc <= lastIdx;
           return (

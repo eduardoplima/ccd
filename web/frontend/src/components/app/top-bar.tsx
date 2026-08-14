@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { ThemeToggle } from "@/components/app/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/lib/auth-api";
 import { cn } from "@/lib/utils";
@@ -109,6 +110,7 @@ export function TopBar({ user }: { user: UserOut }) {
           >
             {user.nomeCompleto}
           </Link>
+          <ThemeToggle />
           <Button
             variant="outline"
             size="sm"

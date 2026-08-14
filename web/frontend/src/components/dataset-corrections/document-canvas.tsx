@@ -6,15 +6,15 @@ import { cn } from "@/lib/utils";
 import { EntityGroup, NerSpan } from "@/schemas/dataset-corrections";
 
 const NER_LABEL_CLASS: Record<string, string> = {
-  MULTA: "bg-amber-100 text-amber-950",
-  OBRIGACAO: "bg-sky-100 text-sky-950",
-  RESSARCIMENTO: "bg-emerald-100 text-emerald-950",
-  RECOMENDACAO: "bg-violet-100 text-violet-950",
+  MULTA: "bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-100",
+  OBRIGACAO: "bg-sky-100 text-sky-950 dark:bg-sky-950 dark:text-sky-100",
+  RESSARCIMENTO: "bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100",
+  RECOMENDACAO: "bg-violet-100 text-violet-950 dark:bg-violet-950 dark:text-violet-100",
 };
 
 function nerClass(label: string | null): string {
   if (!label) return "";
-  return NER_LABEL_CLASS[label] ?? "bg-gray-100 text-gray-900";
+  return NER_LABEL_CLASS[label] ?? "bg-muted text-foreground";
 }
 
 function groupRingClass(status: EntityGroup["status"], selected: boolean): string {
@@ -88,7 +88,7 @@ export function DocumentCanvas({
   );
 
   return (
-    <div className="prose prose-sm max-w-none whitespace-pre-wrap rounded-md border bg-white p-6 font-serif text-base leading-relaxed">
+    <div className="prose prose-sm max-w-none whitespace-pre-wrap rounded-md border bg-card p-6 font-serif text-base leading-relaxed">
       {ranges.map((r, i) => {
         const chunk = text.slice(r.start, r.end);
         if (!chunk) return null;

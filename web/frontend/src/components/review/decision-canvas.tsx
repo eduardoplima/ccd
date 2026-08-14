@@ -83,7 +83,7 @@ export function DecisionCanvas({
   return (
     <div className="space-y-2">
       {pendingSelection && (
-        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-md border bg-white p-2 text-sm shadow-sm">
+        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-md border bg-card p-2 text-sm shadow-sm">
           <span className="text-muted-foreground">Adicionar trecho selecionado como:</span>
           {(Object.keys(TIPO_LABEL) as TipoEntidade[]).map((tipo) => (
             <Button
@@ -107,7 +107,7 @@ export function DecisionCanvas({
       )}
 
       <div
-        className="max-h-[70vh] overflow-y-auto whitespace-pre-wrap rounded-md border bg-white p-6 font-serif text-base leading-relaxed"
+        className="max-h-[70vh] overflow-y-auto whitespace-pre-wrap rounded-md border bg-card p-6 font-serif text-base leading-relaxed"
         onMouseUp={handleMouseUp}
       >
         {ranges.map((r, i) => {

@@ -86,7 +86,7 @@ export default function CleanlabReviewPage() {
       </div>
 
       {progress.data ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-md border bg-white p-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-md border bg-card p-4">
           <div className="flex flex-col">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">Progresso</span>
             <span className="text-lg font-semibold">
@@ -134,7 +134,7 @@ export default function CleanlabReviewPage() {
         ) : null}
       </div>
 
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>

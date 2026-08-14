@@ -5,11 +5,13 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { LABELS, Label, Span } from "@/schemas/dataset";
 
+// Um span costuma cobrir um parágrafo inteiro; no modo noturno o realce claro
+// viraria um bloco aceso na tela, daí a variante escura.
 const LABEL_CLASS: Record<Label, string> = {
-  MULTA: "bg-amber-100 text-amber-950",
-  OBRIGACAO: "bg-sky-100 text-sky-950",
-  RESSARCIMENTO: "bg-emerald-100 text-emerald-950",
-  RECOMENDACAO: "bg-violet-100 text-violet-950",
+  MULTA: "bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-100",
+  OBRIGACAO: "bg-sky-100 text-sky-950 dark:bg-sky-950 dark:text-sky-100",
+  RESSARCIMENTO: "bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100",
+  RECOMENDACAO: "bg-violet-100 text-violet-950 dark:bg-violet-950 dark:text-violet-100",
 };
 
 const LABEL_BUTTON: Record<Label, string> = {
@@ -116,7 +118,7 @@ export function AnnotationCanvas({
       <div
         ref={containerRef}
         onMouseUp={aoSoltar}
-        className="prose prose-sm max-w-none whitespace-pre-wrap rounded-md border bg-white p-6 font-serif text-base leading-relaxed select-text"
+        className="prose prose-sm max-w-none whitespace-pre-wrap rounded-md border bg-card p-6 font-serif text-base leading-relaxed select-text"
       >
         {pedacos.map((p) => {
           const chunk = text.slice(p.start, p.end);

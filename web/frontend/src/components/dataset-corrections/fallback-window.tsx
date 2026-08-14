@@ -15,7 +15,7 @@ export function FallbackWindow({ error }: { error: UnmappedError }) {
   const after = idx >= 0 ? ctx.slice(idx + error.token.length) : ctx;
 
   return (
-    <div className="rounded-md border bg-white p-4 font-mono text-sm leading-relaxed">
+    <div className="rounded-md border bg-card p-4 font-mono text-sm leading-relaxed">
       <div className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
         Sentença #{error.sentenca_idx} · contexto cleanlab
       </div>

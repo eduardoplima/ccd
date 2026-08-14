@@ -10,7 +10,7 @@ export function ConfidenceFilter() {
   const { percentage, setPercentage } = useMinConfidence();
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border bg-white p-3">
+    <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-3">
       <label htmlFor="min-confidence" className="text-sm font-medium text-muted-foreground">
         Confiança mínima
       </label>

@@ -188,7 +188,7 @@ export default function DatasetPage() {
       </div>
 
       {progresso.data && progresso.data.anotadores.length > 0 && (
-        <section className="space-y-2 rounded-md border bg-white p-4">
+        <section className="space-y-2 rounded-md border bg-card p-4">
           <h2 className="text-sm font-semibold">Progresso da equipe</h2>
           <Table>
             <TableHeader>
@@ -230,7 +230,7 @@ export default function DatasetPage() {
 
 function Cartao({ titulo, valor }: { titulo: string; valor: number }) {
   return (
-    <div className="rounded-md border bg-white px-4 py-3">
+    <div className="rounded-md border bg-card px-4 py-3">
       <div className="text-xs text-muted-foreground">{titulo}</div>
       <div className="text-2xl font-semibold">{valor}</div>
     </div>

@@ -62,7 +62,7 @@ export default function UnmappedPage() {
         <div className="flex flex-col gap-3">
           {data.isLoading ? <div className="text-sm text-muted-foreground">Carregando…</div> : null}
           {!data.isLoading && items.length === 0 ? (
-            <div className="rounded-md border bg-white p-6 text-sm text-muted-foreground">
+            <div className="rounded-md border bg-card p-6 text-sm text-muted-foreground">
               Tudo certo: nenhum erro sem documento.
             </div>
           ) : null}
