@@ -73,7 +73,12 @@ export function AnnotationCanvas({
   onChange: (spans: Span[]) => void;
   readOnly?: boolean;
 }) {
-  const [pendente, setPendente] = useState<{ start: number; end: number } | null>(null);
+  const [pendente, setPendente] = useState<{
+    start: number;
+    end: number;
+    top: number;
+    left: number;
+  } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pedacos = useMemo(() => fatiar(text.length, spans), [text.length, spans]);
 
@@ -99,7 +104,14 @@ export function AnnotationCanvas({
       sel.removeAllRanges();
       return;
     }
-    setPendente({ start, end });
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    const base = containerRef.current!.getBoundingClientRect();
+    setPendente({
+      start,
+      end,
+      top: rect.bottom - base.top + 6,
+      left: Math.max(8, Math.min(rect.left - base.left, base.width - 340)),
+    });
   }, [readOnly, spans, text]);
 
   function rotular(label: Label) {
@@ -114,9 +126,8 @@ export function AnnotationCanvas({
   }
 
   return (
-    <div className="space-y-3">
+    <div ref={containerRef} className="relative">
       <div
-        ref={containerRef}
         onMouseUp={aoSoltar}
         className="prose prose-sm max-w-none whitespace-pre-wrap rounded-md border bg-card p-6 font-serif text-base leading-relaxed select-text"
       >
@@ -150,11 +161,10 @@ export function AnnotationCanvas({
       </div>
 
       {pendente && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-zinc-50 p-3">
-          <span className="text-sm text-zinc-600">
-            &ldquo;{text.slice(pendente.start, pendente.end).slice(0, 80)}
-            {pendente.end - pendente.start > 80 ? "…" : ""}&rdquo; é:
-          </span>
+        <div
+          className="absolute z-10 flex flex-wrap items-center gap-1.5 rounded-md border bg-card p-2 shadow-md"
+          style={{ top: pendente.top, left: pendente.left }}
+        >
           {LABELS.map((label) => (
             <button
               key={label}
@@ -174,7 +184,7 @@ export function AnnotationCanvas({
               setPendente(null);
               window.getSelection()?.removeAllRanges();
             }}
-            className="rounded-md px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-200"
+            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
           >
             Cancelar
           </button>
