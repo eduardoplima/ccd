@@ -6,7 +6,12 @@ import { toast } from "sonner";
 
 import { ClaimBanner } from "@/components/review/claim-banner";
 import { CanvasSpan, DecisionCanvas } from "@/components/review/decision-canvas";
-import { EntityDraft, EntityPanel } from "@/components/review/entity-panel";
+import {
+  EntityDraft,
+  EntityPanel,
+  FONTE_CARGO,
+  formatPeriodo,
+} from "@/components/review/entity-panel";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
@@ -14,10 +19,12 @@ import {
   useClaim,
   useDecisao,
   useDecisaoTexto,
+  useOrgaos,
   useRelease,
 } from "@/hooks/use-reviews";
 import { messageForError } from "@/lib/error-messages";
 import { formatAcordao, formatProcesso } from "@/lib/format";
+import { vincularPessoas } from "@/lib/pessoa-match";
 import {
   DecisaoDetail,
   DecisaoReviewPayload,
@@ -40,7 +47,9 @@ export default function DecisaoReviewPage() {
 
   if (!idValid) return null;
 
-  return <Detail id={id} />;
+  // key força a remontagem ao navegar para a próxima decisão: refaz o claim
+  // automático do mount e zera os drafts.
+  return <Detail key={id} id={id} />;
 }
 
 function draftKey(tipo: TipoEntidade, idNer: number): string {
@@ -80,6 +89,7 @@ function Detail({ id }: { id: number }) {
 
   const [drafts, setDrafts] = useState<EntityDraft[] | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const newCounter = useRef(0);
 
   const detail = query.data;
@@ -105,6 +115,23 @@ function Detail({ id }: { id: number }) {
     if (detail && drafts === null) setDrafts(initDrafts(detail));
   }, [detail, drafts]);
 
+  // Uma vez, quando drafts e pessoas do processo estão disponíveis: liga o
+  // responsável proposto pelo extrator à pessoa do processo (nome canônico +
+  // CPF) — "NEREU BATISTA LINHARES (PRESIDENTE)" vira a pessoa com documento.
+  const pessoasVinculadas = useRef(false);
+  useEffect(() => {
+    const pessoas = texto?.pessoas ?? [];
+    if (pessoasVinculadas.current || drafts === null || pessoas.length === 0) return;
+    pessoasVinculadas.current = true;
+    setDrafts((prev) =>
+      prev!.map((d) =>
+        d.serverStatus === "pending"
+          ? { ...d, campos: vincularPessoas(d.tipo, d.campos, pessoas) }
+          : d,
+      ),
+    );
+  }, [texto, drafts]);
+
   if (query.isError) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-10">
@@ -126,7 +153,12 @@ function Detail({ id }: { id: number }) {
     );
   }
 
-  const holdsClaim = !!detail.claimed_by && !!me && detail.claimed_by === me.login;
+  // O claim do mount e o GET do detalhe correm em paralelo: se o detalhe volta
+  // antes do claim ser gravado, ele traz claimed_by=null. O resultado do claim
+  // desta montagem é mais novo que o detalhe — prevalece.
+  const claimedBy = claim.data?.claimed_by ?? detail.claimed_by ?? null;
+  const claimedAt = claim.data?.claimed_at ?? detail.claimed_at ?? null;
+  const holdsClaim = !!claimedBy && !!me && claimedBy === me.login;
   const formDisabled = !holdsClaim || !!detail.revisado_por;
 
   function updateDraft(key: string, patch: Partial<EntityDraft>) {
@@ -179,16 +211,11 @@ function Detail({ id }: { id: number }) {
     for (const draft of pendentes) {
       const label = `${TIPO_LABEL[draft.tipo]}${draft.idNer !== null ? ` #${draft.idNer}` : " (nova)"}`;
       if (draft.rejected) {
-        if (draft.motivo.trim().length < 10) {
-          selectCard(draft.key);
-          toast.error(`${label}: informe o motivo da rejeição (mínimo 10 caracteres).`);
-          return;
-        }
         entidades.push({
           tipo: draft.tipo,
           id_ner: draft.idNer,
           resultado: "rejected",
-          observacoes: draft.motivo.trim(),
+          observacoes: draft.motivo.trim() || undefined,
         });
         continue;
       }
@@ -208,18 +235,39 @@ function Detail({ id }: { id: number }) {
     }
 
     const payload: DecisaoReviewPayload = { entidades };
-    approve.mutate(payload, {
-      onSuccess: () => {
-        toast.success("Decisão aprovada.");
-        router.replace("/cgad/reviews");
+    // Re-reserva antes de aprovar: o claim é idempotente e renova o TTL de 15
+    // min — cobre revisões longas (reserva expirada) e a reserva perdida pela
+    // corrida claim/release do mount. Só falha se OUTRA pessoa detém o item.
+    setSubmitting(true);
+    claim.mutate(undefined, {
+      onSuccess: () =>
+        approve.mutate(payload, {
+          onSuccess: (data) => {
+            if (data.proximo_id) {
+              toast.success("Decisão aprovada. Abrindo a próxima da fila…");
+              router.replace(`/cgad/reviews/decisao/${data.proximo_id}`);
+            } else {
+              toast.success("Decisão aprovada. Não há mais decisões na fila.");
+              router.replace("/cgad/reviews");
+            }
+          },
+          onError: (err) => {
+            setSubmitting(false);
+            toast.error(messageForError(err, "Erro ao aprovar a decisão."));
+          },
+        }),
+      onError: (err) => {
+        setSubmitting(false);
+        toast.error(messageForError(err, "Não foi possível renovar a reserva para aprovar."));
       },
-      onError: (err) => toast.error(messageForError(err, "Erro ao aprovar a decisão.")),
     });
   }
 
   return (
     <DecisaoBody
       detail={detail}
+      claimedBy={claimedBy}
+      claimedAt={claimedAt}
       texto={texto}
       textoLoading={textoQuery.isLoading}
       drafts={drafts}
@@ -232,7 +280,7 @@ function Detail({ id }: { id: number }) {
       formDisabled={formDisabled}
       currentUsername={me?.login ?? null}
       onApprove={handleApprove}
-      approveSubmitting={approve.isPending}
+      approveSubmitting={submitting}
       onReclaim={() =>
         claim.mutate(undefined, {
           onError: (err) => toast.error(messageForError(err, "Não foi possível reservar.")),
@@ -246,6 +294,8 @@ function Detail({ id }: { id: number }) {
 
 type DecisaoBodyProps = {
   detail: DecisaoDetail;
+  claimedBy: string | null;
+  claimedAt: string | null;
   texto: DecisaoTexto | null;
   textoLoading: boolean;
   drafts: EntityDraft[];
@@ -266,6 +316,8 @@ type DecisaoBodyProps = {
 
 function DecisaoBody({
   detail,
+  claimedBy,
+  claimedAt,
   texto,
   textoLoading,
   drafts,
@@ -284,6 +336,7 @@ function DecisaoBody({
   onBackToList,
 }: DecisaoBodyProps) {
   const textoAcordao = texto?.texto_acordao ?? "";
+  const orgaosQuery = useOrgaos();
 
   const notFoundKeys = useMemo(
     () =>
@@ -358,8 +411,8 @@ function DecisaoBody({
 
       <ClaimBanner
         currentUsername={currentUsername}
-        claimedBy={detail.claimed_by ?? null}
-        claimedAt={detail.claimed_at ?? null}
+        claimedBy={claimedBy}
+        claimedAt={claimedAt}
         onReclaim={onReclaim}
         onBack={onBackToList}
         isReclaiming={reclaimSubmitting}
@@ -398,6 +451,7 @@ function DecisaoBody({
           <EntityPanel
             drafts={draftsComSpan}
             pessoas={texto?.pessoas ?? []}
+            orgaos={orgaosQuery.data ?? []}
             selectedKey={selectedKey}
             onSelect={onSelect}
             onUpdate={onUpdate}
@@ -443,6 +497,20 @@ function DecisaoBody({
                       {p.documento ? (
                         <span className="text-muted-foreground"> · {p.documento}</span>
                       ) : null}
+                      {p.cargos.length ? (
+                        <ul className="ml-4 mt-0.5 list-disc space-y-0.5 text-xs text-muted-foreground">
+                          {p.cargos.map((c, i) => (
+                            <li key={i}>
+                              {FONTE_CARGO[c.fonte]}: {c.cargo}
+                              {c.orgao ? ` — ${c.orgao}` : ""} ({formatPeriodo(c.inicio, c.fim)})
+                            </li>
+                          ))}
+                        </ul>
+                      ) : isCpf(p.documento) ? (
+                        <p className="ml-4 mt-0.5 text-xs text-muted-foreground">
+                          Nenhum cargo encontrado nas bases.
+                        </p>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -463,6 +531,11 @@ function DecisaoBody({
       </section>
     </main>
   );
+}
+
+// Órgãos (CNPJ) não têm cargo — o aviso de "nenhum cargo" só faz sentido para CPF.
+function isCpf(documento: string | null | undefined) {
+  return (documento ?? "").replace(/\D/g, "").length === 11;
 }
 
 function AccordionItem({ title, children }: { title: string; children: React.ReactNode }) {

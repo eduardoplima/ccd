@@ -28,6 +28,7 @@ const SUBNAV: Record<string, NavItem[]> = {
     { href: "/cgad/reviews", label: "Revisões" },
     { href: "/cgad/dataset", label: "Conjunto de Dados" },
     { href: "/cgad/etl", label: "Extrações", admin: true },
+    { href: "/cgad/admin/divergencias", label: "Divergências", admin: true },
     { href: "/cgad/dashboards", label: "Painéis" },
   ],
   frap: [

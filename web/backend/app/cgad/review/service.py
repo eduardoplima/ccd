@@ -16,14 +16,15 @@ from __future__ import annotations
 import logging
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_, select, text, update
+from sqlalchemy import bindparam, func, or_, select, text, update
 from sqlalchemy.orm import Session
 
 from app.cgad.review import schemas
+from app.db import get_engine
 from cgad.etl.staging import (
     MultaStagingORM,
     ObrigacaoStagingORM,
@@ -155,6 +156,25 @@ def _load_processo_numero_ano(
         return {}
 
 
+def list_orgaos() -> list[schemas.OrgaoOut]:
+    """Órgãos de ``processo.dbo.Orgaos`` para o campo Órgão responsável.
+    Retorna ``[]`` em falha (ex.: testes sem MSSQL) — o campo degrada para
+    texto livre no frontend.
+    """
+    try:
+        with get_connection(DB_PROCESSOS).connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT DISTINCT IdOrgao, Nome FROM processo.dbo.Orgaos "
+                    "WHERE Nome IS NOT NULL ORDER BY Nome"
+                )
+            ).all()
+        return [schemas.OrgaoOut(id=int(r.IdOrgao), nome=str(r.Nome).strip()) for r in rows]
+    except Exception:
+        logger.exception("failed to list orgaos")
+        return []
+
+
 def _resolve_processo_ids(processo: str) -> list[int]:
     """Resolve a user-typed ``"<numero>[/<ano>]"`` (e.g. ``"5202/2020"``) to the
     matching ``IdProcesso`` set in ``processo.dbo.Processos``. ``Numero_Processo``
@@ -183,6 +203,95 @@ def _resolve_processo_ids(processo: str) -> list[int]:
     except Exception:
         logger.exception("failed to resolve processo %r", processo)
         return []
+
+
+_SQL_CARGOS_ANEXO42 = text(
+    """
+    SELECT DISTINCT resp.CPF,
+           respuni.Cargo,
+           uni.NomeUnidade,
+           respuni.DataInicioGestao,
+           respuni.DataTerminoGestao
+    FROM BdSIAI.dbo.Anexo42_Responsavel resp
+    INNER JOIN BdSIAI.dbo.Anexo42_ResponsavelUnidade respuni
+        ON respuni.IdResponsavel = resp.IdResponsavel
+    INNER JOIN BdSIAI.dbo.Anexo42_UnidadeJurisdicionada uni
+        ON uni.IdUnidadeJurisdicionada = respuni.IdUnidadeJurisdicionada
+    WHERE resp.CPF IN :cpfs
+    """
+).bindparams(bindparam("cpfs", expanding=True))
+
+# SiaiDp_Funcionario tem uma linha por remessa da folha — agrega por cargo/órgão.
+_SQL_CARGOS_SIAI_PESSOAL = text(
+    """
+    SELECT cp.CPF,
+           COALESCE(c.NomeCargo, f.NomeCargo) AS Cargo,
+           LTRIM(RTRIM(og.NomeOrgao)) AS Orgao,
+           MIN(f.DataInicial) AS Inicio,
+           MAX(f.DataFinal) AS Fim
+    FROM BdSIAIPessoal.dbo.Comum_Pessoa cp
+    INNER JOIN BdSIAIPessoal.dbo.SiaiDp_Funcionario f ON f.IdPessoa = cp.IdPessoa
+    LEFT JOIN BdSIAIPessoal.dbo.SiaiDp_Cargo c ON c.IdCargo = f.IdCargo
+    LEFT JOIN Bdc.dbo.vw_Gen_Orgao og ON og.IdOrgao = f.IdOrgao
+    WHERE cp.CPF IN :cpfs
+    GROUP BY cp.CPF, COALESCE(c.NomeCargo, f.NomeCargo), LTRIM(RTRIM(og.NomeOrgao))
+    """
+).bindparams(bindparam("cpfs", expanding=True))
+
+
+def _cargos_por_cpfs(cpfs: list[str]) -> dict[str, list[schemas.PessoaCargo]]:
+    """Cargos por CPF nas bases Anexo 42 (BdSIAI) e SIAI Pessoal (BdSIAIPessoal),
+    via cross-DB no engine BdDIP. Cada fonte degrada isoladamente para nada."""
+    if not cpfs:
+        return {}
+    out: dict[str, list[schemas.PessoaCargo]] = {}
+
+    def _add(cpf: str, cargo: schemas.PessoaCargo) -> None:
+        # CPF é char(11) no MSSQL — pode vir com padding.
+        out.setdefault((cpf or "").strip(), []).append(cargo)
+
+    try:
+        with get_engine().connect() as conn:
+            rows = conn.execute(_SQL_CARGOS_ANEXO42, {"cpfs": cpfs}).all()
+        for r in rows:
+            if r.Cargo:
+                _add(
+                    r.CPF,
+                    schemas.PessoaCargo(
+                        fonte="anexo42",
+                        cargo=r.Cargo,
+                        orgao=r.NomeUnidade,
+                        inicio=r.DataInicioGestao,
+                        fim=r.DataTerminoGestao,
+                    ),
+                )
+    except Exception:
+        logger.exception("cargo lookup (anexo42) failed for %d cpfs", len(cpfs))
+    try:
+        with get_engine().connect() as conn:
+            rows = conn.execute(_SQL_CARGOS_SIAI_PESSOAL, {"cpfs": cpfs}).all()
+        for r in rows:
+            if r.Cargo:
+                inicio = r.Inicio.date() if isinstance(r.Inicio, datetime) else r.Inicio
+                fim = r.Fim.date() if isinstance(r.Fim, datetime) else r.Fim
+                # DataFinal 9999-12-31 é sentinela de vínculo vigente.
+                if fim is not None and fim.year == 9999:
+                    fim = None
+                _add(
+                    r.CPF,
+                    schemas.PessoaCargo(
+                        fonte="siai_pessoal",
+                        cargo=r.Cargo,
+                        orgao=r.Orgao,
+                        inicio=inicio,
+                        fim=fim,
+                    ),
+                )
+    except Exception:
+        logger.exception("cargo lookup (siai_pessoal) failed for %d cpfs", len(cpfs))
+    for cargos in out.values():
+        cargos.sort(key=lambda c: (c.fim or date.max, c.inicio or date.min), reverse=True)
+    return out
 
 
 def _load_decisao_context(id_processo: int, id_composicao: int, id_voto: int) -> dict[str, Any]:
@@ -242,6 +351,17 @@ def _load_decisao_context(id_processo: int, id_composicao: int, id_voto: int) ->
                 continue
             seen.add(key)
             pessoas.append({"nome": nome, "documento": documento})
+
+        # Enriquecimento: cargos por CPF (só pessoa física — 11 dígitos).
+        def _cpf(p: dict[str, Any]) -> str:
+            return re.sub(r"\D", "", p["documento"] or "")
+
+        cargos = _cargos_por_cpfs(sorted({c for p in pessoas if len(c := _cpf(p)) == 11}))
+        for p in pessoas:
+            p["cargos"] = cargos.get(_cpf(p), [])
+        # Gestores (com cargo no Anexo 42) primeiro — sort estável preserva a
+        # ordem do processo nos empates.
+        pessoas.sort(key=lambda p: not any(c.fonte == "anexo42" for c in p["cargos"]))
         return {
             "texto_acordao": getattr(head, "texto_acordao", None),
             "numero_processo": numero,
@@ -594,6 +714,7 @@ def list_decisoes(
     page_size: int,
     current_user: UserORM,
     processo: Optional[str] = None,
+    lista_completa: bool = False,
 ) -> schemas.DecisaoListPage:
     cutoff = datetime.utcnow() - CLAIM_TTL
     me = current_user.NomeUsuario
@@ -608,6 +729,14 @@ def list_decisoes(
         for tipo in TIPOS
     }
 
+    # Multas e ressarcimentos são tratados em outra interface: a fila padrão só
+    # traz decisões com obrigação ou recomendação; `lista_completa` reabre tudo.
+    na_fila = (
+        counts["multa"] + counts["obrigacao"] + counts["recomendacao"] + counts["ressarcimento"]
+        if lista_completa
+        else counts["obrigacao"] + counts["recomendacao"]
+    )
+
     stmt = (
         select(
             NERDecisaoORM,
@@ -617,10 +746,7 @@ def list_decisoes(
             counts["ressarcimento"].label("ressarcimentos"),
         )
         .where(NERDecisaoORM.RevisadoPor.is_(None))
-        .where(
-            counts["multa"] + counts["obrigacao"] + counts["recomendacao"] + counts["ressarcimento"]
-            > 0
-        )
+        .where(na_fila > 0)
         .where(
             or_(
                 NERDecisaoORM.ReservadoPor.is_(None),
@@ -986,6 +1112,34 @@ def _build_staging_row(
     )
 
 
+def _proxima_decisao(session: Session, *, excluir: int) -> Optional[int]:
+    """Próxima decisão da fila padrão (obrigação/recomendação) — mesma
+    elegibilidade de ``list_decisoes``, mas só sem reserva ativa (reserva de
+    outro expirada conta como livre)."""
+    cutoff = datetime.utcnow() - CLAIM_TTL
+    total_entidades = sum(
+        select(func.count())
+        .where(_NER_ORM[tipo].IdNerDecisao == NERDecisaoORM.IdNerDecisao)
+        .correlate(NERDecisaoORM)
+        .scalar_subquery()
+        for tipo in ("obrigacao", "recomendacao")
+    )
+    return session.scalar(
+        select(NERDecisaoORM.IdNerDecisao)
+        .where(
+            NERDecisaoORM.IdNerDecisao != excluir,
+            NERDecisaoORM.RevisadoPor.is_(None),
+            total_entidades > 0,
+            or_(
+                NERDecisaoORM.ReservadoPor.is_(None),
+                NERDecisaoORM.DataReserva < cutoff,
+            ),
+        )
+        .order_by(NERDecisaoORM.IdNerDecisao.asc())
+        .limit(1)
+    )
+
+
 def approve_decisao(
     session: Session,
     *,
@@ -1092,4 +1246,6 @@ def approve_decisao(
         ) from exc
 
     session.refresh(decisao)
-    return get_decisao(session, id=id, current_user=current_user)
+    detail = get_decisao(session, id=id, current_user=current_user)
+    detail.proximo_id = _proxima_decisao(session, excluir=id)
+    return detail

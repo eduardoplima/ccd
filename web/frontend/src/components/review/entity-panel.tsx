@@ -1,14 +1,23 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
-import { useId } from "react";
+import { Plus, Trash2, User } from "lucide-react";
+import { useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { SelectNative } from "@/components/ui/select-native";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Pessoa, ReviewStatus, SolidarioMulta, TIPO_LABEL, TipoEntidade } from "@/schemas/review";
+import {
+  Orgao,
+  Pessoa,
+  ReviewStatus,
+  SolidarioMulta,
+  TIPO_LABEL,
+  TipoEntidade,
+} from "@/schemas/review";
 import { TIPO_SPAN_CLASS } from "@/components/review/decision-canvas";
 
 export type EntityDraft = {
@@ -28,6 +37,7 @@ export type EntityDraft = {
 type EntityPanelProps = {
   drafts: EntityDraft[];
   pessoas: Pessoa[];
+  orgaos: Orgao[];
   selectedKey: string | null;
   onSelect: (key: string) => void;
   onUpdate: (key: string, patch: Partial<EntityDraft>) => void;
@@ -39,6 +49,7 @@ type EntityPanelProps = {
 export function EntityPanel({
   drafts,
   pessoas,
+  orgaos,
   selectedKey,
   onSelect,
   onUpdate,
@@ -47,6 +58,7 @@ export function EntityPanel({
   disabled,
 }: EntityPanelProps) {
   const datalistId = useId();
+  const orgaosDatalistId = useId();
 
   if (drafts.length === 0) {
     return (
@@ -65,11 +77,21 @@ export function EntityPanel({
           ))}
         </datalist>
       )}
+      {orgaos.length > 0 && (
+        <datalist id={orgaosDatalistId}>
+          {orgaos.map((o) => (
+            <option key={`${o.id}-${o.nome}`} value={o.nome} />
+          ))}
+        </datalist>
+      )}
       {drafts.map((draft) => (
         <EntityCard
           key={draft.key}
           draft={draft}
+          pessoas={pessoas}
+          orgaos={orgaos}
           datalistId={datalistId}
+          orgaosDatalistId={orgaosDatalistId}
           selected={draft.key === selectedKey}
           onSelect={() => onSelect(draft.key)}
           onUpdate={(patch) => onUpdate(draft.key, patch)}
@@ -84,7 +106,10 @@ export function EntityPanel({
 
 function EntityCard({
   draft,
+  pessoas,
+  orgaos,
   datalistId,
+  orgaosDatalistId,
   selected,
   onSelect,
   onUpdate,
@@ -93,7 +118,10 @@ function EntityCard({
   disabled,
 }: {
   draft: EntityDraft;
+  pessoas: Pessoa[];
+  orgaos: Orgao[];
   datalistId: string;
+  orgaosDatalistId: string;
   selected: boolean;
   onSelect: () => void;
   onUpdate: (patch: Partial<EntityDraft>) => void;
@@ -182,7 +210,7 @@ function EntityCard({
           </p>
           <Textarea
             rows={2}
-            placeholder="Motivo da rejeição (mínimo 10 caracteres)"
+            placeholder="Motivo da rejeição (opcional)"
             value={draft.motivo}
             disabled={disabled}
             onChange={(e) => onUpdate({ motivo: e.target.value })}
@@ -194,7 +222,10 @@ function EntityCard({
           campos={draft.campos}
           onChange={onUpdateCampos}
           disabled={fieldsDisabled}
+          pessoas={pessoas}
+          orgaos={orgaos}
           datalistId={datalistId}
+          orgaosDatalistId={orgaosDatalistId}
         />
       )}
     </div>
@@ -277,15 +308,230 @@ function CheckField({ label, value, onChange, disabled }: FieldProps) {
   );
 }
 
+export const FONTE_CARGO = { anexo42: "Anexo 42", siai_pessoal: "SIAI Pessoal" } as const;
+
+function formatData(iso: string | null | undefined) {
+  if (!iso) return null;
+  const [ano, mes, dia] = iso.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+export function formatPeriodo(inicio: string | null | undefined, fim: string | null | undefined) {
+  return `${formatData(inicio) ?? "?"} – ${formatData(fim) ?? "atual"}`;
+}
+
+/** Modal com as pessoas do processo e seus cargos (Anexo 42 / SIAI Pessoal);
+ * clicar numa pessoa seleciona o responsável. */
+function PessoaCargosDialog({
+  open,
+  onOpenChange,
+  pessoas,
+  onPick,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  pessoas: Pessoa[];
+  onPick: (nome: string, documento: string | null) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Pessoas do processo</DialogTitle>
+        </DialogHeader>
+        <ul className="max-h-96 space-y-2 overflow-y-auto">
+          {pessoas.map((p, i) => (
+            <li key={`${p.nome}-${p.documento ?? i}`}>
+              <button
+                type="button"
+                className="w-full rounded-md border p-2 text-left text-sm hover:bg-muted/50"
+                onClick={() => {
+                  onPick(p.nome, p.documento ?? null);
+                  onOpenChange(false);
+                }}
+              >
+                <span className="font-medium">{p.nome}</span>
+                {p.documento ? (
+                  <span className="text-muted-foreground"> · {p.documento}</span>
+                ) : null}
+                {p.cargos.length > 0 && (
+                  <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                    {p.cargos.map((c, j) => (
+                      <li key={j}>
+                        {FONTE_CARGO[c.fonte]}: {c.cargo}
+                        {c.orgao ? ` — ${c.orgao}` : ""} ({formatPeriodo(c.inicio, c.fim)})
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Responsável: select com as pessoas do processo. Escolher uma pessoa
+ * preenche nome e documento; o texto extraído pelo modelo (quando não casa com
+ * ninguém) fica disponível como opção, e dá para digitar manualmente. */
+function PessoaField({
+  label,
+  value,
+  pessoas,
+  disabled,
+  datalistId,
+  onPick,
+}: {
+  label: string;
+  value: unknown;
+  pessoas: Pessoa[];
+  disabled?: boolean;
+  datalistId: string;
+  // documento === undefined → não mexer no campo de documento
+  onPick: (nome: string | null, documento?: string | null) => void;
+}) {
+  const nome = typeof value === "string" ? value : "";
+  const indice = pessoas.findIndex((p) => p.nome === nome);
+  const [manual, setManual] = useState(false);
+  const [showPessoas, setShowPessoas] = useState(false);
+
+  const labelEl = (
+    <span className="flex items-center gap-1">
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      {pessoas.length > 0 && (
+        <button
+          type="button"
+          title="Ver pessoas do processo e seus cargos"
+          className="text-muted-foreground hover:text-foreground"
+          disabled={disabled}
+          onClick={() => setShowPessoas(true)}
+        >
+          <User className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </span>
+  );
+  const dialogEl = (
+    <PessoaCargosDialog
+      open={showPessoas}
+      onOpenChange={setShowPessoas}
+      pessoas={pessoas}
+      onPick={(nome, documento) => onPick(nome, documento)}
+    />
+  );
+
+  if (pessoas.length === 0 || manual) {
+    return (
+      <div className="space-y-1">
+        {dialogEl}
+        <div className="flex items-center justify-between">
+          {labelEl}
+          {pessoas.length > 0 && (
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => setManual(false)}
+            >
+              Escolher do processo
+            </button>
+          )}
+        </div>
+        <Input
+          list={datalistId}
+          disabled={disabled}
+          value={nome}
+          onChange={(e) => {
+            const digitado = e.target.value;
+            const pessoa = pessoas.find((p) => p.nome === digitado);
+            if (digitado === "") onPick(null);
+            else if (pessoa) onPick(pessoa.nome, pessoa.documento ?? null);
+            else onPick(digitado);
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {dialogEl}
+      {labelEl}
+      <SelectNative
+        disabled={disabled}
+        value={indice >= 0 ? String(indice) : nome ? "__extraido__" : ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === "__manual__") setManual(true);
+          else if (v === "") onPick(null, null);
+          else if (v !== "__extraido__") {
+            const pessoa = pessoas[Number(v)];
+            onPick(pessoa.nome, pessoa.documento ?? null);
+          }
+        }}
+      >
+        <option value="">—</option>
+        {nome && indice < 0 && <option value="__extraido__">{nome} (texto extraído)</option>}
+        {pessoas.map((p, i) => (
+          <option key={`${p.nome}-${p.documento ?? i}`} value={String(i)}>
+            {p.nome}
+            {p.documento ? ` · ${p.documento}` : ""}
+          </option>
+        ))}
+        <option value="__manual__">Digitar manualmente…</option>
+      </SelectNative>
+    </div>
+  );
+}
+
+/** Órgão responsável: autocomplete por texto com os órgãos cadastrados no
+ * banco (processo.dbo.Orgaos). Nome que casa exatamente com um órgão preenche
+ * também id_orgao_responsavel; texto livre continua permitido (id fica nulo). */
+function OrgaoField({
+  label,
+  value,
+  orgaos,
+  disabled,
+  datalistId,
+  onPick,
+}: {
+  label: string;
+  value: unknown;
+  orgaos: Orgao[];
+  disabled?: boolean;
+  datalistId: string;
+  onPick: (nome: string | null, id: number | null) => void;
+}) {
+  const nome = typeof value === "string" ? value : "";
+  return (
+    <div className="space-y-1">
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <Input
+        list={datalistId}
+        disabled={disabled}
+        value={nome}
+        onChange={(e) => {
+          const digitado = e.target.value;
+          if (digitado === "") onPick(null, null);
+          else onPick(digitado, orgaos.find((o) => o.nome === digitado)?.id ?? null);
+        }}
+      />
+    </div>
+  );
+}
+
 function SolidariosEditor({
   value,
   onChange,
   disabled,
+  pessoas,
   datalistId,
 }: {
   value: unknown;
   onChange: (value: SolidarioMulta[] | null) => void;
   disabled?: boolean;
+  pessoas: Pessoa[];
   datalistId: string;
 }) {
   const rows: SolidarioMulta[] = Array.isArray(value) ? (value as SolidarioMulta[]) : [];
@@ -314,13 +560,19 @@ function SolidariosEditor({
       ) : (
         rows.map((row, index) => (
           <div key={index} className="flex items-end gap-2">
-            <div className="flex-1 space-y-1">
-              <label className="text-xs text-muted-foreground">Nome</label>
-              <Input
-                list={datalistId}
-                disabled={disabled}
+            <div className="flex-1">
+              <PessoaField
+                label="Nome"
                 value={row.nome}
-                onChange={(e) => update(index, { nome: e.target.value })}
+                pessoas={pessoas}
+                disabled={disabled}
+                datalistId={datalistId}
+                onPick={(nome, documento) =>
+                  update(index, {
+                    nome: nome ?? "",
+                    ...(documento !== undefined ? { documento } : {}),
+                  })
+                }
               />
             </div>
             <div className="flex-1 space-y-1">
@@ -357,13 +609,19 @@ function EntityFields({
   campos,
   onChange,
   disabled,
+  pessoas,
+  orgaos,
   datalistId,
+  orgaosDatalistId,
 }: {
   tipo: TipoEntidade;
   campos: Record<string, unknown>;
   onChange: (patch: Record<string, unknown>) => void;
   disabled?: boolean;
+  pessoas: Pessoa[];
+  orgaos: Orgao[];
   datalistId: string;
+  orgaosDatalistId: string;
 }) {
   const set = (key: string) => (value: unknown) => onChange({ [key]: value });
 
@@ -397,12 +655,19 @@ function EntityFields({
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <TextField
+          <PessoaField
             label="Responsável"
             value={campos.nome_responsavel}
-            onChange={set("nome_responsavel")}
+            pessoas={pessoas}
             disabled={disabled}
-            list={datalistId}
+            datalistId={datalistId}
+            onPick={(nome, documento) =>
+              onChange(
+                documento === undefined
+                  ? { nome_responsavel: nome }
+                  : { nome_responsavel: nome, documento_responsavel: documento },
+              )
+            }
           />
           <TextField
             label="Documento do responsável"
@@ -427,6 +692,7 @@ function EntityFields({
             value={campos.solidarios}
             onChange={set("solidarios")}
             disabled={disabled}
+            pessoas={pessoas}
             datalistId={datalistId}
           />
         )}
@@ -471,21 +737,35 @@ function EntityFields({
             disabled={disabled}
           />
         </div>
-        <TextField
+        <OrgaoField
           label="Órgão responsável"
           value={campos.orgao_responsavel}
-          onChange={set("orgao_responsavel")}
+          orgaos={orgaos}
           disabled={disabled}
+          datalistId={orgaosDatalistId}
+          onPick={(nome, id) =>
+            onChange({ orgao_responsavel: nome, id_orgao_responsavel: id })
+          }
         />
         {!!campos.tem_multa_cominatoria && (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <TextField
+              <PessoaField
                 label="Responsável pela multa"
                 value={campos.nome_responsavel_multa_cominatoria}
-                onChange={set("nome_responsavel_multa_cominatoria")}
+                pessoas={pessoas}
                 disabled={disabled}
-                list={datalistId}
+                datalistId={datalistId}
+                onPick={(nome, documento) =>
+                  onChange(
+                    documento === undefined
+                      ? { nome_responsavel_multa_cominatoria: nome }
+                      : {
+                          nome_responsavel_multa_cominatoria: nome,
+                          documento_responsavel_multa_cominatoria: documento,
+                        },
+                  )
+                }
               />
               <TextField
                 label="Documento do responsável"
@@ -526,6 +806,7 @@ function EntityFields({
                 value={campos.solidarios_multa_cominatoria}
                 onChange={set("solidarios_multa_cominatoria")}
                 disabled={disabled}
+                pessoas={pessoas}
                 datalistId={datalistId}
               />
             )}
@@ -559,18 +840,23 @@ function EntityFields({
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <TextField
+          <PessoaField
             label="Responsável"
             value={campos.nome_responsavel}
-            onChange={set("nome_responsavel")}
+            pessoas={pessoas}
             disabled={disabled}
-            list={datalistId}
+            datalistId={datalistId}
+            onPick={(nome) => onChange({ nome_responsavel: nome })}
           />
-          <TextField
+          <OrgaoField
             label="Órgão responsável"
             value={campos.orgao_responsavel}
-            onChange={set("orgao_responsavel")}
+            orgaos={orgaos}
             disabled={disabled}
+            datalistId={orgaosDatalistId}
+            onPick={(nome, id) =>
+              onChange({ orgao_responsavel: nome, id_orgao_responsavel: id })
+            }
           />
         </div>
         <CheckField
@@ -612,12 +898,19 @@ function EntityFields({
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <TextField
+        <PessoaField
           label="Responsável"
           value={campos.nome_responsavel}
-          onChange={set("nome_responsavel")}
+          pessoas={pessoas}
           disabled={disabled}
-          list={datalistId}
+          datalistId={datalistId}
+          onPick={(nome, documento) =>
+            onChange(
+              documento === undefined
+                ? { nome_responsavel: nome }
+                : { nome_responsavel: nome, documento_responsavel: documento },
+            )
+          }
         />
         <TextField
           label="Documento do responsável"

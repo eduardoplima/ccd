@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime
-from typing import Optional
+from typing import Optional, get_args
 
 from fastapi import HTTPException, status
 from sqlalchemy import case, extract, func, or_, select
@@ -402,6 +402,161 @@ def progresso(session: Session) -> schemas.Progresso:
             )
 
     return schemas.Progresso(documentos=documentos, anotadores=anotadores, concordancia=pares)
+
+
+# ----- divergências ----------------------------------------------------------
+
+# Pseudo-anotadores (pré-marcação automática) ficam fora do estudo de divergência.
+_PSEUDO = ("deepseek",)
+
+
+def _divergencias_par(
+    a: list[schemas.Span], b: list[schemas.Span]
+) -> tuple[list[str], list[tuple[str, str]]]:
+    """Classifica cada span de um par de anotadores. Três passes gulosos com o
+    mesmo ``_iou`` de ``_casar``: acerto (mesmo rótulo, IoU >= 0.5), rótulo
+    trocado (rótulos diferentes, IoU >= 0.5), fronteira (mesmo rótulo,
+    sobreposição parcial); o que sobrar de qualquer lado é ausente. Devolve
+    ``([label dos acertos], [(tipo, label), ...])``."""
+    restantes_a = list(a)
+    restantes_b = list(b)
+
+    def _passe(criterio) -> list[schemas.Span]:
+        casados = []
+        for span_a in list(restantes_a):
+            for span_b in restantes_b:
+                if criterio(span_a, span_b):
+                    restantes_a.remove(span_a)
+                    restantes_b.remove(span_b)
+                    casados.append(span_a)
+                    break
+        return casados
+
+    acertos = [s.label for s in _passe(lambda x, y: x.label == y.label and _iou(x, y) >= _IOU_MIN)]
+    itens = [
+        ("rotulo", s.label)
+        for s in _passe(lambda x, y: x.label != y.label and _iou(x, y) >= _IOU_MIN)
+    ]
+    itens += [
+        ("fronteira", s.label) for s in _passe(lambda x, y: x.label == y.label and _iou(x, y) > 0)
+    ]
+    itens += [("ausente", s.label) for s in restantes_a + restantes_b]
+    return acertos, itens
+
+
+def divergencias(session: Session) -> schemas.Divergencias:
+    concluidas = session.execute(
+        select(
+            DatasetAnotacaoORM.Anotador,
+            DatasetAnotacaoORM.IdDocumento,
+            DatasetAnotacaoORM.Spans,
+        ).where(
+            DatasetAnotacaoORM.Status == "done",
+            DatasetAnotacaoORM.Anotador.not_in(_PSEUDO),
+        )
+    ).all()
+
+    spans_por: dict[str, dict[int, list[schemas.Span]]] = {}
+    for anotador, id_doc, raw in concluidas:
+        spans_por.setdefault(anotador, {})[id_doc] = _parse_spans(raw)
+
+    nomes = sorted(spans_por)
+    comuns: set[int] = set.intersection(*(set(spans_por[n]) for n in nomes)) if nomes else set()
+
+    por_rotulo: dict[str, list[int]] = {label: [0, 0] for label in get_args(schemas.Label)}
+    por_tipo: dict[str, int] = {tipo: 0 for tipo in get_args(schemas.TipoDivergencia)}
+    por_doc: dict[int, dict] = {}
+
+    for i, a in enumerate(nomes):
+        for b in nomes[i + 1 :]:
+            for id_doc in set(spans_por[a]) & set(spans_por[b]):
+                acertos, itens = _divergencias_par(spans_por[a][id_doc], spans_por[b][id_doc])
+                if not acertos and not itens:
+                    continue
+                doc = por_doc.setdefault(id_doc, {"acertos": 0, "itens": []})
+                doc["acertos"] += len(acertos)
+                doc["itens"] += itens
+                for label in acertos:
+                    por_rotulo[label][0] += 1
+                for tipo, label in itens:
+                    por_tipo[tipo] += 1
+                    por_rotulo[label][1] += 1
+
+    documentos = []
+    divergentes = {id_doc: doc for id_doc, doc in por_doc.items() if doc["itens"]}
+    if divergentes:
+        meta = {
+            id_doc: (processo, tipo)
+            for id_doc, processo, tipo in session.execute(
+                select(
+                    DatasetDocumentoORM.IdDocumento,
+                    DatasetDocumentoORM.Processo,
+                    DatasetDocumentoORM.CodigoTipoProcesso,
+                ).where(DatasetDocumentoORM.IdDocumento.in_(divergentes))
+            ).all()
+        }
+        for id_doc, doc in divergentes.items():
+            processo, tipo_processo = meta.get(id_doc, (None, None))
+            documentos.append(
+                schemas.DivergenciaDoc(
+                    id=id_doc,
+                    processo=processo,
+                    codigo_tipo_processo=tipo_processo,
+                    score=len(doc["itens"]) / (len(doc["itens"]) + doc["acertos"]),
+                    divergencias=len(doc["itens"]),
+                    spans_por_anotador={
+                        nome: len(spans_por[nome].get(id_doc, [])) for nome in nomes
+                    },
+                    rotulos=sorted({label for _, label in doc["itens"]}),
+                    tipos=sorted({tipo for tipo, _ in doc["itens"]}),
+                )
+            )
+        documentos.sort(key=lambda d: (d.divergencias, d.score), reverse=True)
+
+    return schemas.Divergencias(
+        anotadores=nomes,
+        documentos_comuns=len(comuns),
+        por_rotulo=[
+            schemas.DivergenciaPorRotulo(
+                label=label,
+                acertos=ac,
+                divergencias=div,
+                # Aproximação de F1: fronteira/rótulo trocado contam 1 erro (não
+                # fp+fn como no F1 estrito da concordância) — indicador, não métrica.
+                f1=(2 * ac / (2 * ac + div)) if (ac or div) else None,
+            )
+            for label, (ac, div) in por_rotulo.items()
+        ],
+        por_tipo=[schemas.DivergenciaPorTipo(tipo=tipo, total=n) for tipo, n in por_tipo.items()],
+        documentos=documentos,
+    )
+
+
+def divergencia_detail(session: Session, *, id: int) -> schemas.DivergenciaDetail:
+    doc = session.get(DatasetDocumentoORM, id)
+    if doc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="document not found")
+
+    linhas = session.execute(
+        select(DatasetAnotacaoORM.Anotador, DatasetAnotacaoORM.Spans)
+        .where(
+            DatasetAnotacaoORM.IdDocumento == id,
+            DatasetAnotacaoORM.Status == "done",
+            DatasetAnotacaoORM.Anotador.not_in(_PSEUDO),
+        )
+        .order_by(DatasetAnotacaoORM.Anotador)
+    ).all()
+
+    return schemas.DivergenciaDetail(
+        id=doc.IdDocumento,
+        processo=doc.Processo,
+        codigo_tipo_processo=doc.CodigoTipoProcesso,
+        texto=doc.Texto,
+        anotacoes=[
+            schemas.AnotacaoAnotador(anotador=anotador, spans=_parse_spans(raw))
+            for anotador, raw in linhas
+        ],
+    )
 
 
 # ----- export ----------------------------------------------------------------

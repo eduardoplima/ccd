@@ -33,11 +33,19 @@ def list_awaiting_dispatch(
     )
 
 
+@router.get("/orgaos", response_model=list[schemas.OrgaoOut])
+def list_orgaos(
+    current_user: UserORM = Depends(get_current_user),
+) -> list[schemas.OrgaoOut]:
+    return service.list_orgaos()
+
+
 @router.get("/decisoes", response_model=schemas.DecisaoListPage)
 def list_decisoes(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     processo: str | None = Query(None),
+    lista_completa: bool = Query(False),
     session: Session = Depends(get_db_session),
     current_user: UserORM = Depends(get_current_user),
 ) -> schemas.DecisaoListPage:
@@ -47,6 +55,7 @@ def list_decisoes(
         page_size=page_size,
         current_user=current_user,
         processo=processo,
+        lista_completa=lista_completa,
     )
 
 

@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   FiltroFila,
+  getDivergenciaDetail,
+  getDivergencias,
   getDocumento,
   getProgresso,
   listDocumentos,
@@ -16,6 +18,8 @@ export const datasetKeys = {
   documentos: (args: Record<string, unknown>) => ["dataset", "documentos", args] as const,
   documento: (id: number) => ["dataset", "documentos", id] as const,
   progresso: () => ["dataset", "progresso"] as const,
+  divergencias: () => ["dataset", "divergencias"] as const,
+  divergencia: (id: number) => ["dataset", "divergencias", id] as const,
 };
 
 export function useDocumentos(
@@ -51,6 +55,22 @@ export function useProgresso() {
     queryKey: datasetKeys.progresso(),
     queryFn: getProgresso,
     staleTime: 5_000,
+  });
+}
+
+export function useDivergencias() {
+  return useQuery({
+    queryKey: datasetKeys.divergencias(),
+    queryFn: getDivergencias,
+    staleTime: 60_000,
+  });
+}
+
+export function useDivergenciaDetail(id: number | null) {
+  return useQuery({
+    queryKey: datasetKeys.divergencia(id ?? -1),
+    queryFn: () => getDivergenciaDetail(id!),
+    enabled: id != null,
   });
 }
 

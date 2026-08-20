@@ -1,19 +1,13 @@
 """Popula o conjunto de dados anotado (CGAD) — roda uma vez, da máquina de dev.
 
-Duas fontes:
+Fonte única: os 861 documentos do corpus DeciContas.br (`decicontas.json`),
+inteiros, atribuídos ao **eduardo** como anotação já concluída. O JSON só tem
+texto, então os metadados (processo, tipo, data da sessão) são recuperados
+casando o texto **normalizado** contra `all_decisions.csv` (casamento exato sem
+normalizar pega só 438 de 861) e daí para `vw_ia_votos_acordaos_decisoes`.
 
-1. **Legado** — os 861 documentos do corpus DeciContas.br (`decicontas.json`),
-   inteiros, atribuídos ao **eduardo** como anotação já concluída. O JSON só tem
-   texto, então os metadados (processo, tipo, data da sessão) são recuperados
-   casando o texto **normalizado** contra `all_decisions.csv` (casamento exato sem
-   normalizar pega só 438 de 861) e daí para `vw_ia_votos_acordaos_decisoes`.
-2. **Ampliação** — decisões de 2024 e 2025 que não são de atos de pessoal,
-   deduplicadas e amostradas até o conjunto fechar `ALVO_TOTAL`. A dedup importa: o
-   pool bruto tem 16% de textos idênticos e grupos de até 96 cópias literais do
-   mesmo acórdão.
-
-Depois cria a fila: `antonietta` e `isabella` reanotam tudo às cegas; `eduardo`
-recebe só a ampliação, já que o legado é dele.
+Depois cria a fila: `antonietta` e `isabella` reanotam tudo às cegas; o eduardo
+fica de fora, já que o corpus é a anotação dele.
 
 Idempotente — reexecutar não duplica nada. Para refazer do zero, `--reconstruir`.
 
@@ -32,9 +26,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 import pandas as pd
-from rapidfuzz import fuzz, process
 from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
@@ -42,63 +34,17 @@ from cgad.models import DatasetAnotacaoORM, DatasetDocumentoORM
 from cgad.utils import DB_DECISOES, DB_PROCESSOS, get_connection, get_session
 
 ANOTADORES = ["eduardo", "antonietta", "isabella"]
-ANOS_AMPLIACAO = [2024, 2025]
-ALVO_TOTAL = 1200  # legado (861) + ampliação
-SIMILARIDADE_MAXIMA = 95  # acima disso, dois acórdãos são a mesma peça
-SEED = 20260811  # amostra reprodutível
-TAMANHO_MINIMO = 200
 
 # repo root: cgad-pkg -> tools/cgad -> tools -> web -> <repo>
 REPO_ROOT = Path(__file__).resolve().parents[4]
 CORPUS_JSON = REPO_ROOT / "decicontas" / "decicontas.json"
 ALL_DECISIONS_CSV = REPO_ROOT / "repos" / "decicontas.app" / "dataset" / "all_decisions.csv"
 
-# Códigos de atos de pessoal, apurados em processo.dbo.Tipo.
-CODIGOS_ATOS_PESSOAL = [
-    "APO",
-    "APP",
-    "ASS",
-    "CEM",
-    "CTT",
-    "CVP",
-    "FCO",
-    "INC",
-    "INM",
-    "NCE",
-    "NOM",
-    "PDR",
-    "PEN",
-    "PEP",
-    "RBN",
-]
-
 
 def normalizar(texto: str) -> str:
     """Chave de casamento entre o corpus e o CSV de decisões, e de dedup exata."""
     sem_acento = unicodedata.normalize("NFKD", str(texto)).encode("ascii", "ignore").decode()
     return re.sub(r"\s+", " ", sem_acento).strip().lower()
-
-
-def esqueleto(texto: str) -> str:
-    """Chave de dedup que ignora números: colapsa o mesmo acórdão emitido com
-    número de processo, data ou valor diferentes."""
-    return re.sub(r"[^a-z# ]", "", re.sub(r"[0-9]+", "#", normalizar(texto)))
-
-
-def dedup_fuzzy(textos: list[str], limite: int = SIMILARIDADE_MAXIMA) -> np.ndarray:
-    """Máscara booleana mantendo o primeiro representante de cada grupo de textos
-    com similaridade >= `limite`. O(n²) em C++ — ~1 min para n≈2.000, e este
-    script roda uma vez."""
-    if not textos:
-        return np.zeros(0, bool)
-    m = process.cdist(textos, textos, scorer=fuzz.ratio, workers=-1, score_cutoff=limite)
-    np.fill_diagonal(m, 0)
-    manter = np.ones(len(textos), bool)
-    indices = np.arange(len(textos))
-    for i in range(len(textos)):
-        if manter[i]:
-            manter[(m[i] >= limite) & (indices > i)] = False
-    return manter
 
 
 @dataclass
@@ -115,7 +61,7 @@ class Documento:
     spans: Optional[list[dict]] = None  # anotação do eduardo (só no legado)
 
 
-# ----- fonte 1: corpus legado -------------------------------------------------
+# ----- corpus -------------------------------------------------
 
 
 def carregar_legado() -> list[Documento]:
@@ -149,8 +95,8 @@ def carregar_legado() -> list[Documento]:
     enriquecer(docs)
 
     # O corpus traz a mesma decisão duas vezes em alguns casos, e o índice único
-    # (IdComposicaoPauta, IdVotoPauta) rejeitaria a repetida — deduplicar aqui, e
-    # não no INSERT, para o alvo de ALVO_TOTAL fechar. Fica quem tem mais spans.
+    # (IdComposicaoPauta, IdVotoPauta) rejeitaria a repetida — deduplicar aqui.
+    # Fica quem tem mais spans.
     melhor: dict[tuple, Documento] = {}
     for d in docs:
         chave = (
@@ -198,97 +144,6 @@ def enriquecer(docs: list[Documento]) -> None:
             faltando += 1
     if faltando:
         print(f"  aviso: {faltando} documentos sem correspondência na view (metadados nulos)")
-
-
-# ----- fonte 2: ampliação 2024/2025 ------------------------------------------
-
-
-def carregar_ampliacao(legado: list[Documento]) -> list[Documento]:
-    """Decisões de 2024/2025 fora de atos de pessoal, deduplicadas e amostradas.
-
-    O alvo é o que falta para o conjunto fechar `ALVO_TOTAL` junto com o legado.
-    A cascata é impressa etapa a etapa porque esses números vão para o *dataset
-    paper* — a proveniência do corpus precisa ser auditável.
-    """
-    alvo = max(0, ALVO_TOTAL - len(legado))
-    codigos = ",".join(f"'{c}'" for c in CODIGOS_ATOS_PESSOAL)
-    sql = f"""
-        SELECT DISTINCT
-               v.IdProcesso AS id_processo,
-               v.IdComposicaoPauta AS icp,
-               v.idVotoPauta AS ivp,
-               CONCAT(v.NumeroProcesso, '/', v.AnoProcesso) AS processo,
-               v.codigo_tipo_processo AS cod,
-               v.DataSessao AS data_sessao,
-               v.texto_acordao AS texto
-        FROM {DB_PROCESSOS}.dbo.vw_ia_votos_acordaos_decisoes v
-        WHERE YEAR(v.DataSessao) IN ({",".join(str(a) for a in ANOS_AMPLIACAO)})
-          AND v.texto_acordao IS NOT NULL
-          AND LEN(v.texto_acordao) > {TAMANHO_MINIMO}
-          AND COALESCE(v.codigo_tipo_processo, '') NOT IN ({codigos})
-    """
-    df = pd.read_sql(sql, get_connection(DB_PROCESSOS))
-    print(f"  {len(df)} decisões (2024/2025, fora de atos de pessoal)")
-
-    df["norm"] = df.texto.map(normalizar)
-    df["esq"] = df.norm.map(esqueleto)
-    df = df.drop_duplicates("norm").drop_duplicates("esq").reset_index(drop=True)
-    print(f"  {len(df)} após dedup exata e por esqueleto")
-
-    df = df[dedup_fuzzy(df.norm.tolist())].reset_index(drop=True)
-    print(f"  {len(df)} após dedup fuzzy >= {SIMILARIDADE_MAXIMA}%")
-
-    # Não faz sentido mandar anotar de novo algo que já está no corpus legado.
-    # Por decisão (o índice único barraria no INSERT) e por texto parecido.
-    decisoes_legado = {(d.id_composicao_pauta, d.id_voto_pauta) for d in legado}
-    df = df[[(r.icp, r.ivp) not in decisoes_legado for r in df.itertuples()]].reset_index(drop=True)
-
-    textos_legado = [normalizar(d.texto) for d in legado]
-    colisao = process.cdist(
-        df.norm.tolist(),
-        textos_legado,
-        scorer=fuzz.ratio,
-        workers=-1,
-        score_cutoff=SIMILARIDADE_MAXIMA,
-    ).max(axis=1)
-    df = df[colisao < SIMILARIDADE_MAXIMA].reset_index(drop=True)
-    print(f"  {len(df)} após remover o que já existe no legado")
-
-    df["ano"] = pd.to_datetime(df.data_sessao).dt.year
-    amostra = amostrar(df, alvo)
-    print(
-        f"  {len(amostra)} amostradas (alvo {alvo}) "
-        f"{amostra.ano.value_counts().sort_index().to_dict()}"
-    )
-
-    return [
-        Documento(
-            texto=r["texto"],
-            origem="ampliacao",
-            id_processo=int(r["id_processo"]),
-            id_composicao_pauta=int(r["icp"]),
-            id_voto_pauta=int(r["ivp"]),
-            processo=r["processo"],
-            codigo_tipo_processo=r["cod"],
-            data_sessao=pd.to_datetime(r["data_sessao"]).to_pydatetime(),
-        )
-        for _, r in amostra.iterrows()
-    ]
-
-
-def amostrar(df: pd.DataFrame, n: int) -> pd.DataFrame:
-    """Amostra ~n linhas preservando a proporção de `(ano, cod)` do pool.
-
-    Arredondar para cima por estrato passa de n; o corte final volta ao alvo.
-    """
-    if len(df) <= n:
-        return df
-    fracao = n / len(df)
-    estratos = [
-        grupo.sample(n=max(1, round(len(grupo) * fracao)), random_state=SEED)
-        for _, grupo in df.groupby(["ano", "cod"])
-    ]
-    return pd.concat(estratos).sample(frac=1, random_state=SEED).head(n)
 
 
 # ----- gravação --------------------------------------------------------------
@@ -377,14 +232,15 @@ def montar_fila(session: Session) -> int:
 def limpar(session: Session) -> None:
     """Apaga tudo para semear do zero.
 
-    As anotações do eduardo são regeneradas do JSON, mas as dos outros seriam
-    trabalho humano perdido — daí a guarda.
+    As anotações do eduardo são regeneradas do JSON e as do deepseek pelo
+    ``dataset_pretag``, mas as dos outros seriam trabalho humano perdido — daí a
+    guarda.
     """
     humanas = session.scalar(
         select(DatasetAnotacaoORM.Anotador)
         .where(
             DatasetAnotacaoORM.Status == "done",
-            DatasetAnotacaoORM.Anotador != "eduardo",
+            DatasetAnotacaoORM.Anotador.not_in(["eduardo", "deepseek"]),
         )
         .limit(1)
     )
@@ -408,17 +264,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print("Corpus legado:")
+    print("Corpus DeciContas.br:")
     legado = carregar_legado()
     print(f"  {sum(len(d.spans or []) for d in legado)} spans preservados")
 
-    print(f"Ampliação {ANOS_AMPLIACAO}:")
-    ampliacao = carregar_ampliacao(legado)
-
-    total_docs = len(legado) + len(ampliacao)
-    # eduardo só entra na fila da ampliação; o legado já é dele.
-    pendentes = len(legado) * 2 + len(ampliacao) * 3
-    print(f"\nTotal: {total_docs} documentos, {pendentes} anotações pendentes")
+    # eduardo não entra na fila: o corpus já é a anotação dele.
+    print(f"\nTotal: {len(legado)} documentos, {len(legado) * 2} anotações pendentes")
 
     if args.dry_run:
         print("(dry-run — nada gravado)")
@@ -429,7 +280,7 @@ def main() -> None:
         if args.reconstruir:
             limpar(session)
             print("Conjunto anterior apagado.")
-        novos = gravar(session, legado + ampliacao)
+        novos = gravar(session, legado)
         criadas = montar_fila(session)
         print(f"Gravados {novos} documentos novos e {criadas} anotações pendentes.")
     finally:

@@ -9,6 +9,7 @@ import {
   getDecisaoTexto,
   listAwaitingDispatch,
   listDecisoes,
+  listOrgaos,
   releaseDecisao,
 } from "@/lib/reviews-api";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -16,28 +17,40 @@ import { ClaimResponse, DecisaoDetail, DecisaoReviewPayload } from "@/schemas/re
 
 export const reviewKeys = {
   all: ["reviews"] as const,
-  list: (args: { page: number; pageSize: number; processo?: string }) =>
+  list: (args: { page: number; pageSize: number; processo?: string; listaCompleta?: boolean }) =>
     ["reviews", "decisoes", args] as const,
   detail: (id: number) => ["reviews", "decisao", id] as const,
   texto: (id: number) => ["reviews", "decisao-texto", id] as const,
   awaitingDispatch: (args: { page: number; pageSize: number }) =>
     ["reviews", "awaiting-dispatch", args] as const,
+  orgaos: ["reviews", "orgaos"] as const,
 };
+
+export function useOrgaos() {
+  return useQuery({
+    queryKey: reviewKeys.orgaos,
+    queryFn: listOrgaos,
+    staleTime: Infinity,
+    gcTime: 60 * 60_000,
+  });
+}
 
 export function useDecisoes({
   page = 1,
   pageSize = 20,
   processo,
+  listaCompleta,
   enabled = true,
 }: {
   page?: number;
   pageSize?: number;
   processo?: string;
+  listaCompleta?: boolean;
   enabled?: boolean;
 } = {}) {
   return useQuery({
-    queryKey: reviewKeys.list({ page, pageSize, processo }),
-    queryFn: () => listDecisoes({ page, pageSize, processo }),
+    queryKey: reviewKeys.list({ page, pageSize, processo, listaCompleta }),
+    queryFn: () => listDecisoes({ page, pageSize, processo, listaCompleta }),
     enabled,
   });
 }

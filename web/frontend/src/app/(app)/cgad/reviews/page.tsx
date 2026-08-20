@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -44,6 +46,7 @@ export default function ReviewsPage() {
   const [page, setPage] = useState(1);
   const [processoInput, setProcessoInput] = useState("");
   const [processo, setProcesso] = useState("");
+  const [listaCompleta, setListaCompleta] = useState(false);
 
   const isAwaiting = tab === "awaiting-dispatch";
 
@@ -51,6 +54,7 @@ export default function ReviewsPage() {
     page,
     pageSize: PAGE_SIZE,
     processo,
+    listaCompleta,
     enabled: !isAwaiting,
   });
   const awaiting = useAwaitingDispatch({
@@ -84,7 +88,9 @@ export default function ReviewsPage() {
         <p className="text-sm text-muted-foreground">
           {isAwaiting
             ? "Entidades aprovadas, ainda não enviadas."
-            : "Revise cada decisão: edite, rejeite ou adicione as entidades extraídas do acórdão."}
+            : "Revise cada decisão: edite, rejeite ou adicione as entidades extraídas do acórdão. " +
+              "Multas e ressarcimentos são tratados em outra interface — a fila padrão traz " +
+              "apenas decisões com obrigação ou recomendação."}
         </p>
       </div>
 
@@ -134,6 +140,22 @@ export default function ReviewsPage() {
             </Button>
           )}
         </form>
+      )}
+
+      {!isAwaiting && (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="lista-completa"
+            checked={listaCompleta}
+            onCheckedChange={(v) => {
+              setListaCompleta(v === true);
+              setPage(1);
+            }}
+          />
+          <Label htmlFor="lista-completa" className="text-sm font-normal text-muted-foreground">
+            Lista completa (incluir decisões só com multa ou ressarcimento)
+          </Label>
+        </div>
       )}
 
       {isAwaiting ? (

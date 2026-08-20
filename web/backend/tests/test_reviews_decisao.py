@@ -284,6 +284,7 @@ def test_approve_happy_path(env):
     body = resp.json()
     assert body["revisado_por"] == "revisor1"
     assert body["claimed_by"] is None
+    assert body["proximo_id"] is None  # fila vazia: era a única decisão
 
     with factory() as s:
         multas = s.execute(select(MultaStagingORM)).scalars().all()
@@ -330,6 +331,51 @@ def test_approve_happy_path(env):
     }
 
 
+def test_lista_padrao_esconde_multa_e_ressarcimento(env):
+    """Multas e ressarcimentos são revisados em outra interface: decisão só com
+    multa fica fora da fila padrão (e da fila do próximo pós-aprovação), mas
+    aparece com lista_completa=true."""
+    client, factory = env["client"], env["factory"]
+    with factory() as s:
+        so_multa = NERDecisaoORM(
+            IdProcesso=101, IdComposicaoPauta=201, IdVotoPauta=301, RawJson="{}"
+        )
+        s.add(so_multa)
+        s.flush()
+        s.add(NERMultaORM(IdNerDecisao=so_multa.IdNerDecisao, Ordem=1, DescricaoMulta="multa x"))
+        s.commit()
+        id_so_multa = so_multa.IdNerDecisao
+
+    padrao = client.get("/api/v1/cgad/reviews/decisoes").json()
+    assert id_so_multa not in [i["id"] for i in padrao["items"]]
+
+    completa = client.get("/api/v1/cgad/reviews/decisoes", params={"lista_completa": True}).json()
+    assert id_so_multa in [i["id"] for i in completa["items"]]
+
+    base = f"/api/v1/cgad/reviews/decisoes/{env['ids']['decisao']}"
+    assert client.post(f"{base}/claim").status_code == 200
+    body = client.post(f"{base}/approve", json=_payload_completo(env["ids"])).json()
+    assert body["proximo_id"] is None  # a decisão só-multa não entra na fila
+
+
+def test_approve_devolve_proxima_decisao_livre(env):
+    """Após aprovar, o approve aponta a próxima decisão sem revisão e sem
+    reserva ativa — decisão reservada por outro revisor fica fora da fila."""
+    client, ids, factory = env["client"], env["ids"], env["factory"]
+    ids_livre = _seed_decisao(factory)
+    ids_reservada = _seed_decisao(factory)
+    with factory() as s:
+        reservada = s.get(NERDecisaoORM, ids_reservada["decisao"])
+        reservada.ReservadoPor = "revisor2"
+        reservada.DataReserva = datetime.utcnow()
+        s.commit()
+
+    base = f"/api/v1/cgad/reviews/decisoes/{ids['decisao']}"
+    assert client.post(f"{base}/claim").status_code == 200
+    body = client.post(f"{base}/approve", json=_payload_completo(ids)).json()
+    assert body["proximo_id"] == ids_livre["decisao"]
+
+
 def test_approve_incomplete_payload(env):
     client, ids = env["client"], env["ids"]
     base = f"/api/v1/cgad/reviews/decisoes/{ids['decisao']}"
@@ -365,15 +411,16 @@ def test_reapprove_conflict(env):
     assert resp.status_code in (403, 409)
 
 
-def test_reject_sem_motivo(env):
+def test_reject_sem_motivo_e_aceito(env):
+    # Motivo é opcional na rejeição — curto ou ausente, o approve passa.
     client, ids = env["client"], env["ids"]
     base = f"/api/v1/cgad/reviews/decisoes/{ids['decisao']}"
     client.post(f"{base}/claim")
 
     payload = _payload_completo(ids)
-    payload["entidades"][0]["observacoes"] = "curto"  # < 10 chars
+    payload["entidades"][0]["observacoes"] = "curto"
     resp = client.post(f"{base}/approve", json=payload)
-    assert resp.status_code == 422
+    assert resp.status_code == 200
 
 
 def test_manual_entity_cannot_be_rejected(env):
@@ -392,3 +439,9 @@ def test_manual_entity_cannot_be_rejected(env):
     )
     resp = client.post(f"{base}/approve", json=payload)
     assert resp.status_code == 422
+
+
+def test_orgaos_degrada_para_lista_vazia_sem_mssql(env) -> None:
+    resp = env["client"].get("/api/v1/cgad/reviews/orgaos")
+    assert resp.status_code == 200
+    assert resp.json() == []

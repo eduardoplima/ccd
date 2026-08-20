@@ -346,6 +346,94 @@ def test_concordancia_zero_quando_rotulos_divergem(env):
     assert client.get(f"{BASE}/progresso").json()["concordancia"][0]["f1"] == 0.0
 
 
+# ----- divergências ----------------------------------------------------------
+
+
+def _anotar_par_divergente(env):
+    """eduardo × isabella no mesmo doc: 1 acerto (MULTA idêntica), 1 rótulo
+    trocado, 1 fronteira e 1 span ausente."""
+    client, holder = env["client"], env["holder"]
+    holder.user = env["eduardo"]
+    client.put(
+        f"{BASE}/documentos/{env['doc']}/anotacao",
+        json={
+            "spans": [
+                {"start": 0, "end": 7, "label": "OBRIGACAO"},  # ausente na isabella
+                MULTA,  # acerto
+                {"start": 46, "end": 56, "label": "RECOMENDACAO"},  # rótulo trocado
+                {"start": 60, "end": 66, "label": "RESSARCIMENTO"},  # fronteira
+            ],
+            "status": "done",
+        },
+    )
+    holder.user = env["isabella"]
+    client.put(
+        f"{BASE}/documentos/{env['doc']}/anotacao",
+        json={
+            "spans": [
+                MULTA,
+                {"start": 46, "end": 56, "label": "OBRIGACAO"},
+                {"start": 65, "end": 77, "label": "RESSARCIMENTO"},
+            ],
+            "status": "done",
+        },
+    )
+    holder.user = env["admin"]
+
+
+def test_divergencias_classifica_tipos(env):
+    _anotar_par_divergente(env)
+    corpo = env["client"].get(f"{BASE}/divergencias").json()
+
+    assert corpo["anotadores"] == ["eduardo", "isabella"]
+    assert {t["tipo"]: t["total"] for t in corpo["por_tipo"]} == {
+        "rotulo": 1,
+        "fronteira": 1,
+        "ausente": 1,
+    }
+    multa = next(r for r in corpo["por_rotulo"] if r["label"] == "MULTA")
+    assert (multa["acertos"], multa["divergencias"], multa["f1"]) == (1, 0, 1.0)
+
+    (doc,) = corpo["documentos"]
+    assert doc["id"] == env["doc"]
+    assert doc["divergencias"] == 3
+    assert doc["score"] == 0.75
+    assert doc["spans_por_anotador"] == {"eduardo": 4, "isabella": 3}
+    assert doc["tipos"] == ["ausente", "fronteira", "rotulo"]
+
+
+def test_divergencias_ignora_deepseek(env, factory):
+    _anotar_par_divergente(env)
+    with factory() as s:
+        s.add(
+            DatasetAnotacaoORM(
+                IdDocumento=env["outro"],
+                Anotador="deepseek",
+                Status="done",
+                Spans=json.dumps([MULTA]),
+            )
+        )
+        s.commit()
+
+    corpo = env["client"].get(f"{BASE}/divergencias").json()
+    assert corpo["anotadores"] == ["eduardo", "isabella"]
+    assert [d["id"] for d in corpo["documentos"]] == [env["doc"]]
+
+
+def test_divergencia_detail_traz_todas_as_anotacoes(env):
+    _anotar_par_divergente(env)
+    corpo = env["client"].get(f"{BASE}/divergencias/{env['doc']}").json()
+
+    assert corpo["texto"] == TEXTO
+    assert [a["anotador"] for a in corpo["anotacoes"]] == ["eduardo", "isabella"]
+    assert MULTA in corpo["anotacoes"][0]["spans"]
+
+
+def test_divergencias_restrito_a_admin(env):
+    assert env["client"].get(f"{BASE}/divergencias").status_code == 403
+    assert env["client"].get(f"{BASE}/divergencias/{env['doc']}").status_code == 403
+
+
 # ----- export ----------------------------------------------------------------
 
 

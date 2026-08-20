@@ -33,12 +33,31 @@ class SolidarioMulta(BaseModel):
     documento: Optional[str] = None
 
 
+class PessoaCargo(BaseModel):
+    """One cargo found for a pessoa in the external bases — Anexo 42 (BdSIAI,
+    gestores de unidade jurisdicionada) or SIAI Pessoal (BdSIAIPessoal, folha)."""
+
+    fonte: Literal["anexo42", "siai_pessoal"]
+    cargo: str
+    orgao: Optional[str] = None
+    inicio: Optional[date] = None
+    fim: Optional[date] = None
+
+
 class Pessoa(BaseModel):
     """Person associated with the process — surfaced in ``DecisaoTexto.pessoas``
     so forms can autocomplete ``documento``."""
 
     nome: str
     documento: Optional[str] = None
+    cargos: list[PessoaCargo] = []
+
+
+class OrgaoOut(BaseModel):
+    """Órgão de ``processo.dbo.Orgaos`` — opções do campo Órgão responsável."""
+
+    id: int
+    nome: str
 
 
 def _to_utc_iso(dt: Optional[datetime]) -> Optional[str]:
@@ -123,8 +142,8 @@ class EntidadeReview(BaseModel):
 
     ``id_ner`` is the NER-row id; ``None`` means the reviewer added this
     entity by selecting a span the extractor missed (only valid with
-    ``resultado="approved"``). Rejections carry the motive in ``observacoes``
-    (min 10 chars) and don't need ``campos``.
+    ``resultado="approved"``). Rejections may carry an optional motive in
+    ``observacoes`` and don't need ``campos``.
     """
 
     tipo: Tipo
@@ -139,11 +158,8 @@ class EntidadeReview(BaseModel):
             raise ValueError("campos.tipo diverge de tipo")
         if self.resultado == "approved" and self.campos is None:
             raise ValueError("entidade aprovada exige campos")
-        if self.resultado == "rejected":
-            if self.id_ner is None:
-                raise ValueError("entidade adicionada não pode ser rejeitada")
-            if not self.observacoes or len(self.observacoes.strip()) < 10:
-                raise ValueError("rejeição exige observações (mínimo 10 caracteres)")
+        if self.resultado == "rejected" and self.id_ner is None:
+            raise ValueError("entidade adicionada não pode ser rejeitada")
         return self
 
 
@@ -224,6 +240,9 @@ class DecisaoDetail(BaseModel):
     revisado_por: Optional[str] = None
     data_revisao: Optional[datetime] = None
     entidades: list[EntidadeOut]
+    # Preenchido apenas pelo approve: a próxima decisão da fila (sem revisão e
+    # sem reserva ativa), para o revisor emendar uma na outra.
+    proximo_id: Optional[int] = None
 
     @field_serializer("data_extracao", "claimed_at", "data_revisao")
     def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:

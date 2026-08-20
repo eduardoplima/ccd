@@ -104,6 +104,53 @@ class Progresso(BaseModel):
     concordancia: list[ConcordanciaPar]
 
 
+TipoDivergencia = Literal["rotulo", "fronteira", "ausente"]
+
+
+class DivergenciaPorRotulo(BaseModel):
+    label: Label
+    acertos: int
+    divergencias: int
+    f1: Optional[float] = None
+
+
+class DivergenciaPorTipo(BaseModel):
+    tipo: TipoDivergencia
+    total: int
+
+
+class DivergenciaDoc(BaseModel):
+    id: int
+    processo: Optional[str] = None
+    codigo_tipo_processo: Optional[str] = None
+    score: float
+    divergencias: int
+    spans_por_anotador: dict[str, int]
+    rotulos: list[Label]
+    tipos: list[TipoDivergencia]
+
+
+class Divergencias(BaseModel):
+    anotadores: list[str]
+    documentos_comuns: int
+    por_rotulo: list[DivergenciaPorRotulo]
+    por_tipo: list[DivergenciaPorTipo]
+    documentos: list[DivergenciaDoc]
+
+
+class AnotacaoAnotador(BaseModel):
+    anotador: str
+    spans: list[Span]
+
+
+class DivergenciaDetail(BaseModel):
+    id: int
+    processo: Optional[str] = None
+    codigo_tipo_processo: Optional[str] = None
+    texto: str
+    anotacoes: list[AnotacaoAnotador]
+
+
 class DocumentoExport(BaseModel):
     """Shape do ``decicontas.json``, para o corpus sair pronto para publicação."""
 

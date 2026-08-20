@@ -11,19 +11,33 @@ import {
   DecisaoReviewPayload,
   DecisaoTexto,
   decisaoTextoSchema,
+  Orgao,
+  orgaoSchema,
 } from "@/schemas/review";
+
+export async function listOrgaos(): Promise<Orgao[]> {
+  const response = await apiClient.get("/api/v1/cgad/reviews/orgaos");
+  return orgaoSchema.array().parse(response.data);
+}
 
 export async function listDecisoes({
   page = 1,
   pageSize = 20,
   processo,
+  listaCompleta,
 }: {
   page?: number;
   pageSize?: number;
   processo?: string;
+  listaCompleta?: boolean;
 } = {}): Promise<DecisaoListPage> {
   const response = await apiClient.get("/api/v1/cgad/reviews/decisoes", {
-    params: { page, page_size: pageSize, processo: processo || undefined },
+    params: {
+      page,
+      page_size: pageSize,
+      processo: processo || undefined,
+      lista_completa: listaCompleta || undefined,
+    },
   });
   return decisaoListPageSchema.parse(response.data);
 }

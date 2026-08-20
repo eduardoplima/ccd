@@ -90,6 +90,29 @@ def progresso(
     return service.progresso(session)
 
 
+# Admin-only: expõe as anotações dos três lado a lado, o que quebraria a
+# anotação cega se qualquer anotador visse.
+@router.get(
+    "/divergencias",
+    response_model=schemas.Divergencias,
+    dependencies=[Depends(require_role("admin"))],
+)
+def divergencias(session: Session = Depends(get_db_session)) -> schemas.Divergencias:
+    return service.divergencias(session)
+
+
+@router.get(
+    "/divergencias/{id}",
+    response_model=schemas.DivergenciaDetail,
+    dependencies=[Depends(require_role("admin"))],
+)
+def divergencia_detail(
+    id: int,
+    session: Session = Depends(get_db_session),
+) -> schemas.DivergenciaDetail:
+    return service.divergencia_detail(session, id=id)
+
+
 @router.get(
     "/export",
     response_model=list[schemas.DocumentoExport],

@@ -23,12 +23,30 @@ export const solidarioMultaSchema = z.object({
 });
 export type SolidarioMulta = z.infer<typeof solidarioMultaSchema>;
 
+// Mirrors PessoaCargo in backend schemas.
+export const pessoaCargoSchema = z.object({
+  fonte: z.enum(["anexo42", "siai_pessoal"]),
+  cargo: z.string(),
+  orgao: z.string().nullable().optional(),
+  inicio: z.string().nullable().optional(), // date ISO
+  fim: z.string().nullable().optional(),
+});
+export type PessoaCargo = z.infer<typeof pessoaCargoSchema>;
+
 // Mirrors Pessoa in backend schemas.
 export const pessoaSchema = z.object({
   nome: z.string(),
   documento: z.string().nullable().optional(),
+  cargos: z.array(pessoaCargoSchema).default([]),
 });
 export type Pessoa = z.infer<typeof pessoaSchema>;
+
+// mirrors backend OrgaoOut
+export const orgaoSchema = z.object({
+  id: z.number().int(),
+  nome: z.string(),
+});
+export type Orgao = z.infer<typeof orgaoSchema>;
 
 // ----- Per-type editable fields (mirror *Fields in backend schemas) ---------
 // `tipo` is injected when the payload is built; the form schemas below omit it.
@@ -171,6 +189,7 @@ export const decisaoDetailSchema = z.object({
   revisado_por: z.string().nullable().optional(),
   data_revisao: z.string().datetime({ offset: true }).nullable().optional(),
   entidades: z.array(entidadeOutSchema),
+  proximo_id: z.number().int().nullable().optional(),
 });
 export type DecisaoDetail = z.infer<typeof decisaoDetailSchema>;
 

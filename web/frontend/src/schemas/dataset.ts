@@ -64,7 +64,59 @@ export const progressoSchema = z.object({
   ),
 });
 
+export const TIPOS_DIVERGENCIA = ["rotulo", "fronteira", "ausente"] as const;
+
+// mirrors backend Divergencias
+export const divergenciasSchema = z.object({
+  anotadores: z.array(z.string()),
+  documentos_comuns: z.number().int(),
+  por_rotulo: z.array(
+    z.object({
+      label: z.enum(LABELS),
+      acertos: z.number().int(),
+      divergencias: z.number().int(),
+      f1: z.number().nullable(),
+    }),
+  ),
+  por_tipo: z.array(
+    z.object({
+      tipo: z.enum(TIPOS_DIVERGENCIA),
+      total: z.number().int(),
+    }),
+  ),
+  documentos: z.array(
+    z.object({
+      id: z.number().int(),
+      processo: z.string().nullable(),
+      codigo_tipo_processo: z.string().nullable(),
+      score: z.number(),
+      divergencias: z.number().int(),
+      spans_por_anotador: z.record(z.string(), z.number().int()),
+      rotulos: z.array(z.enum(LABELS)),
+      tipos: z.array(z.enum(TIPOS_DIVERGENCIA)),
+    }),
+  ),
+});
+
+// mirrors backend DivergenciaDetail
+export const divergenciaDetailSchema = z.object({
+  id: z.number().int(),
+  processo: z.string().nullable(),
+  codigo_tipo_processo: z.string().nullable(),
+  texto: z.string(),
+  anotacoes: z.array(
+    z.object({
+      anotador: z.string(),
+      spans: z.array(spanSchema),
+    }),
+  ),
+});
+
 export type Label = (typeof LABELS)[number];
+export type TipoDivergencia = (typeof TIPOS_DIVERGENCIA)[number];
+export type Divergencias = z.infer<typeof divergenciasSchema>;
+export type DivergenciaDoc = Divergencias["documentos"][number];
+export type DivergenciaDetail = z.infer<typeof divergenciaDetailSchema>;
 export type Span = z.infer<typeof spanSchema>;
 export type DocumentoListItem = z.infer<typeof documentoListItemSchema>;
 export type DocumentoListPage = z.infer<typeof documentoListPageSchema>;

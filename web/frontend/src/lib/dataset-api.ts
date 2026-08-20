@@ -1,9 +1,13 @@
 import { apiClient } from "@/lib/api-client";
 import {
+  DivergenciaDetail,
+  Divergencias,
   DocumentoDetail,
   DocumentoListPage,
   Progresso,
   Span,
+  divergenciaDetailSchema,
+  divergenciasSchema,
   documentoDetailSchema,
   documentoListPageSchema,
   progressoSchema,
@@ -69,4 +73,14 @@ export async function salvarAnotacao(
 export async function getProgresso(): Promise<Progresso> {
   const response = await apiClient.get(`${BASE}/progresso`);
   return progressoSchema.parse(response.data);
+}
+
+export async function getDivergencias(): Promise<Divergencias> {
+  const response = await apiClient.get(`${BASE}/divergencias`);
+  return divergenciasSchema.parse(response.data);
+}
+
+export async function getDivergenciaDetail(id: number): Promise<DivergenciaDetail> {
+  const response = await apiClient.get(`${BASE}/divergencias/${id}`);
+  return divergenciaDetailSchema.parse(response.data);
 }
