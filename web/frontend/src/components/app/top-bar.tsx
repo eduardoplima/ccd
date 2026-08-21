@@ -15,6 +15,7 @@ const MODULES = [
   { key: "ccd", label: "CCD", href: "/ccd" },
   { key: "cgad", label: "CGAD", href: "/cgad/reviews" },
   { key: "frap", label: "FRAP", href: "/frap/extratos" },
+  { key: "wiki", label: "WIKI", href: "/wiki" },
 ] as const;
 
 const SUBNAV: Record<string, NavItem[]> = {
@@ -37,11 +38,16 @@ const SUBNAV: Record<string, NavItem[]> = {
     { href: "/frap/desconto-folha", label: "Desconto em Folha" },
     { href: "/frap/jobs", label: "Extrações", admin: true },
   ],
+  wiki: [
+    { href: "/wiki", label: "Início" },
+    { href: "/wiki/procedimentos", label: "POPs" },
+  ],
 };
 
 function activeModule(pathname: string | null): string {
   if (pathname?.startsWith("/cgad")) return "cgad";
   if (pathname?.startsWith("/frap")) return "frap";
+  if (pathname?.startsWith("/wiki")) return "wiki";
   return "ccd";
 }
 

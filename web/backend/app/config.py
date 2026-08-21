@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     cors_allowed_origins: str = "http://localhost:3000"
     redis_url: str | None = None
 
+    # Módulo WIKI: dir de overrides das edições feitas pela UI (prod).
+    # Vazio = grava direto nos .md do repo (dev).
+    wiki_edits_dir: str | None = None
+
     # Azure OpenAI (módulo CGAD).
     azure_openai_api_key: str | None = None
     azure_openai_endpoint: str | None = None

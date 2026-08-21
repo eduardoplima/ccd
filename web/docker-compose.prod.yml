@@ -22,12 +22,14 @@ services:
     env_file: ./.env
     environment:
       REDIS_URL: redis://redis:6379
+      WIKI_EDITS_DIR: /data/wiki_edits
     depends_on:
       - redis
     volumes:
       - frap_extratos:/app/docs/extratos_frap
       - frap_data:/app/data
       - ccd_artifacts:/app/backend/.artifacts  # PDFs/ZIPs do CCD (serve o download)
+      - wiki_edits:/data/wiki_edits            # edições da wiki feitas pela UI
     networks: [frap-controle]
     # Aplica migrations (auth) e sobe a API.
     command: ["sh", "-c", "cd /app/backend && alembic upgrade head && cd /app && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
@@ -89,6 +91,7 @@ networks:
 volumes:
   frap_extratos:
   frap_data:
+  wiki_edits:
   caddy_data:
   caddy_config:
   ccd_artifacts:

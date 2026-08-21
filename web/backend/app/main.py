@@ -26,6 +26,7 @@ from app.jobs.router import router as frap_jobs_router
 from app.lancamentos.router import router as frap_lancamentos_router
 from app.matches.router import router as frap_matches_router
 from app.usuarios.router import router as usuarios_router
+from app.wiki.router import router as wiki_router
 
 
 @asynccontextmanager
@@ -92,6 +93,9 @@ def create_app() -> FastAPI:
     app.include_router(cgad_dashboards_router)
     app.include_router(cgad_dataset_corrections_router)
     app.include_router(cgad_dataset_router)
+
+    # Módulo WIKI
+    app.include_router(wiki_router)
 
     return app
 
