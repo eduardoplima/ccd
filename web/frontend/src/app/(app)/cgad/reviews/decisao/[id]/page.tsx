@@ -104,8 +104,8 @@ function Detail({ id }: { id: number }) {
   useEffect(() => {
     return () => {
       // Best-effort release. sendBeacon can't set the JWT header, so we
-      // just fire the mutation; the backend's 15-min TTL covers missed
-      // releases.
+      // just fire the mutation; se falhar, a reserva fica pendurada mas não
+      // bloqueia ninguém (outro usuário reserva por cima).
       release.mutate();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,7 +157,6 @@ function Detail({ id }: { id: number }) {
   // antes do claim ser gravado, ele traz claimed_by=null. O resultado do claim
   // desta montagem é mais novo que o detalhe — prevalece.
   const claimedBy = claim.data?.claimed_by ?? detail.claimed_by ?? null;
-  const claimedAt = claim.data?.claimed_at ?? detail.claimed_at ?? null;
   const holdsClaim = !!claimedBy && !!me && claimedBy === me.login;
   const formDisabled = !holdsClaim || !!detail.revisado_por;
 
@@ -235,9 +234,8 @@ function Detail({ id }: { id: number }) {
     }
 
     const payload: DecisaoReviewPayload = { entidades };
-    // Re-reserva antes de aprovar: o claim é idempotente e renova o TTL de 15
-    // min — cobre revisões longas (reserva expirada) e a reserva perdida pela
-    // corrida claim/release do mount. Só falha se OUTRA pessoa detém o item.
+    // Re-reserva antes de aprovar: cobre a reserva perdida pela corrida
+    // claim/release do mount ou tomada por outro. Só falha se já revisada.
     setSubmitting(true);
     claim.mutate(undefined, {
       onSuccess: () =>
@@ -267,7 +265,6 @@ function Detail({ id }: { id: number }) {
     <DecisaoBody
       detail={detail}
       claimedBy={claimedBy}
-      claimedAt={claimedAt}
       texto={texto}
       textoLoading={textoQuery.isLoading}
       drafts={drafts}
@@ -295,7 +292,6 @@ function Detail({ id }: { id: number }) {
 type DecisaoBodyProps = {
   detail: DecisaoDetail;
   claimedBy: string | null;
-  claimedAt: string | null;
   texto: DecisaoTexto | null;
   textoLoading: boolean;
   drafts: EntityDraft[];
@@ -317,7 +313,6 @@ type DecisaoBodyProps = {
 function DecisaoBody({
   detail,
   claimedBy,
-  claimedAt,
   texto,
   textoLoading,
   drafts,
@@ -412,14 +407,14 @@ function DecisaoBody({
       <ClaimBanner
         currentUsername={currentUsername}
         claimedBy={claimedBy}
-        claimedAt={claimedAt}
         onReclaim={onReclaim}
         onBack={onBackToList}
         isReclaiming={reclaimSubmitting}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        {/* ponytail: sticky puro (o canvas já limita a 70vh); solta sozinho no fim do grid */}
+        <div className="lg:sticky lg:top-4">
           <h2 className="mb-2 text-sm font-medium">
             Texto do acórdão
             <span className="ml-2 font-normal text-muted-foreground">

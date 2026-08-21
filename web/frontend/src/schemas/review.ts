@@ -248,7 +248,6 @@ export type AwaitingDispatchPage = z.infer<typeof awaitingDispatchPageSchema>;
 export const claimResponseSchema = z.object({
   claimed_by: z.string(),
   claimed_at: z.string().datetime({ offset: true }),
-  expires_at: z.string().datetime({ offset: true }),
 });
 export type ClaimResponse = z.infer<typeof claimResponseSchema>;
 

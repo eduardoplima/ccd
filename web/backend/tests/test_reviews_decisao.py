@@ -1,4 +1,4 @@
-"""Decision-level review flow: claim/TTL, single-POST approve, guards.
+"""Decision-level review flow: claim (sem TTL), single-POST approve, guards.
 
 Uses SQLite in-memory with ``cgad.models.Base`` metadata (the CGAD tables live
 in their own declarative Base, separate from the FRAP ``app.db.Base``). MSSQL
@@ -251,19 +251,20 @@ def test_detail_entidades(env):
     assert all(e["status"] == "pending" for e in body["entidades"])
 
 
-def test_claim_conflict_and_ttl_takeover(env, frozen_time):
+def test_claim_takeover(env):
+    """Reserva não é lock: outro usuário reserva por cima e o anterior perde."""
     client, ids, holder = env["client"], env["ids"], env["holder"]
-    url = f"/api/v1/cgad/reviews/decisoes/{ids['decisao']}/claim"
+    base = f"/api/v1/cgad/reviews/decisoes/{ids['decisao']}"
 
-    assert client.post(url).status_code == 200
+    assert client.post(f"{base}/claim").status_code == 200
 
     holder.user = env["other"]
-    resp = client.post(url)
-    assert resp.status_code == 409
-    assert "revisor1" in resp.json()["detail"]
+    resp = client.post(f"{base}/claim")
+    assert resp.status_code == 200
+    assert resp.json()["claimed_by"] == env["other"].NomeUsuario
 
-    frozen_time.tick(16 * 60)  # TTL de 15 min expira
-    assert client.post(url).status_code == 200
+    holder.user = env["user"]
+    assert client.post(f"{base}/approve", json=_payload_completo(ids)).status_code == 403
 
 
 def test_approve_requires_claim(env):

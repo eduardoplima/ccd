@@ -6,9 +6,9 @@ entity (all four types) in a single transaction and stamps
 ``RevisadoPor``/``DataRevisao`` on the decision — final tables are never
 mutated (audit-only model).
 
-The atomic claim uses a conditional ``UPDATE`` guarded by the current claim
-state, which is MSSQL-compatible (no ``SELECT … FOR UPDATE SKIP LOCKED``):
-exactly one concurrent caller's WHERE clause matches, so exactly one succeeds.
+A reserva (``ReservadoPor``/``DataReserva``) é informativa, não um lock: não
+expira e qualquer usuário pode reservar por cima de outro. Serve só para
+mostrar na fila quem está com a decisão aberta.
 """
 
 from __future__ import annotations
@@ -16,11 +16,11 @@ from __future__ import annotations
 import logging
 import os
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any, Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import bindparam, func, or_, select, text, update
+from sqlalchemy import bindparam, func, select, text, update
 from sqlalchemy.orm import Session
 
 from app.cgad.review import schemas
@@ -49,8 +49,6 @@ from cgad.utils import DB_PROCESSOS, SQL_DIR, get_connection
 
 
 logger = logging.getLogger(__name__)
-
-CLAIM_TTL = timedelta(minutes=15)
 
 TIPOS: tuple[schemas.Tipo, ...] = ("multa", "obrigacao", "recomendacao", "ressarcimento")
 
@@ -716,9 +714,6 @@ def list_decisoes(
     processo: Optional[str] = None,
     lista_completa: bool = False,
 ) -> schemas.DecisaoListPage:
-    cutoff = datetime.utcnow() - CLAIM_TTL
-    me = current_user.NomeUsuario
-
     counts = {
         tipo: (
             select(func.count())
@@ -747,13 +742,6 @@ def list_decisoes(
         )
         .where(NERDecisaoORM.RevisadoPor.is_(None))
         .where(na_fila > 0)
-        .where(
-            or_(
-                NERDecisaoORM.ReservadoPor.is_(None),
-                NERDecisaoORM.ReservadoPor == me,
-                NERDecisaoORM.DataReserva < cutoff,
-            )
-        )
     )
 
     if processo and processo.strip():
@@ -946,17 +934,14 @@ def list_awaiting_dispatch(
 # ----- claim / release --------------------------------------------------------
 
 
-def _has_active_claim_by(decisao: NERDecisaoORM, user: UserORM) -> bool:
-    if decisao.ReservadoPor != user.NomeUsuario:
-        return False
-    if decisao.DataReserva is None:
-        return False
-    return decisao.DataReserva >= datetime.utcnow() - CLAIM_TTL
+def _holds_claim(decisao: NERDecisaoORM, user: UserORM) -> bool:
+    return decisao.ReservadoPor == user.NomeUsuario
 
 
 def claim(session: Session, *, id: int, current_user: UserORM) -> schemas.ClaimResponse:
+    """Reserva a decisão para o usuário — sempre vence, inclusive por cima da
+    reserva de outro (poucos usuários, sem lock)."""
     now = datetime.utcnow()
-    cutoff = now - CLAIM_TTL
     me = current_user.NomeUsuario
 
     decisao = _load_decisao(session, id)
@@ -966,33 +951,14 @@ def claim(session: Session, *, id: int, current_user: UserORM) -> schemas.ClaimR
             detail="decisao already reviewed",
         )
 
-    stmt = (
+    session.execute(
         update(NERDecisaoORM)
-        .where(
-            NERDecisaoORM.IdNerDecisao == id,
-            or_(
-                NERDecisaoORM.ReservadoPor.is_(None),
-                NERDecisaoORM.ReservadoPor == me,
-                NERDecisaoORM.DataReserva < cutoff,
-            ),
-        )
+        .where(NERDecisaoORM.IdNerDecisao == id)
         .values(ReservadoPor=me, DataReserva=now)
         .execution_options(synchronize_session=False)
     )
-    result = session.execute(stmt)
     session.commit()
-
-    if result.rowcount == 1:
-        return schemas.ClaimResponse(
-            claimed_by=me,
-            claimed_at=now,
-            expires_at=now + CLAIM_TTL,
-        )
-
-    raise HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail=f"claimed by {decisao.ReservadoPor}",
-    )
+    return schemas.ClaimResponse(claimed_by=me, claimed_at=now)
 
 
 def release(session: Session, *, id: int, current_user: UserORM) -> None:
@@ -1114,9 +1080,7 @@ def _build_staging_row(
 
 def _proxima_decisao(session: Session, *, excluir: int) -> Optional[int]:
     """Próxima decisão da fila padrão (obrigação/recomendação) — mesma
-    elegibilidade de ``list_decisoes``, mas só sem reserva ativa (reserva de
-    outro expirada conta como livre)."""
-    cutoff = datetime.utcnow() - CLAIM_TTL
+    elegibilidade de ``list_decisoes``; a reserva de outro não bloqueia."""
     total_entidades = sum(
         select(func.count())
         .where(_NER_ORM[tipo].IdNerDecisao == NERDecisaoORM.IdNerDecisao)
@@ -1130,10 +1094,6 @@ def _proxima_decisao(session: Session, *, excluir: int) -> Optional[int]:
             NERDecisaoORM.IdNerDecisao != excluir,
             NERDecisaoORM.RevisadoPor.is_(None),
             total_entidades > 0,
-            or_(
-                NERDecisaoORM.ReservadoPor.is_(None),
-                NERDecisaoORM.DataReserva < cutoff,
-            ),
         )
         .order_by(NERDecisaoORM.IdNerDecisao.asc())
         .limit(1)
@@ -1149,7 +1109,7 @@ def approve_decisao(
 ) -> schemas.DecisaoDetail:
     decisao = _load_decisao(session, id)
 
-    if not _has_active_claim_by(decisao, current_user):
+    if not _holds_claim(decisao, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="no active claim by caller",

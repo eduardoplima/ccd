@@ -316,8 +316,7 @@ class AwaitingDispatchPage(BaseModel):
 class ClaimResponse(BaseModel):
     claimed_by: str
     claimed_at: datetime
-    expires_at: datetime
 
-    @field_serializer("claimed_at", "expires_at")
+    @field_serializer("claimed_at")
     def _ser_dt(self, v: datetime) -> str:
         return _to_utc_iso(v)  # type: ignore[return-value]
