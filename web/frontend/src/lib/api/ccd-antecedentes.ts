@@ -8,13 +8,13 @@ import {
 export async function listCandidatosAntecedentes(
   todos: boolean,
 ): Promise<CandidatosAntecedentesResponse> {
-  const { data } = await apiClient.get("/api/v1/ccd/antecedentes/candidatos", {
+  const { data } = await apiClient.get("/api/v1/ccd/automacao/antecedentes/candidatos", {
     params: { todos: todos ? "true" : "false" },
   });
   return candidatosAntecedentesResponseSchema.parse(data);
 }
 
 export async function gerarAntecedentes(processos: string[]): Promise<Job> {
-  const { data } = await apiClient.post("/api/v1/ccd/antecedentes/gerar", { processos });
+  const { data } = await apiClient.post("/api/v1/ccd/automacao/antecedentes/gerar", { processos });
   return jobSchema.parse(data);
 }

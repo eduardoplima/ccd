@@ -18,7 +18,7 @@ from decimal import Decimal
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.desconto_folha.schemas import (
+from app.ccd.desconto_folha.schemas import (
     DebitoFase,
     DebitosFaseResumo,
     FasesResumo,

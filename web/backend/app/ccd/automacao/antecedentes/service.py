@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
-from app.ccd.antecedentes.schemas import (
+from app.ccd.automacao.antecedentes.schemas import (
     CandidatoAntecedentes,
     CandidatosAntecedentesResponse,
 )
@@ -121,29 +121,25 @@ def _format_currency(value: Any) -> str:
 
 
 def _build_llm():
-    from app.config import get_settings
+    """DeepSeek no Foundry do SERPRO. Sem config, falha — antecedente não é opcional."""
+    from frap.llm import get_llm_client
 
-    s = get_settings()
-    if not (s.azure_openai_api_key and s.azure_openai_endpoint and s.openai_api_version):
+    llm = get_llm_client()
+    if llm is None:
         raise RuntimeError(
-            "Azure OpenAI não configurado: defina AZURE_OPENAI_API_KEY, "
-            "AZURE_OPENAI_ENDPOINT e OPENAI_API_VERSION para gerar antecedentes."
+            "LLM não configurado: defina AZURE_OPENAI_API_KEY e AZURE_OPENAI_ENDPOINT "
+            "(base /openai/v1 do Foundry do SERPRO) para gerar antecedentes."
         )
-    from langchain_openai import AzureChatOpenAI
-
-    return AzureChatOpenAI(
-        azure_deployment=s.azure_openai_deployment,
-        api_key=s.azure_openai_api_key,
-        azure_endpoint=s.azure_openai_endpoint,
-        api_version=s.openai_api_version,
-    )
+    return llm
 
 
 def _extrair_pessoas(llm: Any, texto_despacho: str) -> list[str]:
     from langchain_core.prompts import PromptTemplate
 
+    from frap.llm import structured
+
     prompt = PromptTemplate.from_template(_PROMPT_PESSOAS)
-    chain = prompt | llm.with_structured_output(schema=PessoasAntecedentes)
+    chain = prompt | structured(PessoasAntecedentes, llm)
     resultado: PessoasAntecedentes = chain.invoke(texto_despacho)
     nomes: list[str] = []
     for p in resultado.pessoas:

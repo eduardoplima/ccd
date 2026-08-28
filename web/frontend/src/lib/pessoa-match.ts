@@ -68,7 +68,11 @@ export function vincularPessoas(
     // Na obrigação o responsável é o da multa cominatória — só existe se ela existir.
     const aplicavel = tipo !== "obrigacao" || !!out.tem_multa_cominatoria;
     const nomeAtual = out[campo.nome];
-    if (aplicavel && (typeof nomeAtual !== "string" || !nomeAtual.trim()) && gestores.length === 1) {
+    if (
+      aplicavel &&
+      (typeof nomeAtual !== "string" || !nomeAtual.trim()) &&
+      gestores.length === 1
+    ) {
       out[campo.nome] = gestores[0].nome;
       if (campo.documento && gestores[0].documento) out[campo.documento] = gestores[0].documento;
       continue;

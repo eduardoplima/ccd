@@ -35,7 +35,7 @@ from cgad.schema import NERDecisao
 from cgad.utils import DB_DECISOES, get_session
 
 ANOTADOR = "deepseek"
-MODELO = os.getenv("CGAD_LLM_MODEL", "DeepSeek-V4-Flash")
+MODELO = os.getenv("AZURE_OPENAI_DEPLOYMENT") or "DeepSeek-V4-Flash"
 # ponytail: 4 threads só para as chamadas ao modelo; sobe se o Azure aguentar.
 THREADS = 4
 
@@ -49,29 +49,16 @@ LABELS = {
 
 
 def extrator():
-    """Cliente do DeepSeek no endpoint Foundry (``/openai/v1``, OpenAI puro).
+    """Cliente do DeepSeek no Foundry do SERPRO (ver ``frap.llm``)."""
+    from frap.llm import structured
 
-    Não dá para usar ``AzureChatOpenAI`` com o ``AZURE_OPENAI_ENDPOINT`` do
-    ``web/.env``: aquele endpoint aponta direto para o deployment do gpt-4o, que
-    responde qualquer chamada independentemente do deployment pedido. Daí o par
-    ``CGAD_LLM_*`` próprio.
-    """
-    from langchain_openai import ChatOpenAI
-
-    faltando = [v for v in ("CGAD_LLM_BASE_URL", "CGAD_LLM_API_KEY") if not os.getenv(v)]
-    if faltando:
-        raise SystemExit(f"configure {' e '.join(faltando)} no web/.env (endpoint Foundry)")
-
-    llm = ChatOpenAI(
-        base_url=os.environ["CGAD_LLM_BASE_URL"],
-        api_key=os.environ["CGAD_LLM_API_KEY"],
-        model=MODELO,
-        temperature=0.0,
-        # max_retries alto: o Azure devolve 429 em rajada e o SDK respeita o
-        # Retry-After. Com o default (2) metade da rodada se perde.
-        max_retries=8,
-    )
-    return llm.with_structured_output(NERDecisao, include_raw=False, method="function_calling")
+    extr = structured(NERDecisao, model=MODELO)
+    if extr is None:
+        raise SystemExit(
+            "configure AZURE_OPENAI_ENDPOINT e AZURE_OPENAI_API_KEY no web/.env "
+            "(base /openai/v1 do Foundry do SERPRO)"
+        )
+    return extr
 
 
 def spans_do(ner: NERDecisao, texto: str) -> tuple[list[dict], int]:

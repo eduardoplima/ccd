@@ -30,19 +30,20 @@ logger = logging.getLogger(__name__)
 
 # ---- factories (never called at import time) -----------------------------
 
-# Azure deployment + structured-output mode shared by every stage. Config
-# anterior foi ``gpt-4`` → ``gpt-5.4-nano`` → ``deepseek-v4-flash``. Mantemos
-# ``function_calling`` (não assumimos suporte a ``json_schema`` no modelo novo).
-_LLM_DEPLOYMENT = "deepseek-v4-flash"
-_LLM_MODEL = "deepseek-v4-flash"
-_LLM_METHOD = "function_calling"
-
-
 def _build_structured(schema_cls):
-    from langchain_openai import AzureChatOpenAI
+    """DeepSeek no Foundry do SERPRO — modelo e método vêm de ``frap.llm``."""
+    from frap.llm import structured
 
-    llm = AzureChatOpenAI(deployment_name=_LLM_DEPLOYMENT, model_name=_LLM_MODEL)
-    return llm.with_structured_output(schema_cls, include_raw=False, method=_LLM_METHOD)
+    return structured(schema_cls)
+
+
+def _modelo_em_uso() -> str:
+    """Nome do modelo gravado como proveniência no NER."""
+    import os
+
+    from frap.llm import DEFAULT_LLM_MODEL
+
+    return os.environ.get("AZURE_OPENAI_DEPLOYMENT") or DEFAULT_LLM_MODEL
 
 
 def _build_ner_extractor():
@@ -214,7 +215,7 @@ async def run_full_extraction(ctx: dict, filters_dict: dict, extracao_id: int) -
                         session=ner_session,
                         row=row,
                         extractor=ner_extractor,
-                        model_name=_LLM_MODEL,
+                        model_name=_modelo_em_uso(),
                         prompt_version="v1",
                         run_id=run_id,
                         overwrite=False,

@@ -6,13 +6,13 @@ import { candidatosResponseSchema, type CandidatosResponse } from "@/schemas/ccd
 // job ficam em `@/lib/api/ccd-jobs` (compartilhados entre as páginas do CCD).
 
 export async function listCandidatosDescontoFolha(todos: boolean): Promise<CandidatosResponse> {
-  const { data } = await apiClient.get("/api/v1/ccd/desconto-folha/candidatos", {
+  const { data } = await apiClient.get("/api/v1/ccd/automacao/desconto-folha/candidatos", {
     params: { todos: todos ? "true" : "false" },
   });
   return candidatosResponseSchema.parse(data);
 }
 
 export async function gerarDescontoFolha(processos: string[]): Promise<Job> {
-  const { data } = await apiClient.post("/api/v1/ccd/desconto-folha/gerar", { processos });
+  const { data } = await apiClient.post("/api/v1/ccd/automacao/desconto-folha/gerar", { processos });
   return jobSchema.parse(data);
 }

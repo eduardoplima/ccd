@@ -743,9 +743,7 @@ function EntityFields({
           orgaos={orgaos}
           disabled={disabled}
           datalistId={orgaosDatalistId}
-          onPick={(nome, id) =>
-            onChange({ orgao_responsavel: nome, id_orgao_responsavel: id })
-          }
+          onPick={(nome, id) => onChange({ orgao_responsavel: nome, id_orgao_responsavel: id })}
         />
         {!!campos.tem_multa_cominatoria && (
           <>
@@ -854,9 +852,7 @@ function EntityFields({
             orgaos={orgaos}
             disabled={disabled}
             datalistId={orgaosDatalistId}
-            onPick={(nome, id) =>
-              onChange({ orgao_responsavel: nome, id_orgao_responsavel: id })
-            }
+            onPick={(nome, id) => onChange({ orgao_responsavel: nome, id_orgao_responsavel: id })}
           />
         </div>
         <CheckField

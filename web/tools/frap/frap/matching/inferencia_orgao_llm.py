@@ -18,6 +18,7 @@ from collections.abc import Iterable
 from pydantic import BaseModel, Field
 
 from frap.llm import get_llm_client
+from frap.llm import structured as estruturado
 from frap.matching.inferencia_orgao import OrgaoIndex, _normaliza
 
 logger = logging.getLogger(__name__)
@@ -93,8 +94,7 @@ def infer_via_llm(
     prompt = _PROMPT_TEMPLATE.format(texto=texto_full, candidatos=candidatos_str)
 
     try:
-        structured = client.with_structured_output(_LlmResposta)
-        resp: _LlmResposta = structured.invoke(prompt)
+        resp: _LlmResposta = estruturado(_LlmResposta, client).invoke(prompt)
     except Exception as exc:
         logger.warning("LLM falhou para chave=%r: %s", chave[:80], exc)
         _CACHE[chave] = None

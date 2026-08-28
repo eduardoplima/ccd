@@ -554,6 +554,40 @@ def importar_monitoramento_cmd(
         click.echo(f"  ... +{len(res.erros) - 20} erros", err=True)
 
 
+@cli.command("importar-monitoramento-tabela")
+@click.option(
+    "--arquivo",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path("docs/desconto_folha/monitoramento_desconto_folha.xlsx"),
+    show_default=True,
+)
+@click.option(
+    "--grupo",
+    type=click.Choice(["GERAL", "ANTIGO", "NEREU"]),
+    default=None,
+    help="Importa só uma aba; default = todas.",
+)
+@click.option("--dry-run", is_flag=True, help="Imprime contagens sem persistir.")
+def importar_monitoramento_tabela_cmd(arquivo: Path, grupo: str | None, dry_run: bool) -> None:
+    """Importa as abas de monitoramento para dbo.FRAPMonitoramentoDescontoFolha.
+
+    Upsert por (Grupo, NumeroProcesso, CpfCnpj) — idempotente. Aposenta a
+    planilha: depois do import, o CRUD da webapp passa a ser a fonte.
+    """
+    engine = build_engine(BANCO_DIP)
+    res = planilha_mod.importar_monitoramento_tabela(engine, arquivo, grupo=grupo, dry_run=dry_run)
+    prefixo = "[dry-run] " if dry_run else ""
+    click.echo(f"{prefixo}{res.resumo()}")
+    if res.orgaos_nao_resolvidos:
+        click.echo("órgãos não resolvidos (IdOrgaoNotificado ficou NULL — corrigir pela UI):")
+        for nome in res.orgaos_nao_resolvidos:
+            click.echo(f"  - {nome}")
+    if res.sem_cpf:
+        click.echo("linhas sem CPF:")
+        for p in res.sem_cpf:
+            click.echo(f"  - {p}")
+
+
 @cli.command("popular-descontos-siai")
 @click.option("--dry-run", is_flag=True, help="Imprime contagens sem persistir.")
 def popular_descontos_siai_cmd(dry_run: bool) -> None:
@@ -659,9 +693,7 @@ def inferir_orgaos_lancamentos_cmd(id_lancamento: int | None, dry_run: bool) -> 
     if res.amostras_sem_match:
         click.echo("Amostras sem match (regex+LLM):")
         for a in res.amostras_sem_match:
-            click.echo(
-                f"  [{a['id_lancamento']}] hist={a['historico']!r} desc={a['descricao']!r}"
-            )
+            click.echo(f"  [{a['id_lancamento']}] hist={a['historico']!r} desc={a['descricao']!r}")
 
 
 if __name__ == "__main__":

@@ -4,12 +4,21 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 
 import {
   atribuirOrgaoPessoa,
+  atualizarCadastro,
+  atualizarMonitoramento,
+  atualizarParcela,
   criarCadastro,
   criarMatchManual,
+  criarMonitoramento,
+  criarParcela,
   deletarCadastro,
   deletarMatchManual,
+  deletarMonitoramento,
+  deletarParcela,
+  getCadastro,
   getDepositosOrgao,
   getDepositosOrgaoLancamentos,
+  getMonitoramentoResumo,
   getParcelasPessoa,
   getPessoasDoOrgao,
   getTipologiaAtrasoSistemico,
@@ -17,13 +26,22 @@ import {
   getTipologiaParcelaDuplicada,
   getTipologiaRepasseMulti,
   listCadastros,
+  listMonitoramento,
   listOrgaos,
   listOrgaosDisponiveis,
   listPessoas,
+  type MonitoramentoFilters,
   type OrgaosFilters,
   type PessoasFilters,
   type RepasseMultiFilters,
 } from "@/lib/api/desconto-folha";
+import type {
+  CadastroManualUpdate,
+  GrupoMonitoramento,
+  MonitoramentoPayload,
+  ParcelaManualInput,
+  ParcelaManualUpdate,
+} from "@/schemas/desconto-folha";
 
 const KEY = "desconto-folha";
 
@@ -111,6 +129,100 @@ export function useDeletarCadastro() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: deletarCadastro,
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function useCadastro(idDescontoFolha: number | null) {
+  return useQuery({
+    queryKey: [KEY, "cadastro", idDescontoFolha],
+    queryFn: () => getCadastro(idDescontoFolha!),
+    enabled: idDescontoFolha !== null,
+    staleTime: 10_000,
+  });
+}
+
+export function useAtualizarCadastro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: number; input: CadastroManualUpdate }) =>
+      atualizarCadastro(id, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function useCriarParcela() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: number; input: ParcelaManualInput }) =>
+      criarParcela(id, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function useAtualizarParcela() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      idParcela,
+      input,
+    }: {
+      id: number;
+      idParcela: number;
+      input: ParcelaManualUpdate;
+    }) => atualizarParcela(id, idParcela, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function useDeletarParcela() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, idParcela }: { id: number; idParcela: number }) =>
+      deletarParcela(id, idParcela),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function useMonitoramento(filters: MonitoramentoFilters) {
+  return useQuery({
+    queryKey: [KEY, "monitoramento", filters],
+    queryFn: () => listMonitoramento(filters),
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useMonitoramentoResumo(grupo?: GrupoMonitoramento) {
+  return useQuery({
+    queryKey: [KEY, "monitoramento-resumo", grupo],
+    queryFn: () => getMonitoramentoResumo(grupo),
+    staleTime: 30_000,
+  });
+}
+
+export function useCriarMonitoramento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: criarMonitoramento,
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function useAtualizarMonitoramento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: MonitoramentoPayload }) =>
+      atualizarMonitoramento(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function useDeletarMonitoramento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deletarMonitoramento,
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 }

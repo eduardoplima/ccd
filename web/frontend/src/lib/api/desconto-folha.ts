@@ -2,8 +2,12 @@ import { apiClient } from "@/lib/api-client";
 import {
   atrasoSistemicoResponseSchema,
   atribuirOrgaoResultadoSchema,
+  cadastroManualDetailSchema,
   cadastroManualInputSchema,
   cadastroManualListResponseSchema,
+  monitoramentoItemSchema,
+  monitoramentoListResponseSchema,
+  monitoramentoResumoSchema,
   cpfSemSiaiResponseSchema,
   depositosOrgaoResponseSchema,
   lancamentosDoOrgaoResponseSchema,
@@ -18,8 +22,17 @@ import {
   repasseMultiParcelaResponseSchema,
   type AtrasoSistemicoResponse,
   type AtribuirOrgaoResultado,
+  type CadastroManualDetail,
   type CadastroManualInput,
   type CadastroManualListResponse,
+  type CadastroManualUpdate,
+  type GrupoMonitoramento,
+  type MonitoramentoItem,
+  type MonitoramentoListResponse,
+  type MonitoramentoPayload,
+  type MonitoramentoResumo,
+  type ParcelaManualInput,
+  type ParcelaManualUpdate,
   type CpfSemSiaiResponse,
   type DepositosOrgaoResponse,
   type LancamentosDoOrgaoResponse,
@@ -34,7 +47,7 @@ import {
   type RepasseMultiParcelaResponse,
 } from "@/schemas/desconto-folha";
 
-const BASE = "/api/v1/frap/desconto-folha";
+const BASE = "/api/v1/ccd/desconto-folha";
 
 function buildParams(input: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
@@ -150,6 +163,93 @@ export async function criarCadastro(
 
 export async function deletarCadastro(idDescontoFolha: number): Promise<void> {
   await apiClient.delete(`${BASE}/cadastro/${idDescontoFolha}`);
+}
+
+export async function getCadastro(idDescontoFolha: number): Promise<CadastroManualDetail> {
+  const { data } = await apiClient.get(`${BASE}/cadastro/${idDescontoFolha}`);
+  return cadastroManualDetailSchema.parse(data);
+}
+
+export async function atualizarCadastro(
+  idDescontoFolha: number,
+  input: CadastroManualUpdate,
+): Promise<void> {
+  await apiClient.patch(`${BASE}/cadastro/${idDescontoFolha}`, input);
+}
+
+export async function criarParcela(
+  idDescontoFolha: number,
+  input: ParcelaManualInput,
+): Promise<{ idFrapParcela: number }> {
+  const { data } = await apiClient.post(`${BASE}/cadastro/${idDescontoFolha}/parcelas`, input);
+  return { idFrapParcela: Number((data as { idFrapParcela: number }).idFrapParcela) };
+}
+
+export async function atualizarParcela(
+  idDescontoFolha: number,
+  idParcela: number,
+  input: ParcelaManualUpdate,
+): Promise<void> {
+  await apiClient.patch(`${BASE}/cadastro/${idDescontoFolha}/parcelas/${idParcela}`, input);
+}
+
+export async function deletarParcela(idDescontoFolha: number, idParcela: number): Promise<void> {
+  await apiClient.delete(`${BASE}/cadastro/${idDescontoFolha}/parcelas/${idParcela}`);
+}
+
+// ---------------------------------------------------------------------------
+// Monitoramento
+// ---------------------------------------------------------------------------
+
+export type MonitoramentoSortKey =
+  | "processo"
+  | "nome"
+  | "grupo"
+  | "dataNotificacao"
+  | "valorOriginal";
+
+export interface MonitoramentoFilters {
+  q?: string;
+  grupo?: GrupoMonitoramento;
+  page: number;
+  size: number;
+  sortBy?: MonitoramentoSortKey | null;
+  sortDir?: "asc" | "desc";
+}
+
+export async function listMonitoramento(
+  f: MonitoramentoFilters,
+): Promise<MonitoramentoListResponse> {
+  const { data } = await apiClient.get(`${BASE}/monitoramento`, { params: buildParams({ ...f }) });
+  return monitoramentoListResponseSchema.parse(data);
+}
+
+export async function getMonitoramentoResumo(
+  grupo?: GrupoMonitoramento,
+): Promise<MonitoramentoResumo> {
+  const { data } = await apiClient.get(`${BASE}/monitoramento/resumo`, {
+    params: buildParams({ grupo }),
+  });
+  return monitoramentoResumoSchema.parse(data);
+}
+
+export async function criarMonitoramento(
+  payload: MonitoramentoPayload,
+): Promise<{ idMonitoramento: number }> {
+  const { data } = await apiClient.post(`${BASE}/monitoramento`, payload);
+  return { idMonitoramento: Number((data as { idMonitoramento: number }).idMonitoramento) };
+}
+
+export async function atualizarMonitoramento(
+  idMonitoramento: number,
+  payload: MonitoramentoPayload,
+): Promise<MonitoramentoItem> {
+  const { data } = await apiClient.patch(`${BASE}/monitoramento/${idMonitoramento}`, payload);
+  return monitoramentoItemSchema.parse(data);
+}
+
+export async function deletarMonitoramento(idMonitoramento: number): Promise<void> {
+  await apiClient.delete(`${BASE}/monitoramento/${idMonitoramento}`);
 }
 
 export async function criarMatchManual(input: MatchManualInput): Promise<MatchManualResultado> {

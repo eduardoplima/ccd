@@ -8,8 +8,8 @@ from pathlib import Path
 from arq.connections import RedisSettings
 from dotenv import load_dotenv
 
-from app.ccd.antecedentes.tasks import task_gerar_antecedentes
-from app.ccd.desconto_folha.tasks import task_gerar_desconto_folha
+from app.ccd.automacao.antecedentes.tasks import task_gerar_antecedentes
+from app.ccd.automacao.desconto_folha.tasks import task_gerar_desconto_folha
 from app.cgad.tasks import run_full_extraction
 from app.config import get_settings
 from app.jobs.tasks import task_conciliar_mes, task_parse_e_publicar

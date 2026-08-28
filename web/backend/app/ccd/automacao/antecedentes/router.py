@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.auth.models import FRAPUsuario
-from app.ccd.antecedentes import service
-from app.ccd.antecedentes.schemas import (
+from app.ccd.automacao.antecedentes import service
+from app.ccd.automacao.antecedentes.schemas import (
     CandidatosAntecedentesResponse,
     GerarAntecedentesRequest,
 )
@@ -16,7 +16,7 @@ from app.ccd.gen.jobs import enqueue_ccd_job
 from app.deps import get_arq_pool, get_current_user, get_db_session, get_processo_session
 from app.jobs.schemas import JobOut
 
-router = APIRouter(prefix="/api/v1/ccd/antecedentes", tags=["ccd:antecedentes"])
+router = APIRouter(prefix="/api/v1/ccd/automacao/antecedentes", tags=["ccd:automacao"])
 
 _PROCESSO_RE = re.compile(r"^\d{1,6}/\d{4}$")
 

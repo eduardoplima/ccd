@@ -30,7 +30,7 @@ function parseProcessosTexto(texto: string): string[] {
     .filter((p) => p.length > 0);
 }
 
-export default function AntecedentesPage() {
+export function AntecedentesTab() {
   const [todos, setTodos] = useState(false);
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [texto, setTexto] = useState("");
@@ -117,7 +117,6 @@ export default function AntecedentesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="section-heading text-2xl">Antecedentes</h1>
       <p className="text-sm text-muted-foreground">
         Gera o despacho de antecedentes de cada processo selecionado. O servidor lê o último
         despacho no share de PDFs e usa um LLM para identificar os responsáveis — pode demorar

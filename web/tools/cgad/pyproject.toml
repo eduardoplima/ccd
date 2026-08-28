@@ -21,6 +21,8 @@ llm = [
     "langchain-community>=0.3",
     "openai>=1.91",
     "numpy>=1.26",
+    # frap.llm é o único ponto de construção de cliente LLM da árvore web/ (LGPD).
+    "tools",
 ]
 
 [build-system]

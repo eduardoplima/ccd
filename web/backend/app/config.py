@@ -42,11 +42,9 @@ class Settings(BaseSettings):
     # Vazio = grava direto nos .md do repo (dev).
     wiki_edits_dir: str | None = None
 
-    # Azure OpenAI (módulo CGAD).
-    azure_openai_api_key: str | None = None
-    azure_openai_endpoint: str | None = None
-    openai_api_version: str | None = None
-    azure_openai_deployment: str = "gpt-4o"
+    # LLM: nada aqui. O único ponto de construção de cliente é `frap.llm`
+    # (DeepSeek no Foundry do SERPRO, exigido por LGPD), compartilhado com o
+    # worker e as CLIs — por isso lê AZURE_OPENAI_* do ambiente, não daqui.
 
     @field_validator("cors_allowed_origins")
     @classmethod

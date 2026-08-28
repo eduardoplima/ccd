@@ -188,6 +188,146 @@ export const cadastroManualInputSchema = z.object({
 });
 export type CadastroManualInput = z.infer<typeof cadastroManualInputSchema>;
 
+// mirrors backend ParcelaCadastroItem
+export const parcelaCadastroItemSchema = z.object({
+  idFrapParcela: z.number().int(),
+  numeroParcela: z.number().int().nullable().optional(),
+  mesReferencia: z.number().int().nullable().optional(),
+  anoReferencia: z.number().int().nullable().optional(),
+  valorEsperado: decimalLike,
+  dataVencimento: z.string().nullable().optional(),
+  temMatch: z.boolean().default(false),
+});
+export type ParcelaCadastroItem = z.infer<typeof parcelaCadastroItemSchema>;
+
+// mirrors backend CadastroManualDetail
+export const cadastroManualDetailSchema = cadastroManualItemSchema.extend({
+  origem: z.string(),
+  parcelas: z.array(parcelaCadastroItemSchema),
+});
+export type CadastroManualDetail = z.infer<typeof cadastroManualDetailSchema>;
+
+// mirrors backend CadastroManualUpdate
+export interface CadastroManualUpdate {
+  nomePessoa?: string;
+  idOrgaoNotificado?: number;
+  nomeOrgaoNotificado?: string;
+}
+
+// mirrors backend ParcelaManualUpdate
+export interface ParcelaManualUpdate {
+  numeroParcela?: number;
+  mesReferencia?: number;
+  anoReferencia?: number;
+  valorEsperado?: number;
+  dataVencimento?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Monitoramento (substitui a planilha "Monitoramento Desconto em Folha.xlsx")
+// ---------------------------------------------------------------------------
+
+export const GRUPOS_MONITORAMENTO = ["GERAL", "ANTIGO", "NEREU"] as const;
+export type GrupoMonitoramento = (typeof GRUPOS_MONITORAMENTO)[number];
+
+// mirrors backend MonitoramentoItem
+export const monitoramentoItemSchema = z.object({
+  idMonitoramento: z.number().int(),
+  grupo: z.string(),
+  numeroProcesso: z.string(),
+  processoSei: z.string().nullable().optional(),
+  cpfCnpj: z.string().nullable().optional(),
+  nomePessoa: z.string().nullable().optional(),
+  idOrgaoNotificado: z.number().int().nullable().optional(),
+  nomeOrgao: z.string().nullable().optional(),
+  esferaOrgao: z.string().nullable().optional(),
+  cadastradoDescontoFolha: z.boolean().nullable().optional(),
+  dataDespacho: z.string().nullable().optional(),
+  dataNotificacao: z.string().nullable().optional(),
+  dataRecebimentoAr: z.string().nullable().optional(),
+  dataResposta: z.string().nullable().optional(),
+  dataSegundaNotificacao: z.string().nullable().optional(),
+  dataRecebimentoAr2: z.string().nullable().optional(),
+  descFolhaTexto: z.string().nullable().optional(),
+  valorPeriodo: decimalNullable,
+  periodoReferencia: z.string().nullable().optional(),
+  transfFrap: z.string().nullable().optional(),
+  pagoSiteTce: z.string().nullable().optional(),
+  tipoPagamento: z.string().nullable().optional(),
+  remanescente: z.string().nullable().optional(),
+  apr: z.string().nullable().optional(),
+  valorOriginal: decimalNullable,
+  observacoes: z.string().nullable().optional(),
+  relator: z.string().nullable().optional(),
+  valorImplementado: decimalNullable,
+  dataImplementacao: z.string().nullable().optional(),
+  verificadoSiaidp: z.string().nullable().optional(),
+  verificadoFrap: z.string().nullable().optional(),
+  idFrapDescontoFolha: z.number().int().nullable().optional(),
+  dataInclusao: z.string().nullable().optional(),
+  dataAtualizacao: z.string().nullable().optional(),
+});
+export type MonitoramentoItem = z.infer<typeof monitoramentoItemSchema>;
+
+export const monitoramentoListResponseSchema = z.object({
+  items: z.array(monitoramentoItemSchema),
+  total: z.number().int(),
+  page: z.number().int(),
+  size: z.number().int(),
+});
+export type MonitoramentoListResponse = z.infer<typeof monitoramentoListResponseSchema>;
+
+// mirrors backend MonitoramentoResumo
+export const monitoramentoResumoSchema = z.object({
+  total: z.number().int(),
+  totalGeral: z.number().int(),
+  totalAntigo: z.number().int(),
+  totalNereu: z.number().int(),
+  qtdNotificados: z.number().int(),
+  qtdComAr: z.number().int(),
+  qtdRespondidos: z.number().int(),
+  qtdSegundaNotificacao: z.number().int(),
+  qtdDescontoImplementado: z.number().int(),
+  qtdTransfFrap: z.number().int(),
+  qtdPagoSite: z.number().int(),
+});
+export type MonitoramentoResumo = z.infer<typeof monitoramentoResumoSchema>;
+
+// mirrors backend MonitoramentoInput / MonitoramentoUpdate (validação fica no backend)
+export interface MonitoramentoPayload {
+  grupo?: GrupoMonitoramento;
+  numeroProcesso?: string;
+  processoSei?: string | null;
+  cpfCnpj?: string | null;
+  nomePessoa?: string | null;
+  idOrgaoNotificado?: number | null;
+  nomeOrgao?: string | null;
+  esferaOrgao?: string | null;
+  cadastradoDescontoFolha?: boolean | null;
+  dataDespacho?: string | null;
+  dataNotificacao?: string | null;
+  dataRecebimentoAr?: string | null;
+  dataResposta?: string | null;
+  dataSegundaNotificacao?: string | null;
+  dataRecebimentoAr2?: string | null;
+  descFolhaTexto?: string | null;
+  valorPeriodo?: number | null;
+  periodoReferencia?: string | null;
+  transfFrap?: string | null;
+  pagoSiteTce?: string | null;
+  tipoPagamento?: string | null;
+  remanescente?: string | null;
+  apr?: string | null;
+  valorOriginal?: number | null;
+  observacoes?: string | null;
+  relator?: string | null;
+  valorImplementado?: number | null;
+  dataImplementacao?: string | null;
+  verificadoSiaidp?: string | null;
+  verificadoFrap?: string | null;
+  idFrapDescontoFolha?: number | null;
+}
+
 // ---------------------------------------------------------------------------
 // Match manual
 // ---------------------------------------------------------------------------

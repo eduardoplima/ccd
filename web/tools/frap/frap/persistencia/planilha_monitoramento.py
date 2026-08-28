@@ -878,6 +878,402 @@ def importar_nereu(
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Monitoramento → dbo.FRAPMonitoramentoDescontoFolha (aposenta a planilha)
+# ---------------------------------------------------------------------------
+
+_RE_PROCESSO = re.compile(r"^(\d{1,6})\s*/\s*(\d{4})$")
+
+
+def _norm_processo(texto: Any) -> str | None:
+    """'4917/2024 ' -> '004917/2024'. Espelha app.desconto_folha.monitoramento
+    (pacotes distintos; manter as duas cópias em sincronia)."""
+    if texto is None:
+        return None
+    limpo = re.sub(r"\s+", " ", str(texto)).strip()
+    if not limpo:
+        return None
+    m = _RE_PROCESSO.match(limpo)
+    if m:
+        return f"{int(m.group(1)):06d}/{m.group(2)}"
+    return limpo
+
+
+def _lenient_date(v: Any, rotulo: str, obs: list[str]) -> date | None:
+    """Data ou None; texto não-data ('SIM', 'NÃO RECEBEU') vai para obs."""
+    d = _to_date(v)
+    if d is not None:
+        return d
+    s = _str_strip(v)
+    if s:
+        obs.append(f"{rotulo}: {s}")
+    return None
+
+
+def _lenient_decimal(v: Any, rotulo: str, obs: list[str]) -> float | None:
+    if v is None or v == "":
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        s = _str_strip(v)
+        if s:
+            obs.append(f"{rotulo}: {s}")
+        return None
+
+
+def _texto_curto(v: Any, limite: int) -> str | None:
+    """Célula polimórfica → NVARCHAR: datas viram ISO, resto vira str truncada."""
+    d = _to_date(v)
+    if d is not None:
+        return d.isoformat()
+    s = _str_strip(v)
+    return s[:limite] if s else None
+
+
+def _esfera(v: Any) -> str | None:
+    s = _str_strip(v)
+    if not s:
+        return None
+    up = s.upper()
+    if up.startswith("EST"):
+        return "ESTADUAL"
+    if up.startswith("MUN"):
+        return "MUNICIPAL"
+    return up[:10]
+
+
+def _linha_geral(cells: list[Any], grupo: str) -> dict[str, Any] | None:
+    """Linha das abas 'Monitoramento Geral' (GERAL) e 'Processos Antigos' (ANTIGO).
+
+    'Processos Antigos' tem o mesmo layout sem a coluna 'CADASTRADO DF' (idx 1) e
+    sem as colunas 'valor 2 trimestre'/'2 trimestre 2025' (idx 9-10).
+    """
+
+    def c(idx: int) -> Any:
+        return cells[idx] if 0 <= idx < len(cells) else None
+
+    processo = _norm_processo(c(0))
+    # Rejeita rodapés da aba ("TOTAL", "LEGENDA DE CORES", ...): só entra o que
+    # tem cara de número de processo.
+    if processo is None or not re.fullmatch(r"\d{6}/\d{4}", processo):
+        return None
+    obs_extra: list[str] = []
+    if grupo == "GERAL":
+        cadastrado = _str_strip(c(1))
+        i_desp, i_notif, i_ar, i_resp, i_notif2, i_ar2, i_desc = 2, 3, 4, 5, 6, 7, 8
+        valor_periodo = _lenient_decimal(c(9), "valor 2 trimestre", obs_extra)
+        periodo_flag = _str_strip(c(10))
+        i_esfera, i_orgao, i_sei = 11, 12, 13
+        i_frap, i_pago, i_tipo, i_reman, i_apr, i_valor, i_nome, i_cpf, i_obs = (
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+        )
+    else:  # ANTIGO
+        cadastrado = None
+        i_desp, i_notif, i_ar, i_resp, i_notif2, i_ar2, i_desc = 1, 2, 3, 4, 5, 6, 7
+        valor_periodo, periodo_flag = None, None
+        i_esfera, i_orgao, i_sei = 8, 9, 10
+        i_frap, i_pago, i_tipo, i_reman, i_apr, i_valor, i_nome, i_cpf, i_obs = (
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+        )
+    linha = {
+        "Grupo": grupo,
+        "NumeroProcesso": processo,
+        "CadastradoDescontoFolha": (
+            None if cadastrado is None else cadastrado.upper().startswith("S")
+        ),
+        "DataDespacho": _lenient_date(c(i_desp), "DESPACHO", obs_extra),
+        "DataNotificacao": _lenient_date(c(i_notif), "NOTIFICACAO", obs_extra),
+        "DataRecebimentoAr": _lenient_date(c(i_ar), "RECEBIMENTO AR", obs_extra),
+        "DataResposta": _lenient_date(c(i_resp), "RESPOSTA", obs_extra),
+        "DataSegundaNotificacao": _lenient_date(c(i_notif2), "2 NOTIFICACAO", obs_extra),
+        "DataRecebimentoAr2": _lenient_date(c(i_ar2), "RECEBIMENTO AR 2", obs_extra),
+        "DescFolhaTexto": _texto_curto(c(i_desc), 100),
+        "ValorPeriodo": valor_periodo,
+        "PeriodoReferencia": f"2 trimestre 2025: {periodo_flag}"[:40] if periodo_flag else None,
+        "EsferaOrgao": _esfera(c(i_esfera)),
+        "NomeOrgao": _texto_curto(c(i_orgao), 200),
+        "ProcessoSei": _texto_curto(c(i_sei), 80),
+        "TransfFrap": _texto_curto(c(i_frap), 100),
+        "PagoSiteTce": _texto_curto(c(i_pago), 100),
+        "TipoPagamento": _texto_curto(c(i_tipo), 60),
+        "Remanescente": _texto_curto(c(i_reman), 200),
+        "Apr": _texto_curto(c(i_apr), 100),
+        "ValorOriginal": _lenient_decimal(c(i_valor), "VALOR ORIGINAL", obs_extra),
+        "NomePessoa": _texto_curto(c(i_nome), 200),
+        "CpfCnpj": _norm_cpf(c(i_cpf)),
+        "Relator": None,
+        "ValorImplementado": None,
+        "DataImplementacao": None,
+        "VerificadoSiaidp": None,
+        "VerificadoFrap": None,
+    }
+    obs = _str_strip(cells[i_obs] if len(cells) > i_obs else None)
+    partes = ([obs] if obs else []) + obs_extra
+    linha["Observacoes"] = " | ".join(partes) if partes else None
+    return linha
+
+
+def parse_monitoramento_geral_completo(path: Path) -> list[dict[str, Any]]:
+    """Aba 'Monitoramento Geral' completa (24 colunas), grupo GERAL."""
+    wb = load_workbook(path, data_only=True, read_only=True)
+    ws = wb["Monitoramento Geral"]
+    out = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        linha = _linha_geral(list(row), "GERAL")
+        if linha:
+            out.append(linha)
+    wb.close()
+    return out
+
+
+def parse_processos_antigos(path: Path) -> list[dict[str, Any]]:
+    """Aba 'Processos Antigos' (mesmo layout sem CADASTRADO DF), grupo ANTIGO."""
+    wb = load_workbook(path, data_only=True, read_only=True)
+    ws = wb["Processos Antigos"]
+    out = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        linha = _linha_geral(list(row), "ANTIGO")
+        if linha:
+            out.append(linha)
+    wb.close()
+    return out
+
+
+def parse_nereu_completo(path: Path) -> list[dict[str, Any]]:
+    """Aba 'Monitoramento NEREU' completa (10 colunas), grupo NEREU.
+
+    Colunas (0-based): 0=número, 1=ano, 2=VALOR IMPLEMENTADO, 3=DATA IMPLEMENTAÇÃO,
+    5=Processo SEI, 6=Relator, 7=OBS, 8=verificado SIAIDP, 9=verificado FRAP.
+    """
+    wb = load_workbook(path, data_only=True, read_only=True)
+    ws = wb["Monitoramento NEREU"]
+    out: list[dict[str, Any]] = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        cells = list(row)
+
+        def c(idx: int) -> Any:
+            return cells[idx] if 0 <= idx < len(cells) else None
+
+        num, ano = c(0), c(1)
+        if num is None or ano is None:
+            continue
+        try:
+            processo = f"{int(num):06d}/{int(ano)}"
+        except (TypeError, ValueError):
+            continue
+        obs_extra: list[str] = []
+        linha = {
+            "Grupo": "NEREU",
+            "NumeroProcesso": processo,
+            "CadastradoDescontoFolha": None,
+            "DataDespacho": None,
+            "DataNotificacao": None,
+            "DataRecebimentoAr": None,
+            "DataResposta": None,
+            "DataSegundaNotificacao": None,
+            "DataRecebimentoAr2": None,
+            "DescFolhaTexto": None,
+            "ValorPeriodo": None,
+            "PeriodoReferencia": None,
+            "EsferaOrgao": "ESTADUAL",
+            "NomeOrgao": SIGLA_NEREU_ORGAO,
+            "ProcessoSei": _texto_curto(c(5), 80),
+            "TransfFrap": None,
+            "PagoSiteTce": None,
+            "TipoPagamento": None,
+            "Remanescente": None,
+            "Apr": None,
+            "ValorOriginal": None,
+            "NomePessoa": NOME_NEREU,
+            "CpfCnpj": cpf_nereu(),
+            "Relator": _texto_curto(c(6), 120),
+            "ValorImplementado": _lenient_decimal(c(2), "VALOR IMPLEMENTADO", obs_extra),
+            "DataImplementacao": _lenient_date(c(3), "DATA IMPLEMENTACAO", obs_extra),
+            "VerificadoSiaidp": _texto_curto(c(8), 200),
+            "VerificadoFrap": _texto_curto(c(9), 400),
+        }
+        obs = _str_strip(c(7))
+        partes = ([obs] if obs else []) + obs_extra
+        linha["Observacoes"] = " | ".join(partes) if partes else None
+        out.append(linha)
+    wb.close()
+    return out
+
+
+_COLS_MONITORAMENTO: tuple[str, ...] = (
+    "Grupo",
+    "NumeroProcesso",
+    "ProcessoSei",
+    "CpfCnpj",
+    "NomePessoa",
+    "IdOrgaoNotificado",
+    "NomeOrgao",
+    "EsferaOrgao",
+    "CadastradoDescontoFolha",
+    "DataDespacho",
+    "DataNotificacao",
+    "DataRecebimentoAr",
+    "DataResposta",
+    "DataSegundaNotificacao",
+    "DataRecebimentoAr2",
+    "DescFolhaTexto",
+    "ValorPeriodo",
+    "PeriodoReferencia",
+    "TransfFrap",
+    "PagoSiteTce",
+    "TipoPagamento",
+    "Remanescente",
+    "Apr",
+    "ValorOriginal",
+    "Observacoes",
+    "Relator",
+    "ValorImplementado",
+    "DataImplementacao",
+    "VerificadoSiaidp",
+    "VerificadoFrap",
+    "IdFRAPDescontoFolha",
+)
+
+
+@dataclass
+class MonitoramentoResult:
+    inseridos: int = 0
+    atualizados: int = 0
+    orgaos_nao_resolvidos: list[str] = field(default_factory=list)
+    sem_cpf: list[str] = field(default_factory=list)
+
+    def resumo(self) -> str:
+        return (
+            f"inseridos={self.inseridos} atualizados={self.atualizados} "
+            f"orgaos_nao_resolvidos={len(self.orgaos_nao_resolvidos)} "
+            f"sem_cpf={len(self.sem_cpf)}"
+        )
+
+
+def persistir_monitoramento(
+    engine: Engine, linhas: list[dict[str, Any]], *, dry_run: bool = False
+) -> MonitoramentoResult:
+    """Upsert em dbo.FRAPMonitoramentoDescontoFolha por (Grupo, NumeroProcesso).
+
+    Resolve IdOrgaoNotificado via fuzzy (texto cru sempre preservado em NomeOrgao)
+    e vincula IdFRAPDescontoFolha pelo CPF quando houver cadastro ativo.
+    """
+    res = MonitoramentoResult()
+    if not linhas:
+        return res
+
+    # Dedup intra-lote pela chave do índice único (a planilha tem linhas
+    # literalmente repetidas) — a última ocorrência vence.
+    por_chave: dict[tuple[str, str, str | None], dict[str, Any]] = {}
+    for linha in linhas:
+        por_chave[(linha["Grupo"], linha["NumeroProcesso"], linha.get("CpfCnpj"))] = linha
+    linhas = list(por_chave.values())
+
+    cache_orgao: dict[str, tuple[int, str] | None] = {}
+    for linha in linhas:
+        nome_orgao = linha.get("NomeOrgao")
+        linha.setdefault("IdOrgaoNotificado", None)
+        if nome_orgao:
+            if nome_orgao not in cache_orgao:
+                cache_orgao[nome_orgao] = resolver_orgao_por_nome(engine, nome_orgao)
+            resolvido = cache_orgao[nome_orgao]
+            if resolvido is not None:
+                linha["IdOrgaoNotificado"] = resolvido[0]
+            elif nome_orgao not in res.orgaos_nao_resolvidos:
+                res.orgaos_nao_resolvidos.append(nome_orgao)
+        if not linha.get("CpfCnpj"):
+            res.sem_cpf.append(f"{linha['Grupo']} {linha['NumeroProcesso']}")
+
+    with engine.connect() as conn:
+        existentes = {
+            (str(r[1]), str(r[2]), str(r[3]) if r[3] is not None else None): int(r[0])
+            for r in conn.execute(
+                text(
+                    "SELECT IdFRAPMonitoramentoDescontoFolha, Grupo, NumeroProcesso, CpfCnpj "
+                    "FROM dbo.FRAPMonitoramentoDescontoFolha WHERE Ativo = 1"
+                )
+            ).fetchall()
+        }
+        planos_por_cpf = {
+            str(r[0]): int(r[1])
+            for r in conn.execute(
+                text(
+                    "SELECT CpfCnpj, MAX(IdFRAPDescontoFolha) "
+                    "FROM dbo.FRAPDescontoFolha "
+                    "WHERE Ativo = 1 AND CpfCnpj IS NOT NULL GROUP BY CpfCnpj"
+                )
+            ).fetchall()
+        }
+
+    for linha in linhas:
+        cpf = linha.get("CpfCnpj")
+        linha["IdFRAPDescontoFolha"] = planos_por_cpf.get(cpf) if cpf else None
+
+    if dry_run:
+        for linha in linhas:
+            chave = (linha["Grupo"], linha["NumeroProcesso"], linha.get("CpfCnpj"))
+            if chave in existentes:
+                res.atualizados += 1
+            else:
+                res.inseridos += 1
+        return res
+
+    cols = _COLS_MONITORAMENTO
+    sql_insert = text(
+        f"INSERT INTO dbo.FRAPMonitoramentoDescontoFolha ({', '.join(cols)}) "
+        f"VALUES ({', '.join(':' + c for c in cols)})"
+    )
+    cols_upd = [c for c in cols if c not in ("Grupo", "NumeroProcesso", "CpfCnpj")]
+    sql_update = text(
+        "UPDATE dbo.FRAPMonitoramentoDescontoFolha SET "
+        + ", ".join(f"{c} = :{c}" for c in cols_upd)
+        + ", DataAtualizacao = SYSUTCDATETIME() "
+        "WHERE IdFRAPMonitoramentoDescontoFolha = :id"
+    )
+    with engine.begin() as conn:
+        for linha in linhas:
+            params = {c: linha.get(c) for c in cols}
+            chave = (linha["Grupo"], linha["NumeroProcesso"], linha.get("CpfCnpj"))
+            if chave in existentes:
+                conn.execute(sql_update, {**params, "id": existentes[chave]})
+                res.atualizados += 1
+            else:
+                conn.execute(sql_insert, params)
+                res.inseridos += 1
+    return res
+
+
+def importar_monitoramento_tabela(
+    engine: Engine, arquivo: Path, *, grupo: str | None = None, dry_run: bool = False
+) -> MonitoramentoResult:
+    """Importa as abas de monitoramento para FRAPMonitoramentoDescontoFolha."""
+    linhas: list[dict[str, Any]] = []
+    if grupo in (None, "GERAL"):
+        linhas += parse_monitoramento_geral_completo(arquivo)
+    if grupo in (None, "ANTIGO"):
+        linhas += parse_processos_antigos(arquivo)
+    if grupo in (None, "NEREU"):
+        linhas += parse_nereu_completo(arquivo)
+    return persistir_monitoramento(engine, linhas, dry_run=dry_run)
+
+
 def importar_planilha(
     engine: Engine,
     arquivo: Path,

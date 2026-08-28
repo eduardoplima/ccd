@@ -132,7 +132,7 @@ function ParcelasInline({ cpfCnpj }: { cpfCnpj: string }) {
           Parcelas {data?.nomePessoa ? `· ${data.nomePessoa}` : ""}
         </h4>
         <Link
-          href={`/frap/desconto-folha/${encodeURIComponent(cpfCnpj)}`}
+          href={`/ccd/desconto-folha/${encodeURIComponent(cpfCnpj)}`}
           className="text-xs text-yellow-700 hover:underline"
           onClick={(e) => e.stopPropagation()}
         >

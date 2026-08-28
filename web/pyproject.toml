@@ -17,4 +17,18 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-extend-select = ["I"]
+extend-select = ["I", "TID"]
+
+# LGPD: cliente de LLM só pode nascer em tools/frap/frap/llm.py, que garante o
+# destino (DeepSeek no Foundry do SERPRO). Ver a regra irmã em ../pyproject.toml.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"langchain_openai.ChatOpenAI".msg = "use frap.llm.get_llm_client() — LLM só pela Azure do SERPRO (LGPD)"
+"langchain_openai.AzureChatOpenAI".msg = "use frap.llm.get_llm_client() — LLM só pela Azure do SERPRO (LGPD)"
+"langchain_openai.OpenAIEmbeddings".msg = "embeddings fora do SERPRO são vedados (LGPD)"
+"langchain_openai.AzureOpenAIEmbeddings".msg = "use frap.llm — embeddings só pela Azure do SERPRO (LGPD)"
+"openai.OpenAI".msg = "use frap.llm.get_llm_client() — LLM só pela Azure do SERPRO (LGPD)"
+"openai.AzureOpenAI".msg = "use frap.llm.get_llm_client() — LLM só pela Azure do SERPRO (LGPD)"
+
+[tool.ruff.lint.per-file-ignores]
+# o factory é o único lugar autorizado a construir o cliente
+"tools/frap/frap/llm.py" = ["TID251"]

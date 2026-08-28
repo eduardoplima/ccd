@@ -2,17 +2,13 @@
 Prompt engineering techniques for NER on TCE/RN decisions.
 
 Chain-of-Thought, Negative Examples, Role Prompting, Structured Definitions,
-Two-Stage, Self-Refinement, Dynamic Few-Shot, Self-Consistency.
+Two-Stage, Self-Refinement, Self-Consistency.
 """
 import json
-import os
 from collections import Counter
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-import numpy as np
-from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import OpenAIEmbeddings
 from pydantic import BaseModel, Field
 
 from .fewshot import TOOL_USE_EXAMPLES, get_formatted_messages_from_examples
@@ -217,36 +213,10 @@ def extract_with_verification(llm_extractor, llm_verifier, text, prompt_fn):
     return llm_verifier.invoke(verification_prompt)
 
 
-def make_embeddings_model(
-    model: str = "text-embedding-3-small",
-    api_key: Optional[str] = None,
-) -> OpenAIEmbeddings:
-    return OpenAIEmbeddings(
-        model=model,
-        openai_api_key=api_key or os.getenv("OPENAI_API_KEY"),
-    )
-
-
-def dynamic_few_shot_selection(input_text, all_examples, embeddings_model, k: int = 5):
-    input_emb = np.array(embeddings_model.embed_query(input_text))
-    example_embs = embeddings_model.embed_documents([ex[0] for ex in all_examples])
-    sims = [
-        np.dot(input_emb, np.array(e))
-        / (np.linalg.norm(input_emb) * np.linalg.norm(e))
-        for e in example_embs
-    ]
-    top_k = np.argsort(sims)[-k:][::-1]
-    return [all_examples[i] for i in top_k]
-
-
-def generate_dynamic_few_shot_prompt(text, embeddings_model, k: int = 5, all_examples=None):
-    all_examples = all_examples or TOOL_USE_EXAMPLES
-    selected = dynamic_few_shot_selection(text, all_examples, embeddings_model, k)
-    examples = []
-    for ex in selected:
-        examples.append(HumanMessage(content=ex[0]))
-        examples.append(AIMessage(content=json.dumps(ex[1].model_dump(), ensure_ascii=False)))
-    return FEW_SHOT_NER_PROMPT.invoke(dict(text=text, examples=examples))
+# Removidos `make_embeddings_model` / `dynamic_few_shot_selection` /
+# `generate_dynamic_few_shot_prompt`: sem chamador em todo o repo e o único
+# caminho que mandava texto de acórdão para a OpenAI pública (OPENAI_API_KEY).
+# Se voltar a fazer falta, refaça sobre embeddings do Foundry do SERPRO.
 
 
 def self_consistency_ner(llm, prompt_fn, text: str, n_runs: int = 3) -> Dict[str, List[str]]:

@@ -48,6 +48,21 @@ packages = ["app"]
 [tool.ruff]
 line-length = 100
 
+[tool.ruff.lint]
+# só TID: "I" nunca esteve ativo aqui e ligá-lo agora reordenaria 28 arquivos.
+extend-select = ["TID"]
+
+# LGPD: cliente de LLM só nasce em tools/frap/frap/llm.py. Cópia da regra de
+# ../pyproject.toml — esta seção sobrescreve a config do workspace para o backend,
+# e `extend` traria junto reformatação de import não relacionada.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"langchain_openai.ChatOpenAI".msg = "use frap.llm.get_llm_client() — LLM só pela Azure do SERPRO (LGPD)"
+"langchain_openai.AzureChatOpenAI".msg = "use frap.llm.get_llm_client() — LLM só pela Azure do SERPRO (LGPD)"
+"langchain_openai.OpenAIEmbeddings".msg = "embeddings fora do SERPRO são vedados (LGPD)"
+"langchain_openai.AzureOpenAIEmbeddings".msg = "use frap.llm — embeddings só pela Azure do SERPRO (LGPD)"
+"openai.OpenAI".msg = "use frap.llm.get_llm_client() — LLM só pela Azure do SERPRO (LGPD)"
+"openai.AzureOpenAI".msg = "use frap.llm.get_llm_client() — LLM só pela Azure do SERPRO (LGPD)"
+
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests"]
 

@@ -22,7 +22,7 @@ const SUBNAV: Record<string, NavItem[]> = {
   ccd: [
     { href: "/ccd", label: "Início" },
     { href: "/ccd/desconto-folha", label: "Desconto em Folha" },
-    { href: "/ccd/antecedentes", label: "Antecedentes" },
+    { href: "/ccd/automacao", label: "Automação" },
     { href: "/ccd/alertas", label: "Alertas" },
   ],
   cgad: [
@@ -34,8 +34,6 @@ const SUBNAV: Record<string, NavItem[]> = {
   ],
   frap: [
     { href: "/frap/extratos", label: "Extratos" },
-    { href: "/frap/conciliacoes", label: "Conciliações" },
-    { href: "/frap/desconto-folha", label: "Desconto em Folha" },
     { href: "/frap/jobs", label: "Extrações", admin: true },
   ],
   wiki: [
