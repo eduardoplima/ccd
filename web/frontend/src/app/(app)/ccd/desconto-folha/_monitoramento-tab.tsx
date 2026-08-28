@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { parseAsInteger, parseAsString, parseAsStringEnum, useQueryState } from "nuqs";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+
+import { OrgaoField, PessoaField } from "@/components/review/entity-panel";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,14 +29,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   useAtualizarMonitoramento,
   useCriarMonitoramento,
   useDeletarMonitoramento,
   useMonitoramento,
   useMonitoramentoResumo,
+  usePessoasProcesso,
 } from "@/hooks/use-desconto-folha";
+import { useOrgaos } from "@/hooks/use-reviews";
 import { formatBRL, formatDate } from "@/lib/format";
 import {
   GRUPOS_MONITORAMENTO,
@@ -54,9 +57,6 @@ const GRUPO_LABEL: Record<string, string> = {
 };
 
 export function MonitoramentoTab() {
-  const { data: me } = useCurrentUser();
-  const isAdmin = me?.papel === "admin";
-
   const [q, setQ] = useQueryState("mq", parseAsString.withDefault(""));
   const [grupo, setGrupo] = useQueryState(
     "mgrupo",
@@ -135,11 +135,9 @@ export function MonitoramentoTab() {
             ))}
           </SelectNative>
         </div>
-        {isAdmin ? (
-          <Button className="ml-auto" onClick={() => setCriarOpen(true)}>
-            Novo processo
-          </Button>
-        ) : null}
+        <Button className="ml-auto" onClick={() => setCriarOpen(true)}>
+          Novo processo
+        </Button>
       </div>
 
       <p className="text-xs text-muted-foreground">
@@ -208,16 +206,12 @@ export function MonitoramentoTab() {
                           Parcelas
                         </Link>
                       ) : null}
-                      {isAdmin ? (
-                        <>
-                          <Button size="sm" variant="outline" onClick={() => setEditando(m)}>
-                            Editar
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => void handleDelete(m)}>
-                            Excluir
-                          </Button>
-                        </>
-                      ) : null}
+                      <Button size="sm" variant="outline" onClick={() => setEditando(m)}>
+                        Editar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => void handleDelete(m)}>
+                        Excluir
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -358,6 +352,10 @@ function MonitoramentoFormDialog({
   const atualizar = useAtualizarMonitoramento();
   const [f, setF] = useState<FormState>(() => itemToForm(null));
   const pending = criar.isPending || atualizar.isPending;
+  const { data: pessoas } = usePessoasProcesso(open ? (f.numeroProcesso ?? "") : "");
+  const { data: orgaos } = useOrgaos();
+  const pessoasDatalistId = useId();
+  const orgaosDatalistId = useId();
 
   useEffect(() => {
     if (open) setF(itemToForm(item));
@@ -417,6 +415,21 @@ function MonitoramentoFormDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {(pessoas ?? []).length > 0 && (
+          <datalist id={pessoasDatalistId}>
+            {(pessoas ?? []).map((p) => (
+              <option key={`${p.nome}-${p.documento ?? ""}`} value={p.nome} />
+            ))}
+          </datalist>
+        )}
+        {(orgaos ?? []).length > 0 && (
+          <datalist id={orgaosDatalistId}>
+            {(orgaos ?? []).map((o) => (
+              <option key={o.id} value={o.nome} />
+            ))}
+          </datalist>
+        )}
+
         <div className="flex flex-col gap-5">
           <div className="grid gap-3 md:grid-cols-3">
             {campo("numeroProcesso", "Processo (NNNNNN/AAAA)")}
@@ -435,7 +448,20 @@ function MonitoramentoFormDialog({
               </SelectNative>
             </div>
             {campo("processoSei", "Processo SEI")}
-            {campo("nomePessoa", "Responsável")}
+            <PessoaField
+              label="Responsável"
+              value={f.nomePessoa}
+              pessoas={pessoas ?? []}
+              disabled={pending}
+              datalistId={pessoasDatalistId}
+              onPick={(nome, documento) =>
+                setF((prev) => ({
+                  ...prev,
+                  nomePessoa: nome ?? "",
+                  ...(documento !== undefined ? { cpfCnpj: documento ?? "" } : {}),
+                }))
+              }
+            />
             {campo("cpfCnpj", "CPF/CNPJ")}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="mf-esfera">Esfera</Label>
@@ -449,7 +475,14 @@ function MonitoramentoFormDialog({
                 <option value="MUNICIPAL">Municipal</option>
               </SelectNative>
             </div>
-            {campo("nomeOrgao", "Órgão")}
+            <OrgaoField
+              label="Órgão"
+              value={f.nomeOrgao}
+              orgaos={orgaos ?? []}
+              disabled={pending}
+              datalistId={orgaosDatalistId}
+              onPick={(nome) => set("nomeOrgao", nome ?? "")}
+            />
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="mf-cadastrado">Cadastrado DF</Label>
               <SelectNative

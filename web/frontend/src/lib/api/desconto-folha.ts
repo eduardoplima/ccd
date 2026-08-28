@@ -46,6 +46,7 @@ import {
   type PessoasDoOrgaoResponse,
   type RepasseMultiParcelaResponse,
 } from "@/schemas/desconto-folha";
+import { pessoaSchema, type Pessoa } from "@/schemas/review";
 
 const BASE = "/api/v1/ccd/desconto-folha";
 
@@ -250,6 +251,13 @@ export async function atualizarMonitoramento(
 
 export async function deletarMonitoramento(idMonitoramento: number): Promise<void> {
   await apiClient.delete(`${BASE}/monitoramento/${idMonitoramento}`);
+}
+
+export async function getPessoasProcesso(processo: string): Promise<Pessoa[]> {
+  const { data } = await apiClient.get(`${BASE}/monitoramento/pessoas-processo`, {
+    params: { processo },
+  });
+  return pessoaSchema.array().parse(data);
 }
 
 export async function criarMatchManual(input: MatchManualInput): Promise<MatchManualResultado> {

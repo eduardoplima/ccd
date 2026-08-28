@@ -20,6 +20,7 @@ import {
   getDepositosOrgaoLancamentos,
   getMonitoramentoResumo,
   getParcelasPessoa,
+  getPessoasProcesso,
   getPessoasDoOrgao,
   getTipologiaAtrasoSistemico,
   getTipologiaCpfSemSiai,
@@ -216,6 +217,16 @@ export function useAtualizarMonitoramento() {
     mutationFn: ({ id, payload }: { id: number; payload: MonitoramentoPayload }) =>
       atualizarMonitoramento(id, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function usePessoasProcesso(processo: string) {
+  const proc = processo.trim();
+  return useQuery({
+    queryKey: [KEY, "monitoramento-pessoas", proc],
+    queryFn: () => getPessoasProcesso(proc),
+    enabled: /^\d{1,6}\s*\/\s*\d{4}$/.test(proc),
+    staleTime: 5 * 60_000,
   });
 }
 

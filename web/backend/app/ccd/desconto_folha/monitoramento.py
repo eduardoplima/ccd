@@ -323,3 +323,52 @@ def deletar(session: Session, id_monitoramento: int, *, id_usuario: int) -> str:
         return "not_found"
     session.commit()
     return "ok"
+
+
+def pessoas_do_processo(session: Session, processo: str) -> list[Any]:
+    """Responsáveis de despesa do processo, com cargos (Anexo 42 / SIAI Pessoal)
+    — mesma fonte do modal de revisão do CGAD. Retorna ``cgad.review.schemas.Pessoa``."""
+    # Import tardio: evita acoplar o import de app.ccd ao de app.cgad.
+    from app.cgad.review.service import _cargos_por_cpfs
+
+    proc = normalizar_processo(processo)
+    if not _RE_PROCESSO.match(proc):
+        return []
+    rows = (
+        session.execute(
+            text(
+                """
+                SELECT DISTINCT gp.Nome AS nome, gp.Documento AS documento
+                FROM processo.dbo.Processos p
+                JOIN processo.dbo.Pro_ProcessosResponsavelDespesa pprd
+                    ON pprd.IdProcesso = p.IdProcesso
+                JOIN processo.dbo.GenPessoa gp ON gp.IdPessoa = pprd.IdPessoa
+                WHERE CONCAT(p.numero_processo, '/', p.ano_processo) = :processo
+                """
+            ),
+            {"processo": proc},
+        )
+        .mappings()
+        .all()
+    )
+    pessoas: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for r in rows:
+        nome = (r["nome"] or "").strip()
+        if not nome:
+            continue
+        documento = (r["documento"] or "").strip() or None
+        key = documento or f"nome:{nome}"
+        if key in seen:
+            continue
+        seen.add(key)
+        pessoas.append({"nome": nome, "documento": documento})
+
+    def _cpf(p: dict[str, Any]) -> str:
+        return re.sub(r"\D", "", p["documento"] or "")
+
+    cargos = _cargos_por_cpfs(sorted({c for p in pessoas if len(c := _cpf(p)) == 11}))
+    for p in pessoas:
+        p["cargos"] = cargos.get(_cpf(p), [])
+    pessoas.sort(key=lambda p: not any(c.fonte == "anexo42" for c in p["cargos"]))
+    return pessoas

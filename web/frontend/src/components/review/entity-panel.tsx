@@ -376,7 +376,7 @@ function PessoaCargosDialog({
 /** Responsável: select com as pessoas do processo. Escolher uma pessoa
  * preenche nome e documento; o texto extraído pelo modelo (quando não casa com
  * ninguém) fica disponível como opção, e dá para digitar manualmente. */
-function PessoaField({
+export function PessoaField({
   label,
   value,
   pessoas,
@@ -488,7 +488,7 @@ function PessoaField({
 /** Órgão responsável: autocomplete por texto com os órgãos cadastrados no
  * banco (processo.dbo.Orgaos). Nome que casa exatamente com um órgão preenche
  * também id_orgao_responsavel; texto livre continua permitido (id fica nulo). */
-function OrgaoField({
+export function OrgaoField({
   label,
   value,
   orgaos,

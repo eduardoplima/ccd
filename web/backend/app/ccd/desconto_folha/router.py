@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.auth.models import FRAPUsuario
+from app.cgad.review.schemas import Pessoa
 from app.deps import get_current_user, get_db_session, require_role
 from app.ccd.desconto_folha import fases as fases_service
 from app.ccd.desconto_folha import monitoramento as monitoramento_service
@@ -397,6 +398,15 @@ def resumo_monitoramento(
     return monitoramento_service.resumo(session, grupo=grupo)
 
 
+@router.get("/monitoramento/pessoas-processo", response_model=list[Pessoa])
+def pessoas_processo_monitoramento(
+    processo: str = Query(max_length=20),
+    session: Session = Depends(get_db_session),
+    _: FRAPUsuario = Depends(get_current_user),
+) -> list[Pessoa]:
+    return monitoramento_service.pessoas_do_processo(session, processo)
+
+
 @router.get("/monitoramento/{id_monitoramento}", response_model=MonitoramentoItem)
 def obter_monitoramento(
     id_monitoramento: int,
@@ -424,7 +434,7 @@ def _validar_cpf_monitoramento(payload: MonitoramentoInput | MonitoramentoUpdate
 def criar_monitoramento(
     payload: MonitoramentoInput,
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(get_current_user),
 ) -> dict[str, int]:
     _validar_cpf_monitoramento(payload)
     res = monitoramento_service.criar(
@@ -443,7 +453,7 @@ def atualizar_monitoramento(
     id_monitoramento: int,
     payload: MonitoramentoUpdate,
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(get_current_user),
 ) -> MonitoramentoItem:
     _validar_cpf_monitoramento(payload)
     res = monitoramento_service.atualizar(
@@ -469,7 +479,7 @@ def atualizar_monitoramento(
 def deletar_monitoramento(
     id_monitoramento: int,
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(get_current_user),
 ) -> None:
     res = monitoramento_service.deletar(session, id_monitoramento, id_usuario=user.IdUsuario)
     if res == "not_found":
