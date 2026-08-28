@@ -2,7 +2,12 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { getFiltrosCCD, listProcessosCCD, type ProcessoCCDFilters } from "@/lib/api/ccd";
+import {
+  getFiltrosCCD,
+  listPrescricaoCCD,
+  listProcessosCCD,
+  type ProcessoCCDFilters,
+} from "@/lib/api/ccd";
 
 export function useProcessosCCD(filters: ProcessoCCDFilters) {
   return useQuery({
@@ -10,6 +15,14 @@ export function useProcessosCCD(filters: ProcessoCCDFilters) {
     queryFn: () => listProcessosCCD(filters),
     staleTime: 30_000,
     placeholderData: keepPreviousData,
+  });
+}
+
+export function usePrescricaoCCD(ocultarPermanencia: boolean) {
+  return useQuery({
+    queryKey: ["ccd-prescricao", ocultarPermanencia],
+    queryFn: () => listPrescricaoCCD(ocultarPermanencia),
+    staleTime: 60_000,
   });
 }
 

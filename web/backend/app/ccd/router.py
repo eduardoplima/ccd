@@ -14,7 +14,11 @@ from app.auth.models import Usuario
 from app.ccd import service
 from app.ccd.gen.jobs import TIPO_PREFIXO
 from app.ccd.gen.paths import final_artifact
-from app.ccd.schemas import FiltrosCCDResponse, ProcessoCCDListResponse
+from app.ccd.schemas import (
+    FiltrosCCDResponse,
+    PrescricaoCCDListResponse,
+    ProcessoCCDListResponse,
+)
 from app.deps import get_current_user, get_db_session, get_processo_session
 from app.jobs import service as jobs_service
 from app.jobs.schemas import JobOut
@@ -45,6 +49,7 @@ def listar_processos(
     assunto: str | None = Query(None),
     sort: str | None = Query(None),
     order: str = Query("asc"),
+    ocultar_permanencia: bool = Query(False),
     session: Session = Depends(get_processo_session),
     _: Usuario = Depends(get_current_user),
 ) -> ProcessoCCDListResponse:
@@ -58,7 +63,17 @@ def listar_processos(
         order=order,
         page=page,
         size=size,
+        ocultar_permanencia=ocultar_permanencia,
     )
+
+
+@router.get("/prescricao", response_model=PrescricaoCCDListResponse)
+def listar_prescricao(
+    ocultar_permanencia: bool = Query(True),
+    session: Session = Depends(get_processo_session),
+    _: Usuario = Depends(get_current_user),
+) -> PrescricaoCCDListResponse:
+    return service.listar_prescricao(session, ocultar_permanencia=ocultar_permanencia)
 
 
 @router.get("/processos/filtros", response_model=FiltrosCCDResponse)
