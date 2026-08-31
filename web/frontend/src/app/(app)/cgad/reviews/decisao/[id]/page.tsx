@@ -10,6 +10,7 @@ import {
   EntityDraft,
   EntityPanel,
   FONTE_CARGO,
+  formatData,
   formatPeriodo,
 } from "@/components/review/entity-panel";
 import { Button } from "@/components/ui/button";
@@ -401,6 +402,7 @@ function DecisaoBody({
             {formatProcesso(texto?.numero_processo, texto?.ano_processo, detail.id_processo)}
           </h1>
           <p className="text-xs text-muted-foreground">
+            {texto?.data_sessao ? `Sessão de ${formatData(texto.data_sessao)} · ` : ""}
             Decisão #{detail.id} · Pauta {detail.id_composicao_pauta}/{detail.id_voto_pauta} ·{" "}
             {drafts.length} entidade{drafts.length === 1 ? "" : "s"}
           </p>

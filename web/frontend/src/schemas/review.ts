@@ -211,6 +211,7 @@ export const decisaoTextoSchema = z.object({
   numero_acordao: z.string().nullable().optional(),
   ano_acordao: z.string().nullable().optional(),
   tipo_acordao: z.string().nullable().optional(),
+  data_sessao: z.string().nullable().optional(),
   pessoas: z.array(pessoaSchema).default([]),
   relatorio: z.string().nullable().optional(),
   fundamentacao_voto: z.string().nullable().optional(),

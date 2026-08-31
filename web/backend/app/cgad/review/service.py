@@ -312,6 +312,7 @@ def _load_decisao_context(id_processo: int, id_composicao: int, id_voto: int) ->
         "numero_acordao": None,
         "ano_acordao": None,
         "tipo_acordao": None,
+        "data_sessao": None,
     }
     try:
         with open(os.path.join(SQL_DIR, "decisions_full_text.sql")) as f:
@@ -376,6 +377,10 @@ def _load_decisao_context(id_processo: int, id_composicao: int, id_voto: int) ->
             "numero_acordao": (str(getattr(head, "numero_resultado", "") or "")).strip() or None,
             "ano_acordao": (str(getattr(head, "ano_resultado", "") or "")).strip() or None,
             "tipo_acordao": (str(getattr(head, "resultado_tipo", "") or "")).strip() or None,
+            # DataSessao chega como datetime à meia-noite — só a data interessa.
+            "data_sessao": (
+                ds.date() if isinstance(ds := getattr(head, "data_sessao", None), datetime) else ds
+            ),
         }
     except Exception as exc:
         logger.exception(
@@ -852,6 +857,7 @@ def get_decisao_texto(session: Session, *, id: int, current_user: UserORM) -> sc
         numero_acordao=ctx.get("numero_acordao"),
         ano_acordao=ctx.get("ano_acordao"),
         tipo_acordao=ctx.get("tipo_acordao"),
+        data_sessao=ctx.get("data_sessao"),
         pessoas=ctx.get("pessoas", []),
         relatorio=ctx.get("relatorio"),
         fundamentacao_voto=ctx.get("fundamentacao_voto"),

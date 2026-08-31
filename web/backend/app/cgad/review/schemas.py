@@ -272,6 +272,8 @@ class DecisaoTexto(BaseModel):
     numero_acordao: Optional[str] = None
     ano_acordao: Optional[str] = None
     tipo_acordao: Optional[str] = None
+    # Data da sessão em que o acórdão/decisão foi proferido (DataSessao).
+    data_sessao: Optional[date] = None
     pessoas: list[Pessoa] = Field(default_factory=list)
     relatorio: Optional[str] = None
     fundamentacao_voto: Optional[str] = None

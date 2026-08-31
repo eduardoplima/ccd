@@ -310,7 +310,7 @@ function CheckField({ label, value, onChange, disabled }: FieldProps) {
 
 export const FONTE_CARGO = { anexo42: "Anexo 42", siai_pessoal: "SIAI Pessoal" } as const;
 
-function formatData(iso: string | null | undefined) {
+export function formatData(iso: string | null | undefined) {
   if (!iso) return null;
   const [ano, mes, dia] = iso.split("-");
   return `${dia}/${mes}/${ano}`;
