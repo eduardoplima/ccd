@@ -44,8 +44,12 @@ export default function BeneficiosPage() {
     try {
       const job = await detectar.mutateAsync();
       toast.success(`Detecção enfileirada (job ${job.idJob}).`);
-    } catch {
-      toast.error("Falha ao enfileirar a detecção.");
+    } catch (err) {
+      const resp = (err as { response?: { status?: number; data?: { detail?: string } } }).response;
+      if (resp?.status === 503)
+        toast.error("Fila de tarefas indisponível — o Redis não está rodando.");
+      else if (resp?.status === 403) toast.error("Apenas administradores disparam a detecção.");
+      else toast.error(resp?.data?.detail ?? "Falha ao enfileirar a detecção.");
     }
   }
 
