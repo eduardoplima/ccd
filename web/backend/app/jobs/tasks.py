@@ -9,11 +9,11 @@ from __future__ import annotations
 import asyncio
 import sys
 from contextlib import suppress
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.auth.models import FRAPUsuario  # noqa: F401  registra FK target no metadata
@@ -99,6 +99,75 @@ async def task_parse_e_publicar(ctx: dict[str, Any], id_frap_job: int) -> str:
         return output
     except Exception as exc:
         _set_failed(factory, id_frap_job, repr(exc))
+        raise
+
+
+_SQL_DELETE_VERIF_SIAI = """
+DELETE FROM dbo.FRAPVerificacaoSiaiFolha WHERE Ano = :ano AND Mes = :mes
+"""
+
+# Rubrica TCE/FRAP = união dos filtros já usados em tools/frap
+# (descontos_extras._SQL_SIAI + siaipessoal.contracheque_descontos_tce).
+# ano/mes na view são CHAR com padding — TRY_CAST(LTRIM(RTRIM(...))) obrigatório.
+_SQL_INSERT_VERIF_SIAI = """
+INSERT INTO dbo.FRAPVerificacaoSiaiFolha
+    (CpfCnpj, Ano, Mes, IdOrgao, NomeOrgao, CodigoRubrica, NomeRubrica, Valor)
+SELECT LTRIM(RTRIM(v.cpf)), :ano, :mes, v.id_orgao, MAX(v.nome_orgao),
+       v.codigo_rubrica, MAX(v.nome_rubrica), SUM(v.valor_rubrica)
+FROM dbo.vwSiaiPessoalFolhaCompletaTodas v
+WHERE v.vantagem_desconto = 'D'
+  AND (v.nome_rubrica LIKE '%tce%' OR v.nome_rubrica LIKE '%frap%'
+       OR v.nome_rubrica LIKE '%tribunal de contas%')
+  AND v.nome_rubrica NOT LIKE '%VANT%'
+  AND TRY_CAST(LTRIM(RTRIM(v.ano)) AS INT) = :ano
+  AND TRY_CAST(LTRIM(RTRIM(v.mes)) AS INT) = :mes
+  AND EXISTS (SELECT 1 FROM dbo.FRAPMonitoramentoDescontoFolha m
+              WHERE m.Ativo = 1 AND m.CpfCnpj = LTRIM(RTRIM(v.cpf)))
+GROUP BY LTRIM(RTRIM(v.cpf)), v.id_orgao, v.codigo_rubrica
+"""
+
+
+def _competencias(meses: int) -> list[tuple[int, int]]:
+    """As `meses` competências fechadas mais recentes (mês anterior para trás)."""
+    ano, mes = date.today().year, date.today().month
+    pares: list[tuple[int, int]] = []
+    for _ in range(meses):
+        mes -= 1
+        if mes == 0:
+            ano, mes = ano - 1, 12
+        pares.append((ano, mes))
+    return pares
+
+
+async def task_verificar_siai_folha(
+    ctx: dict[str, Any], id_frap_job: int | None = None, meses: int = 3
+) -> str:
+    """Varre as últimas `meses` competências fechadas no SIAI Pessoal e
+    materializa as rubricas TCE/FRAP dos CPFs monitorados em
+    FRAPVerificacaoSiaiFolha (delete+insert por competência — remessas SIAI
+    atrasadas se autocorrigem na rodada seguinte).
+
+    O cron chama sem id_frap_job (sem linha em FRAPJob — IdUsuario é NOT NULL);
+    o endpoint manual passa um.
+    """
+    factory = _session_factory()
+    if id_frap_job is not None:
+        _set_running(factory, id_frap_job)
+    try:
+        linhas: list[str] = []
+        with factory() as s:
+            for ano, mes in _competencias(meses):
+                s.execute(text(_SQL_DELETE_VERIF_SIAI), {"ano": ano, "mes": mes})
+                n = s.execute(text(_SQL_INSERT_VERIF_SIAI), {"ano": ano, "mes": mes}).rowcount
+                linhas.append(f"{mes:02d}/{ano}: {n} linhas")
+            s.commit()
+        resultado = "\n".join(linhas)
+        if id_frap_job is not None:
+            _set_done(factory, id_frap_job, resultado)
+        return resultado
+    except Exception as exc:
+        if id_frap_job is not None:
+            _set_failed(factory, id_frap_job, repr(exc))
         raise
 
 

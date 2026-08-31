@@ -39,6 +39,25 @@ async def disparar_parse(
     return JobOut.model_validate(job)
 
 
+@router.post("/verificar-siai-folha", response_model=JobOut, status_code=status.HTTP_202_ACCEPTED)
+async def disparar_verificar_siai_folha(
+    meses: int = Query(default=3, ge=1, le=36),
+    pool=Depends(get_arq_pool),
+    session: Session = Depends(get_db_session),
+    user: FRAPUsuario = Depends(require_role("admin")),
+) -> JobOut:
+    """Disparo manual/backfill da verificação SIAI (o cron mensal roda sem FRAPJob)."""
+    job = await service.enqueue_job(
+        pool,
+        session,
+        user=user,
+        tipo="verificar-siai-folha",
+        funcao="task_verificar_siai_folha",
+        argumentos={"meses": meses},
+    )
+    return JobOut.model_validate(job)
+
+
 @router.post("/conciliar", response_model=JobOut, status_code=status.HTTP_202_ACCEPTED)
 async def disparar_conciliar(
     payload: ConciliarRequest,
