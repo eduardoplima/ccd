@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ClaimBanner } from "@/components/review/claim-banner";
-import { CanvasSpan, DecisionCanvas } from "@/components/review/decision-canvas";
+import { CanvasSpan, DecisionCanvas, TIPO_SPAN_CLASS } from "@/components/review/decision-canvas";
 import {
   EntityDraft,
   EntityPanel,
@@ -25,6 +25,7 @@ import {
 import { messageForError } from "@/lib/error-messages";
 import { formatAcordao, formatProcesso } from "@/lib/format";
 import { vincularPessoas } from "@/lib/pessoa-match";
+import { cn } from "@/lib/utils";
 import {
   DecisaoDetail,
   DecisaoReviewPayload,
@@ -447,7 +448,25 @@ function DecisaoBody({
         </div>
 
         <div>
-          <h2 className="mb-2 text-sm font-medium">Entidades</h2>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-medium">Entidades</h2>
+            {!formDisabled && (
+              <>
+                <span className="text-xs text-muted-foreground">adicionar:</span>
+                {(Object.keys(TIPO_LABEL) as TipoEntidade[]).map((tipo) => (
+                  <Button
+                    key={tipo}
+                    size="sm"
+                    variant="outline"
+                    className={cn("h-6 px-2 text-xs", TIPO_SPAN_CLASS[tipo])}
+                    onClick={() => onAddEntity(tipo, "")}
+                  >
+                    + {TIPO_LABEL[tipo]}
+                  </Button>
+                ))}
+              </>
+            )}
+          </div>
           <EntityPanel
             drafts={draftsComSpan}
             pessoas={texto?.pessoas ?? []}
