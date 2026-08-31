@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Vazio = grava direto nos .md do repo (dev).
     wiki_edits_dir: str | None = None
 
+    # SisBenefícios: IdSetorUsuarioCadastro da CCD no export (staging CCDBeneficio).
+    # None = exporta em branco até o setor importador informar o id.
+    beneficio_id_setor_ccd: int | None = None
+
     # LLM: nada aqui. O único ponto de construção de cliente é `frap.llm`
     # (DeepSeek no Foundry do SERPRO, exigido por LGPD), compartilhado com o
     # worker e as CLIs — por isso lê AZURE_OPENAI_* do ambiente, não daqui.
