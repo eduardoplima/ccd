@@ -320,3 +320,12 @@ class ClaimResponse(BaseModel):
     @field_serializer("claimed_at")
     def _ser_dt(self, v: datetime) -> str:
         return _to_utc_iso(v)  # type: ignore[return-value]
+
+
+class ClaimLoteRequest(BaseModel):
+    quantidade: int = Field(ge=1)
+
+
+class ClaimLoteResponse(BaseModel):
+    ids: list[int]
+    quantidade: int

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   approveDecisao,
   claimDecisao,
+  claimLoteDecisoes,
   getDecisao,
   getDecisaoTexto,
   listAwaitingDispatch,
@@ -17,8 +18,13 @@ import { ClaimResponse, DecisaoDetail, DecisaoReviewPayload } from "@/schemas/re
 
 export const reviewKeys = {
   all: ["reviews"] as const,
-  list: (args: { page: number; pageSize: number; processo?: string; listaCompleta?: boolean }) =>
-    ["reviews", "decisoes", args] as const,
+  list: (args: {
+    page: number;
+    pageSize: number;
+    processo?: string;
+    listaCompleta?: boolean;
+    reserva?: "pendentes" | "minhas";
+  }) => ["reviews", "decisoes", args] as const,
   detail: (id: number) => ["reviews", "decisao", id] as const,
   texto: (id: number) => ["reviews", "decisao-texto", id] as const,
   awaitingDispatch: (args: { page: number; pageSize: number }) =>
@@ -40,17 +46,19 @@ export function useDecisoes({
   pageSize = 20,
   processo,
   listaCompleta,
+  reserva,
   enabled = true,
 }: {
   page?: number;
   pageSize?: number;
   processo?: string;
   listaCompleta?: boolean;
+  reserva?: "pendentes" | "minhas";
   enabled?: boolean;
 } = {}) {
   return useQuery({
-    queryKey: reviewKeys.list({ page, pageSize, processo, listaCompleta }),
-    queryFn: () => listDecisoes({ page, pageSize, processo, listaCompleta }),
+    queryKey: reviewKeys.list({ page, pageSize, processo, listaCompleta, reserva }),
+    queryFn: () => listDecisoes({ page, pageSize, processo, listaCompleta, reserva }),
     enabled,
   });
 }
@@ -131,6 +139,26 @@ export function useClaim(id: number) {
           claimed_at: claim.claimed_at,
         });
       }
+    },
+  });
+}
+
+export function useClaimLote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (quantidade: number) => claimLoteDecisoes(quantidade),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: reviewKeys.all });
+    },
+  });
+}
+
+export function useReleaseFromList() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => releaseDecisao(id),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: reviewKeys.all });
     },
   });
 }

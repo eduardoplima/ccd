@@ -251,6 +251,13 @@ export const claimResponseSchema = z.object({
 });
 export type ClaimResponse = z.infer<typeof claimResponseSchema>;
 
+// mirrors backend ClaimLoteResponse
+export const claimLoteResponseSchema = z.object({
+  ids: z.array(z.number().int()),
+  quantidade: z.number().int(),
+});
+export type ClaimLoteResponse = z.infer<typeof claimLoteResponseSchema>;
+
 // ----- UI labels --------------------------------------------------------------
 
 export const TIPO_LABEL: Record<TipoEntidade, string> = {

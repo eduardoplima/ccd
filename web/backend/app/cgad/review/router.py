@@ -7,6 +7,8 @@ come from ``HTTPException`` — FastAPI serializes them as ``{"detail": "..."}``
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
@@ -46,6 +48,7 @@ def list_decisoes(
     page_size: int = Query(20, ge=1, le=100),
     processo: str | None = Query(None),
     lista_completa: bool = Query(False),
+    reserva: Literal["pendentes", "minhas"] = Query("pendentes"),
     session: Session = Depends(get_db_session),
     current_user: UserORM = Depends(get_current_user),
 ) -> schemas.DecisaoListPage:
@@ -56,7 +59,17 @@ def list_decisoes(
         current_user=current_user,
         processo=processo,
         lista_completa=lista_completa,
+        reserva=reserva,
     )
+
+
+@router.post("/decisoes/claim-lote", response_model=schemas.ClaimLoteResponse)
+def claim_lote(
+    payload: schemas.ClaimLoteRequest,
+    session: Session = Depends(get_db_session),
+    current_user: UserORM = Depends(get_current_user),
+) -> schemas.ClaimLoteResponse:
+    return service.claim_lote(session, quantidade=payload.quantidade, current_user=current_user)
 
 
 @router.get("/decisoes/{id}", response_model=schemas.DecisaoDetail)

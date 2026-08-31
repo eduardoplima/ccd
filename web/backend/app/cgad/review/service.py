@@ -713,6 +713,7 @@ def list_decisoes(
     current_user: UserORM,
     processo: Optional[str] = None,
     lista_completa: bool = False,
+    reserva: str = "pendentes",
 ) -> schemas.DecisaoListPage:
     counts = {
         tipo: (
@@ -743,6 +744,13 @@ def list_decisoes(
         .where(NERDecisaoORM.RevisadoPor.is_(None))
         .where(na_fila > 0)
     )
+
+    # `lista_completa` é a visão de auditoria: mostra tudo, inclusive reservadas.
+    if not lista_completa:
+        if reserva == "minhas":
+            stmt = stmt.where(NERDecisaoORM.ReservadoPor == current_user.NomeUsuario)
+        else:
+            stmt = stmt.where(NERDecisaoORM.ReservadoPor.is_(None))
 
     if processo and processo.strip():
         stmt = stmt.where(NERDecisaoORM.IdProcesso.in_(_resolve_processo_ids(processo)))
@@ -961,6 +969,60 @@ def claim(session: Session, *, id: int, current_user: UserORM) -> schemas.ClaimR
     return schemas.ClaimResponse(claimed_by=me, claimed_at=now)
 
 
+def claim_lote(
+    session: Session, *, quantidade: int, current_user: UserORM
+) -> schemas.ClaimLoteResponse:
+    """Reserva as N decisões livres mais antigas da fila padrão. Diferente do
+    ``claim`` individual, não toma a reserva de outro usuário."""
+    now = datetime.utcnow()
+    me = current_user.NomeUsuario
+
+    na_fila = sum(
+        select(func.count())
+        .where(_NER_ORM[tipo].IdNerDecisao == NERDecisaoORM.IdNerDecisao)
+        .correlate(NERDecisaoORM)
+        .scalar_subquery()
+        for tipo in ("obrigacao", "recomendacao")
+    )
+    ids = list(
+        session.scalars(
+            select(NERDecisaoORM.IdNerDecisao)
+            .where(
+                NERDecisaoORM.RevisadoPor.is_(None),
+                NERDecisaoORM.ReservadoPor.is_(None),
+                na_fila > 0,
+            )
+            .order_by(NERDecisaoORM.IdNerDecisao.asc())
+            .limit(quantidade)
+        )
+    )
+    if not ids:
+        return schemas.ClaimLoteResponse(ids=[], quantidade=0)
+
+    # O WHERE repetido fecha a corrida entre dois usuários reservando ao mesmo
+    # tempo: quem chegar depois simplesmente reserva menos do que pediu.
+    session.execute(
+        update(NERDecisaoORM)
+        .where(
+            NERDecisaoORM.IdNerDecisao.in_(ids),
+            NERDecisaoORM.ReservadoPor.is_(None),
+            NERDecisaoORM.RevisadoPor.is_(None),
+        )
+        .values(ReservadoPor=me, DataReserva=now)
+        .execution_options(synchronize_session=False)
+    )
+    session.commit()
+
+    reservadas = list(
+        session.scalars(
+            select(NERDecisaoORM.IdNerDecisao)
+            .where(NERDecisaoORM.IdNerDecisao.in_(ids), NERDecisaoORM.ReservadoPor == me)
+            .order_by(NERDecisaoORM.IdNerDecisao.asc())
+        )
+    )
+    return schemas.ClaimLoteResponse(ids=reservadas, quantidade=len(reservadas))
+
+
 def release(session: Session, *, id: int, current_user: UserORM) -> None:
     """Idempotent: release the claim if it's held by the caller."""
     me = current_user.NomeUsuario
@@ -1078,9 +1140,9 @@ def _build_staging_row(
     )
 
 
-def _proxima_decisao(session: Session, *, excluir: int) -> Optional[int]:
-    """Próxima decisão da fila padrão (obrigação/recomendação) — mesma
-    elegibilidade de ``list_decisoes``; a reserva de outro não bloqueia."""
+def _proxima_decisao(session: Session, *, excluir: int, current_user: UserORM) -> Optional[int]:
+    """Próxima decisão da fila padrão (obrigação/recomendação) — primeiro a
+    reserva do próprio usuário, depois as livres; reserva de outro fica fora."""
     total_entidades = sum(
         select(func.count())
         .where(_NER_ORM[tipo].IdNerDecisao == NERDecisaoORM.IdNerDecisao)
@@ -1088,16 +1150,22 @@ def _proxima_decisao(session: Session, *, excluir: int) -> Optional[int]:
         .scalar_subquery()
         for tipo in ("obrigacao", "recomendacao")
     )
-    return session.scalar(
-        select(NERDecisaoORM.IdNerDecisao)
-        .where(
-            NERDecisaoORM.IdNerDecisao != excluir,
-            NERDecisaoORM.RevisadoPor.is_(None),
-            total_entidades > 0,
+
+    def _next(cond: Any) -> Optional[int]:
+        return session.scalar(
+            select(NERDecisaoORM.IdNerDecisao)
+            .where(
+                NERDecisaoORM.IdNerDecisao != excluir,
+                NERDecisaoORM.RevisadoPor.is_(None),
+                total_entidades > 0,
+                cond,
+            )
+            .order_by(NERDecisaoORM.IdNerDecisao.asc())
+            .limit(1)
         )
-        .order_by(NERDecisaoORM.IdNerDecisao.asc())
-        .limit(1)
-    )
+
+    minha = _next(NERDecisaoORM.ReservadoPor == current_user.NomeUsuario)
+    return minha if minha is not None else _next(NERDecisaoORM.ReservadoPor.is_(None))
 
 
 def approve_decisao(
@@ -1207,5 +1275,5 @@ def approve_decisao(
 
     session.refresh(decisao)
     detail = get_decisao(session, id=id, current_user=current_user)
-    detail.proximo_id = _proxima_decisao(session, excluir=id)
+    detail.proximo_id = _proxima_decisao(session, excluir=id, current_user=current_user)
     return detail

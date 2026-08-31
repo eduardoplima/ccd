@@ -95,18 +95,23 @@ function Detail({ id }: { id: number }) {
   const detail = query.data;
   const texto = textoQuery.data ?? null;
 
-  // Claim on mount, release on unmount + tab close.
+  // Claim quando a decisão carrega — a menos que ela já estivesse reservada
+  // para mim (reserva em lote do mutirão): aí a reserva é pré-existente e não
+  // pode ser liberada ao sair da página.
+  const preReserved = useRef<boolean | null>(null);
   useEffect(() => {
-    claim.mutate();
+    if (!detail || !me || preReserved.current !== null) return;
+    preReserved.current = detail.claimed_by === me.login;
+    if (!preReserved.current) claim.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [detail, me]);
 
   useEffect(() => {
     return () => {
       // Best-effort release. sendBeacon can't set the JWT header, so we
       // just fire the mutation; se falhar, a reserva fica pendurada mas não
       // bloqueia ninguém (outro usuário reserva por cima).
-      release.mutate();
+      if (preReserved.current === false) release.mutate();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

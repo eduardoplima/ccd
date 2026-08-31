@@ -6,6 +6,14 @@ import { toast } from "sonner";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,7 +25,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAwaitingDispatch, useDecisoes } from "@/hooks/use-reviews";
+import {
+  useAwaitingDispatch,
+  useClaimLote,
+  useDecisoes,
+  useReleaseFromList,
+} from "@/hooks/use-reviews";
 import { messageForError } from "@/lib/error-messages";
 import { formatAcordao, formatProcesso } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -25,7 +38,7 @@ import { AwaitingDispatchItem, DecisaoListItem, TIPO_LABEL, TipoEntidade } from 
 
 const PAGE_SIZE = 20;
 
-type Tab = "pendentes" | "awaiting-dispatch";
+type Tab = "pendentes" | "minha-reserva" | "awaiting-dispatch";
 
 const BADGE_CLASS: Record<TipoEntidade, string> = {
   multa: "bg-amber-100 text-amber-950",
@@ -49,14 +62,17 @@ export default function ReviewsPage() {
   const [listaCompleta, setListaCompleta] = useState(false);
 
   const isAwaiting = tab === "awaiting-dispatch";
+  const isMinhaReserva = tab === "minha-reserva";
 
   const decisoes = useDecisoes({
     page,
     pageSize: PAGE_SIZE,
     processo,
-    listaCompleta,
+    listaCompleta: isMinhaReserva ? undefined : listaCompleta,
+    reserva: isMinhaReserva ? "minhas" : "pendentes",
     enabled: !isAwaiting,
   });
+  const devolver = useReleaseFromList();
   const awaiting = useAwaitingDispatch({
     page,
     pageSize: PAGE_SIZE,
@@ -83,14 +99,20 @@ export default function ReviewsPage() {
     <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 p-6">
       <div>
         <h1 className="text-2xl font-semibold">
-          {isAwaiting ? "Aguardando envio" : "Decisões pendentes"}
+          {isAwaiting
+            ? "Aguardando envio"
+            : isMinhaReserva
+              ? "Minha reserva"
+              : "Decisões pendentes"}
         </h1>
         <p className="text-sm text-muted-foreground">
           {isAwaiting
             ? "Entidades aprovadas, ainda não enviadas."
-            : "Revise cada decisão: edite, rejeite ou adicione as entidades extraídas do acórdão. " +
-              "Multas e ressarcimentos são tratados em outra interface — a fila padrão traz " +
-              "apenas decisões com obrigação ou recomendação."}
+            : isMinhaReserva
+              ? "Decisões reservadas para você no mutirão. Devolva as que não for revisar."
+              : "Revise cada decisão: edite, rejeite ou adicione as entidades extraídas do acórdão. " +
+                "Multas e ressarcimentos são tratados em outra interface — a fila padrão traz " +
+                "apenas decisões com obrigação ou recomendação."}
         </p>
       </div>
 
@@ -103,6 +125,7 @@ export default function ReviewsPage() {
       >
         <TabsList>
           <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
+          <TabsTrigger value="minha-reserva">Minha reserva</TabsTrigger>
           <TabsTrigger value="awaiting-dispatch">Aguardando envio</TabsTrigger>
         </TabsList>
       </Tabs>
@@ -142,19 +165,30 @@ export default function ReviewsPage() {
         </form>
       )}
 
-      {!isAwaiting && (
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="lista-completa"
-            checked={listaCompleta}
-            onCheckedChange={(v) => {
-              setListaCompleta(v === true);
-              setPage(1);
-            }}
-          />
-          <Label htmlFor="lista-completa" className="text-sm font-normal text-muted-foreground">
-            Lista completa (incluir decisões só com multa ou ressarcimento)
-          </Label>
+      {tab === "pendentes" && (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="lista-completa"
+              checked={listaCompleta}
+              onCheckedChange={(v) => {
+                setListaCompleta(v === true);
+                setPage(1);
+              }}
+            />
+            <Label htmlFor="lista-completa" className="text-sm font-normal text-muted-foreground">
+              Lista completa (incluir decisões só com multa ou ressarcimento)
+            </Label>
+          </div>
+          {!listaCompleta && (
+            <ReservarLoteDialog
+              total={decisoes.data?.total ?? 0}
+              onReserved={() => {
+                setTab("minha-reserva");
+                setPage(1);
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -175,6 +209,20 @@ export default function ReviewsPage() {
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
           isLoading={isLoading}
+          emptyMessage={
+            isMinhaReserva ? "Nenhuma decisão na sua reserva." : "Nenhuma decisão pendente."
+          }
+          onDevolver={
+            isMinhaReserva
+              ? (id) =>
+                  devolver.mutate(id, {
+                    onSuccess: () => toast.success("Decisão devolvida à fila."),
+                    onError: (err) =>
+                      toast.error(messageForError(err, "Erro ao devolver a decisão.")),
+                  })
+              : undefined
+          }
+          isDevolvendo={devolver.isPending}
         />
       )}
     </main>
@@ -244,6 +292,71 @@ function Pagination({
   );
 }
 
+function ReservarLoteDialog({ total, onReserved }: { total: number; onReserved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [quantidade, setQuantidade] = useState("");
+  const claimLote = useClaimLote();
+
+  return (
+    <>
+      <Button variant="outline" disabled={total === 0} onClick={() => setOpen(true)}>
+        Reservar lote
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const n = Number(quantidade);
+              if (!Number.isInteger(n) || n < 1 || n > total) return;
+              claimLote.mutate(n, {
+                onSuccess: (res) => {
+                  toast.success(
+                    res.quantidade === n
+                      ? `${res.quantidade} ${res.quantidade === 1 ? "decisão reservada" : "decisões reservadas"}.`
+                      : `${res.quantidade} de ${n} decisões reservadas — as demais foram reservadas por outro usuário.`,
+                  );
+                  setOpen(false);
+                  setQuantidade("");
+                  onReserved();
+                },
+                onError: (err) => toast.error(messageForError(err, "Erro ao reservar o lote.")),
+              });
+            }}
+            className="space-y-4"
+          >
+            <DialogHeader>
+              <DialogTitle>Reservar lote para o mutirão</DialogTitle>
+              <DialogDescription>
+                As decisões mais antigas da fila (sem reserva de outro usuário) serão reservadas
+                para você e sairão de Pendentes.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="quantidade-lote">Quantidade (1 a {total})</Label>
+              <Input
+                id="quantidade-lote"
+                type="number"
+                min={1}
+                max={total}
+                value={quantidade}
+                onChange={(e) => setQuantidade(e.target.value)}
+                autoFocus
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={claimLote.isPending}>
+                {claimLote.isPending ? "Reservando..." : "Reservar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function DecisoesTable({
   items,
   total,
@@ -251,6 +364,9 @@ function DecisoesTable({
   pageSize,
   onPageChange,
   isLoading,
+  emptyMessage = "Nenhuma decisão pendente.",
+  onDevolver,
+  isDevolvendo = false,
 }: {
   items: DecisaoListItem[];
   total: number;
@@ -258,6 +374,9 @@ function DecisoesTable({
   pageSize: number;
   onPageChange: (page: number) => void;
   isLoading: boolean;
+  emptyMessage?: string;
+  onDevolver?: (id: number) => void;
+  isDevolvendo?: boolean;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -284,7 +403,7 @@ function DecisoesTable({
           ) : items.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                Nenhuma decisão pendente.
+                {emptyMessage}
               </TableCell>
             </TableRow>
           ) : (
@@ -310,12 +429,24 @@ function DecisoesTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  <Link
-                    href={`/cgad/reviews/decisao/${item.id}`}
-                    className={buttonVariants({ size: "sm" })}
-                  >
-                    Revisar
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/cgad/reviews/decisao/${item.id}`}
+                      className={buttonVariants({ size: "sm" })}
+                    >
+                      Revisar
+                    </Link>
+                    {onDevolver && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isDevolvendo}
+                        onClick={() => onDevolver(item.id)}
+                      >
+                        Devolver
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))

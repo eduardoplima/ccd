@@ -267,6 +267,59 @@ def test_claim_takeover(env):
     assert client.post(f"{base}/approve", json=_payload_completo(ids)).status_code == 403
 
 
+def test_claim_lote(env):
+    """Reserva as N livres mais antigas, sem roubar reserva alheia; somem de
+    Pendentes e aparecem em reserva='minhas'."""
+    client, factory = env["client"], env["factory"]
+    ids2 = _seed_decisao(factory)
+    ids3 = _seed_decisao(factory)
+    with factory() as s:
+        d = s.get(NERDecisaoORM, ids2["decisao"])
+        d.ReservadoPor = "revisor2"
+        d.DataReserva = datetime.utcnow()
+        s.commit()
+
+    resp = client.post("/api/v1/cgad/reviews/decisoes/claim-lote", json={"quantidade": 5})
+    assert resp.status_code == 200
+    body = resp.json()
+    # pega só as livres (a do revisor2 fica fora), capado no disponível
+    assert body["ids"] == [env["ids"]["decisao"], ids3["decisao"]]
+    assert body["quantidade"] == 2
+
+    # Pendentes esvazia; reserva='minhas' traz o lote
+    assert client.get("/api/v1/cgad/reviews/decisoes").json()["total"] == 0
+    minhas = client.get("/api/v1/cgad/reviews/decisoes", params={"reserva": "minhas"}).json()
+    assert [i["id"] for i in minhas["items"]] == body["ids"]
+    assert all(i["claimed_by"] == "revisor1" for i in minhas["items"])
+
+    # lista_completa (auditoria) continua mostrando tudo
+    completa = client.get("/api/v1/cgad/reviews/decisoes", params={"lista_completa": True}).json()
+    assert completa["total"] == 3
+
+
+def test_claim_lote_quantidade_invalida(env):
+    resp = env["client"].post("/api/v1/cgad/reviews/decisoes/claim-lote", json={"quantidade": 0})
+    assert resp.status_code == 422
+
+
+def test_proxima_decisao_prefere_minha_reserva(env):
+    """Concluir → próxima: a reserva do próprio usuário vem antes das livres,
+    mesmo com id maior."""
+    client, ids, factory = env["client"], env["ids"], env["factory"]
+    _seed_decisao(factory)  # livre, id menor que a reservada
+    ids_minha = _seed_decisao(factory)
+    with factory() as s:
+        d = s.get(NERDecisaoORM, ids_minha["decisao"])
+        d.ReservadoPor = "revisor1"
+        d.DataReserva = datetime.utcnow()
+        s.commit()
+
+    base = f"/api/v1/cgad/reviews/decisoes/{ids['decisao']}"
+    assert client.post(f"{base}/claim").status_code == 200
+    body = client.post(f"{base}/approve", json=_payload_completo(ids)).json()
+    assert body["proximo_id"] == ids_minha["decisao"]
+
+
 def test_approve_requires_claim(env):
     resp = env["client"].post(
         f"/api/v1/cgad/reviews/decisoes/{env['ids']['decisao']}/approve",

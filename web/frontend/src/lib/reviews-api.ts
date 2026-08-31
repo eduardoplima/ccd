@@ -2,6 +2,8 @@ import { apiClient } from "@/lib/api-client";
 import {
   AwaitingDispatchPage,
   awaitingDispatchPageSchema,
+  ClaimLoteResponse,
+  claimLoteResponseSchema,
   ClaimResponse,
   claimResponseSchema,
   DecisaoDetail,
@@ -25,11 +27,13 @@ export async function listDecisoes({
   pageSize = 20,
   processo,
   listaCompleta,
+  reserva,
 }: {
   page?: number;
   pageSize?: number;
   processo?: string;
   listaCompleta?: boolean;
+  reserva?: "pendentes" | "minhas";
 } = {}): Promise<DecisaoListPage> {
   const response = await apiClient.get("/api/v1/cgad/reviews/decisoes", {
     params: {
@@ -37,9 +41,17 @@ export async function listDecisoes({
       page_size: pageSize,
       processo: processo || undefined,
       lista_completa: listaCompleta || undefined,
+      reserva: reserva || undefined,
     },
   });
   return decisaoListPageSchema.parse(response.data);
+}
+
+export async function claimLoteDecisoes(quantidade: number): Promise<ClaimLoteResponse> {
+  const response = await apiClient.post("/api/v1/cgad/reviews/decisoes/claim-lote", {
+    quantidade,
+  });
+  return claimLoteResponseSchema.parse(response.data);
 }
 
 export async function getDecisao(id: number): Promise<DecisaoDetail> {
