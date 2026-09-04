@@ -45,6 +45,8 @@ import {
   triggerFormSchema,
 } from "@/schemas/etl";
 
+import { CoverageTimeline } from "./_coverage-timeline";
+
 const PAGE_SIZE = 20;
 
 const STAGES: { key: Etapa; label: string }[] = [
@@ -225,6 +227,8 @@ export default function EtlPage() {
           A extração executa três passos: decisões, obrigações e recomendações.
         </p>
       </div>
+
+      <CoverageTimeline />
 
       <Card>
         <CardHeader>
