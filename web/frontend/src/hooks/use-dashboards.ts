@@ -6,21 +6,12 @@ import { getDashboardSummary } from "@/lib/dashboards-api";
 
 export const dashboardsKeys = {
   all: ["dashboards"] as const,
-  summary: (args: { startDate?: string; endDate?: string; topN: number }) =>
-    ["dashboards", "summary", args] as const,
+  summary: (args: { topN: number }) => ["dashboards", "summary", args] as const,
 };
 
-export function useDashboardSummary({
-  startDate,
-  endDate,
-  topN = 10,
-}: {
-  startDate?: string;
-  endDate?: string;
-  topN?: number;
-} = {}) {
+export function useDashboardSummary({ topN = 10 }: { topN?: number } = {}) {
   return useQuery({
-    queryKey: dashboardsKeys.summary({ startDate, endDate, topN }),
-    queryFn: () => getDashboardSummary({ startDate, endDate, topN }),
+    queryKey: dashboardsKeys.summary({ topN }),
+    queryFn: () => getDashboardSummary({ topN }),
   });
 }
