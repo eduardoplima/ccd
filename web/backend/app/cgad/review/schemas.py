@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_valid
 
 
 Tipo = Literal["multa", "obrigacao", "recomendacao", "ressarcimento"]
-ReviewStatusStr = Literal["pending", "approved", "rejected"]
+ReviewStatusStr = Literal["pending", "approved", "rejected", "dispatched"]
 SpanMatchStatusStr = Literal["exact", "fuzzy", "not_found"]
 
 
@@ -191,8 +191,10 @@ class DecisaoListItem(BaseModel):
     ressarcimentos: int
     claimed_by: Optional[str] = None
     claimed_at: Optional[datetime] = None
+    revisado_por: Optional[str] = None
+    data_revisao: Optional[datetime] = None
 
-    @field_serializer("data_extracao", "claimed_at")
+    @field_serializer("data_extracao", "claimed_at", "data_revisao")
     def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:
         return _to_utc_iso(v)
 
@@ -201,6 +203,13 @@ class DecisaoListPage(BaseModel):
     items: list[DecisaoListItem]
     page: int
     page_size: int
+    total: int
+
+
+class ReservaUsuarioOut(BaseModel):
+    """Total de decisões por usuário (reservas em aberto ou revisões feitas)."""
+
+    usuario: str
     total: int
 
 
@@ -287,18 +296,23 @@ class DecisaoTexto(BaseModel):
 # ----- Awaiting dispatch -----------------------------------------------------
 
 
-class AwaitingDispatchItem(BaseModel):
-    """Approved staging row awaiting downstream dispatch — union of the four
-    ``*Staging`` tables with ``Status=approved``. ``id`` is the staging PK."""
+class AwaitingDispatchGroup(BaseModel):
+    """Um processo com entidades aprovadas (ou já enviadas) nas quatro
+    ``*Staging``. ``status`` é ``approved`` enquanto restar alguma entidade
+    não enviada; ``sent`` quando todas foram marcadas como enviadas."""
 
-    id: int
-    tipo: Tipo
     id_processo: int
     numero_processo: Optional[int] = None
     ano_processo: Optional[int] = None
-    descricao: str
-    reviewer: Optional[str] = None
+    multas: int
+    obrigacoes: int
+    recomendacoes: int
+    ressarcimentos: int
+    status: Literal["approved", "dispatched"]
+    revisores: list[str]
     reviewed_at: Optional[datetime] = None
+    # NERDecisao de origem das entidades (via IdProcesso/IdComposicaoPauta/IdVotoPauta).
+    ids_decisao: list[int] = []
 
     @field_serializer("reviewed_at")
     def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:
@@ -306,7 +320,7 @@ class AwaitingDispatchItem(BaseModel):
 
 
 class AwaitingDispatchPage(BaseModel):
-    items: list[AwaitingDispatchItem]
+    items: list[AwaitingDispatchGroup]
     page: int
     page_size: int
     total: int

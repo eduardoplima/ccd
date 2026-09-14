@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectNative } from "@/components/ui/select-native";
 import {
   Table,
   TableBody,
@@ -25,20 +27,67 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   useAwaitingDispatch,
   useClaimLote,
   useDecisoes,
   useReleaseFromList,
+  useReservas,
+  useRevisores,
 } from "@/hooks/use-reviews";
 import { messageForError } from "@/lib/error-messages";
 import { formatAcordao, formatProcesso } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { AwaitingDispatchItem, DecisaoListItem, TIPO_LABEL, TipoEntidade } from "@/schemas/review";
+import {
+  AwaitingDispatchGroup,
+  DecisaoListItem,
+  ReservaFiltro,
+  TIPO_LABEL,
+  TipoEntidade,
+} from "@/schemas/review";
 
 const PAGE_SIZE = 20;
 
-type Tab = "pendentes" | "minha-reserva" | "awaiting-dispatch";
+type Tab = "pendentes" | "reserva" | "minha-reserva" | "realizadas" | "awaiting-dispatch";
+
+const TAB_RESERVA: Record<Exclude<Tab, "awaiting-dispatch">, ReservaFiltro> = {
+  pendentes: "pendentes",
+  reserva: "usuario",
+  "minha-reserva": "minhas",
+  realizadas: "realizadas",
+};
+
+const TAB_TEXT: Record<Tab, { title: string; subtitle: string; empty: string }> = {
+  pendentes: {
+    title: "Decisões pendentes",
+    subtitle:
+      "Revise cada decisão: edite, rejeite ou adicione as entidades extraídas do acórdão. " +
+      "Multas e ressarcimentos são tratados em outra interface — a fila padrão traz " +
+      "apenas decisões com obrigação ou recomendação.",
+    empty: "Nenhuma decisão pendente.",
+  },
+  reserva: {
+    title: "Reserva da equipe",
+    subtitle: "Decisões reservadas por cada usuário e ainda não revisadas.",
+    empty: "Nenhuma decisão pendente na reserva deste usuário.",
+  },
+  "minha-reserva": {
+    title: "Minha reserva",
+    subtitle: "Decisões reservadas para você no mutirão. Devolva as que não for revisar.",
+    empty: "Nenhuma decisão na sua reserva.",
+  },
+  realizadas: {
+    title: "Revisões realizadas",
+    subtitle: "Decisões já revisadas por todos os usuários, da mais recente para a mais antiga.",
+    empty: "Nenhuma revisão realizada.",
+  },
+  "awaiting-dispatch": {
+    title: "Aguardando envio",
+    subtitle: "Processos com entidades aprovadas. Marque como enviado depois de remeter ao setor.",
+    empty: "",
+  },
+};
 
 const BADGE_CLASS: Record<TipoEntidade, string> = {
   multa: "bg-amber-100 text-amber-950",
@@ -54,23 +103,46 @@ const TIPO_PLURAL: Record<TipoEntidade, string> = {
   ressarcimento: "ressarcimentos",
 };
 
+const TABS: Tab[] = ["pendentes", "reserva", "minha-reserva", "realizadas", "awaiting-dispatch"];
+
 export default function ReviewsPage() {
-  const [tab, setTab] = useState<Tab>("pendentes");
+  const tabParam = useSearchParams().get("tab");
+  const [tab, setTab] = useState<Tab>(
+    TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "pendentes",
+  );
   const [page, setPage] = useState(1);
   const [processoInput, setProcessoInput] = useState("");
   const [processo, setProcesso] = useState("");
   const [listaCompleta, setListaCompleta] = useState(false);
+  const [usuarioReserva, setUsuarioReserva] = useState("");
+  const [revisor, setRevisor] = useState("");
 
+  const { data: me } = useCurrentUser();
+  const isAdmin = me?.papel === "admin";
   const isAwaiting = tab === "awaiting-dispatch";
   const isMinhaReserva = tab === "minha-reserva";
+  const isReserva = tab === "reserva";
+  const isRealizadas = tab === "realizadas";
+
+  const reservas = useReservas(isAdmin);
+  const usuariosComReserva = reservas.data ?? [];
+  const usuarioSelecionado =
+    usuariosComReserva.find((r) => r.usuario === usuarioReserva)?.usuario ??
+    usuariosComReserva[0]?.usuario ??
+    "";
+
+  const revisores = useRevisores(isRealizadas);
+  const listaRevisores = revisores.data ?? [];
+  const totalRealizadas = listaRevisores.reduce((acc, r) => acc + r.total, 0);
 
   const decisoes = useDecisoes({
     page,
     pageSize: PAGE_SIZE,
     processo,
-    listaCompleta: isMinhaReserva ? undefined : listaCompleta,
-    reserva: isMinhaReserva ? "minhas" : "pendentes",
-    enabled: !isAwaiting,
+    listaCompleta: tab === "pendentes" ? listaCompleta : undefined,
+    reserva: isAwaiting ? undefined : TAB_RESERVA[tab],
+    usuario: isReserva ? usuarioSelecionado : isRealizadas ? revisor || undefined : undefined,
+    enabled: !isAwaiting && (!isReserva || !!usuarioSelecionado),
   });
   const devolver = useReleaseFromList();
   const awaiting = useAwaitingDispatch({
@@ -98,22 +170,8 @@ export default function ReviewsPage() {
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 p-6">
       <div>
-        <h1 className="text-2xl font-semibold">
-          {isAwaiting
-            ? "Aguardando envio"
-            : isMinhaReserva
-              ? "Minha reserva"
-              : "Decisões pendentes"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {isAwaiting
-            ? "Entidades aprovadas, ainda não enviadas."
-            : isMinhaReserva
-              ? "Decisões reservadas para você no mutirão. Devolva as que não for revisar."
-              : "Revise cada decisão: edite, rejeite ou adicione as entidades extraídas do acórdão. " +
-                "Multas e ressarcimentos são tratados em outra interface — a fila padrão traz " +
-                "apenas decisões com obrigação ou recomendação."}
-        </p>
+        <h1 className="text-2xl font-semibold">{TAB_TEXT[tab].title}</h1>
+        <p className="text-sm text-muted-foreground">{TAB_TEXT[tab].subtitle}</p>
       </div>
 
       <Tabs
@@ -125,10 +183,41 @@ export default function ReviewsPage() {
       >
         <TabsList>
           <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
+          {isAdmin && <TabsTrigger value="reserva">Reserva</TabsTrigger>}
           <TabsTrigger value="minha-reserva">Minha reserva</TabsTrigger>
+          <TabsTrigger value="realizadas">Realizadas</TabsTrigger>
           <TabsTrigger value="awaiting-dispatch">Aguardando envio</TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {isReserva && (
+        <div className="flex items-center gap-2">
+          <Label htmlFor="usuario-reserva" className="text-sm font-normal text-muted-foreground">
+            Usuário
+          </Label>
+          {usuariosComReserva.length === 0 ? (
+            <span className="text-sm text-muted-foreground">
+              {reservas.isLoading ? "Carregando..." : "Ninguém tem reserva."}
+            </span>
+          ) : (
+            <SelectNative
+              id="usuario-reserva"
+              className="w-auto"
+              value={usuarioSelecionado}
+              onChange={(e) => {
+                setUsuarioReserva(e.target.value);
+                setPage(1);
+              }}
+            >
+              {usuariosComReserva.map((r) => (
+                <option key={r.usuario} value={r.usuario}>
+                  {r.usuario} ({r.total} {r.total === 1 ? "pendente" : "pendentes"})
+                </option>
+              ))}
+            </SelectNative>
+          )}
+        </div>
+      )}
 
       {!isAwaiting && (
         <form
@@ -161,6 +250,24 @@ export default function ReviewsPage() {
             >
               Limpar
             </Button>
+          )}
+          {isRealizadas && (
+            <SelectNative
+              aria-label="Revisor"
+              className="w-auto"
+              value={revisor}
+              onChange={(e) => {
+                setRevisor(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">Todos ({totalRealizadas})</option>
+              {listaRevisores.map((r) => (
+                <option key={r.usuario} value={r.usuario}>
+                  {r.usuario} ({r.total})
+                </option>
+              ))}
+            </SelectNative>
           )}
         </form>
       )}
@@ -209,9 +316,8 @@ export default function ReviewsPage() {
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
           isLoading={isLoading}
-          emptyMessage={
-            isMinhaReserva ? "Nenhuma decisão na sua reserva." : "Nenhuma decisão pendente."
-          }
+          emptyMessage={TAB_TEXT[tab].empty}
+          showRevisao={tab === "realizadas"}
           onDevolver={
             isMinhaReserva
               ? (id) =>
@@ -229,7 +335,11 @@ export default function ReviewsPage() {
   );
 }
 
-function CountBadges({ item }: { item: DecisaoListItem }) {
+function CountBadges({
+  item,
+}: {
+  item: Pick<DecisaoListItem, "multas" | "obrigacoes" | "recomendacoes" | "ressarcimentos">;
+}) {
   const counts: [TipoEntidade, number][] = [
     ["multa", item.multas],
     ["obrigacao", item.obrigacoes],
@@ -365,6 +475,7 @@ function DecisoesTable({
   onPageChange,
   isLoading,
   emptyMessage = "Nenhuma decisão pendente.",
+  showRevisao = false,
   onDevolver,
   isDevolvendo = false,
 }: {
@@ -375,6 +486,7 @@ function DecisoesTable({
   onPageChange: (page: number) => void;
   isLoading: boolean;
   emptyMessage?: string;
+  showRevisao?: boolean;
   onDevolver?: (id: number) => void;
   isDevolvendo?: boolean;
 }) {
@@ -388,8 +500,8 @@ function DecisoesTable({
             <TableHead>Processo</TableHead>
             <TableHead>Acórdão</TableHead>
             <TableHead>Entidades</TableHead>
-            <TableHead>Reservado por</TableHead>
-            <TableHead>Extraído em</TableHead>
+            <TableHead>{showRevisao ? "Revisado por" : "Reservado por"}</TableHead>
+            <TableHead>{showRevisao ? "Revisado em" : "Extraído em"}</TableHead>
             <TableHead className="w-0" />
           </TableRow>
         </TableHeader>
@@ -419,11 +531,15 @@ function DecisoesTable({
                   <CountBadges item={item} />
                 </TableCell>
                 <TableCell>
-                  {item.claimed_by ?? <span className="text-muted-foreground">—</span>}
+                  {(showRevisao ? item.revisado_por : item.claimed_by) ?? (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
-                  {item.data_extracao ? (
-                    new Date(item.data_extracao).toLocaleDateString("pt-BR")
+                  {(showRevisao ? item.data_revisao : item.data_extracao) ? (
+                    new Date(
+                      (showRevisao ? item.data_revisao : item.data_extracao) as string,
+                    ).toLocaleDateString("pt-BR")
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
@@ -431,10 +547,14 @@ function DecisoesTable({
                 <TableCell>
                   <div className="flex gap-2">
                     <Link
-                      href={`/cgad/reviews/decisao/${item.id}`}
+                      href={
+                        showRevisao
+                          ? `/cgad/reviews/decisao/${item.id}/visualizar?tab=realizadas`
+                          : `/cgad/reviews/decisao/${item.id}`
+                      }
                       className={buttonVariants({ size: "sm" })}
                     >
-                      Revisar
+                      {showRevisao ? "Ver" : "Revisar"}
                     </Link>
                     {onDevolver && (
                       <Button
@@ -473,7 +593,7 @@ function AwaitingDispatchTable({
   onPageChange,
   isLoading,
 }: {
-  items: AwaitingDispatchItem[];
+  items: AwaitingDispatchGroup[];
   total: number;
   page: number;
   pageSize: number;
@@ -481,6 +601,7 @@ function AwaitingDispatchTable({
   isLoading: boolean;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const router = useRouter();
 
   return (
     <div className="space-y-3">
@@ -488,8 +609,8 @@ function AwaitingDispatchTable({
         <TableHeader>
           <TableRow>
             <TableHead>Processo</TableHead>
-            <TableHead>Tipo</TableHead>
-            <TableHead>Descrição</TableHead>
+            <TableHead>Entidades</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Revisado por</TableHead>
           </TableRow>
         </TableHeader>
@@ -508,25 +629,45 @@ function AwaitingDispatchTable({
             </TableRow>
           ) : (
             items.map((item) => (
-              <TableRow key={`${item.tipo}-${item.id}`}>
+              // ponytail: processo com mais de uma decisão abre a primeira
+              <TableRow
+                key={item.id_processo}
+                className={cn(item.ids_decisao.length > 0 && "cursor-pointer")}
+                onClick={() => {
+                  const id = item.ids_decisao[0];
+                  if (id !== undefined)
+                    router.push(`/cgad/reviews/decisao/${id}/visualizar?tab=awaiting-dispatch`);
+                }}
+              >
                 <TableCell className="font-mono">
                   {formatProcesso(item.numero_processo, item.ano_processo, item.id_processo)}
+                  {item.ids_decisao.length > 1 && (
+                    <span className="ml-2 font-sans text-xs text-muted-foreground">
+                      {item.ids_decisao.length} decisões
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <CountBadges item={item} />
                 </TableCell>
                 <TableCell>
                   <span
                     className={cn(
                       "rounded px-1.5 py-0.5 text-xs font-medium",
-                      BADGE_CLASS[item.tipo],
+                      item.status === "dispatched"
+                        ? "bg-emerald-100 text-emerald-950"
+                        : "bg-amber-100 text-amber-950",
                     )}
                   >
-                    {TIPO_LABEL[item.tipo]}
+                    {item.status === "dispatched" ? "Enviado" : "Aprovado"}
                   </span>
                 </TableCell>
-                <TableCell className="max-w-xl truncate" title={item.descricao}>
-                  {item.descricao}
-                </TableCell>
                 <TableCell>
-                  {item.reviewer ?? <span className="text-muted-foreground">—</span>}
+                  {item.revisores.length > 0 ? (
+                    item.revisores.join(", ")
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
               </TableRow>
             ))

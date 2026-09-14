@@ -7,7 +7,7 @@ import { z } from "zod";
 export const tipoEntidadeSchema = z.enum(["multa", "obrigacao", "recomendacao", "ressarcimento"]);
 export type TipoEntidade = z.infer<typeof tipoEntidadeSchema>;
 
-export const reviewStatusSchema = z.enum(["pending", "approved", "rejected"]);
+export const reviewStatusSchema = z.enum(["pending", "approved", "rejected", "dispatched"]);
 export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 
 export const spanMatchStatusSchema = z.enum(["exact", "fuzzy", "not_found"]);
@@ -152,6 +152,8 @@ export const decisaoListItemSchema = z.object({
   ressarcimentos: z.number().int(),
   claimed_by: z.string().nullable().optional(),
   claimed_at: z.string().datetime({ offset: true }).nullable().optional(),
+  revisado_por: z.string().nullable().optional(),
+  data_revisao: z.string().datetime({ offset: true }).nullable().optional(),
 });
 export type DecisaoListItem = z.infer<typeof decisaoListItemSchema>;
 
@@ -163,6 +165,15 @@ export const decisaoListPageSchema = z.object({
   total: z.number().int(),
 });
 export type DecisaoListPage = z.infer<typeof decisaoListPageSchema>;
+
+export type ReservaFiltro = "pendentes" | "minhas" | "usuario" | "realizadas";
+
+// Mirrors ReservaUsuarioOut in backend schemas.
+export const reservaUsuarioSchema = z.object({
+  usuario: z.string(),
+  total: z.number().int(),
+});
+export type ReservaUsuario = z.infer<typeof reservaUsuarioSchema>;
 
 // Mirrors EntidadeOut in backend schemas.
 export const entidadeOutSchema = z.object({
@@ -223,22 +234,25 @@ export const decisaoTextoSchema = z.object({
 });
 export type DecisaoTexto = z.infer<typeof decisaoTextoSchema>;
 
-// Mirrors AwaitingDispatchItem in backend schemas.
-export const awaitingDispatchItemSchema = z.object({
-  id: z.number().int(),
-  tipo: tipoEntidadeSchema,
+// Mirrors AwaitingDispatchGroup in backend schemas.
+export const awaitingDispatchGroupSchema = z.object({
   id_processo: z.number().int(),
   numero_processo: z.number().int().nullable().optional(),
   ano_processo: z.number().int().nullable().optional(),
-  descricao: z.string(),
-  reviewer: z.string().nullable().optional(),
+  multas: z.number().int(),
+  obrigacoes: z.number().int(),
+  recomendacoes: z.number().int(),
+  ressarcimentos: z.number().int(),
+  status: z.enum(["approved", "dispatched"]),
+  revisores: z.array(z.string()),
   reviewed_at: z.string().datetime({ offset: true }).nullable().optional(),
+  ids_decisao: z.array(z.number().int()),
 });
-export type AwaitingDispatchItem = z.infer<typeof awaitingDispatchItemSchema>;
+export type AwaitingDispatchGroup = z.infer<typeof awaitingDispatchGroupSchema>;
 
 // Mirrors AwaitingDispatchPage in backend schemas.
 export const awaitingDispatchPageSchema = z.object({
-  items: z.array(awaitingDispatchItemSchema),
+  items: z.array(awaitingDispatchGroupSchema),
   page: z.number().int(),
   page_size: z.number().int(),
   total: z.number().int(),

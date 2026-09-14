@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.deps import get_current_user, get_db_session
+from app.deps import get_current_user, get_db_session, require_role
 from app.cgad.review import schemas, service
 from cgad.models import UserORM
 
@@ -42,16 +42,35 @@ def list_orgaos(
     return service.list_orgaos()
 
 
+@router.get("/reservas", response_model=list[schemas.ReservaUsuarioOut])
+def list_reservas(
+    session: Session = Depends(get_db_session),
+    _: UserORM = Depends(require_role("admin")),
+) -> list[schemas.ReservaUsuarioOut]:
+    return service.list_reservas(session)
+
+
+@router.get("/revisores", response_model=list[schemas.ReservaUsuarioOut])
+def list_revisores(
+    session: Session = Depends(get_db_session),
+    current_user: UserORM = Depends(get_current_user),
+) -> list[schemas.ReservaUsuarioOut]:
+    return service.list_revisores(session)
+
+
 @router.get("/decisoes", response_model=schemas.DecisaoListPage)
 def list_decisoes(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     processo: str | None = Query(None),
     lista_completa: bool = Query(False),
-    reserva: Literal["pendentes", "minhas"] = Query("pendentes"),
+    reserva: Literal["pendentes", "minhas", "usuario", "realizadas"] = Query("pendentes"),
+    usuario: str | None = Query(None),
     session: Session = Depends(get_db_session),
     current_user: UserORM = Depends(get_current_user),
 ) -> schemas.DecisaoListPage:
+    if reserva == "usuario" and current_user.Papel != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="role not authorized")
     return service.list_decisoes(
         session,
         page=page,
@@ -60,6 +79,7 @@ def list_decisoes(
         processo=processo,
         lista_completa=lista_completa,
         reserva=reserva,
+        usuario=usuario,
     )
 
 

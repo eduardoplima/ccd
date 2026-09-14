@@ -163,11 +163,7 @@ def list_extracoes(
     total = session.execute(
         select(func.count()).select_from(base.order_by(None).subquery())
     ).scalar_one()
-    rows = (
-        session.execute(base.offset((page - 1) * page_size).limit(page_size))
-        .scalars()
-        .all()
-    )
+    rows = session.execute(base.offset((page - 1) * page_size).limit(page_size)).scalars().all()
     return schemas.ExtracaoListPage(
         items=[_to_extracao_out(r) for r in rows],
         page=page,
@@ -187,9 +183,7 @@ def get_extracao(
 ) -> schemas.ExtracaoOut:
     row = session.get(ExtracaoORM, extracao_id)
     if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found")
     return _to_extracao_out(row)
 
 
@@ -211,9 +205,7 @@ async def abort_extracao(
     """
     row = session.get(ExtracaoORM, extracao_id)
     if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found")
     if row.Status not in {"queued", "running"}:
         return _to_extracao_out(row)
 
@@ -249,9 +241,7 @@ def delete_extracao(
     """
     row = session.get(ExtracaoORM, extracao_id)
     if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found")
     if row.Status in {"queued", "running"}:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -280,9 +270,7 @@ def list_eventos(
     only what's new.
     """
     if session.get(ExtracaoORM, extracao_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found")
 
     stmt = (
         select(ExtracaoEventoORM)
@@ -332,9 +320,7 @@ def list_decisoes(
     show empty results, which is expected.
     """
     if session.get(ExtracaoORM, extracao_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="extracao not found")
 
     run_id = str(extracao_id)
     base = (
@@ -345,11 +331,7 @@ def list_decisoes(
     total = session.execute(
         select(func.count()).select_from(base.order_by(None).subquery())
     ).scalar_one()
-    decisoes = (
-        session.execute(base.offset((page - 1) * page_size).limit(page_size))
-        .scalars()
-        .all()
-    )
+    decisoes = session.execute(base.offset((page - 1) * page_size).limit(page_size)).scalars().all()
 
     items = [_decisao_to_item(session, decisao) for decisao in decisoes]
     return schemas.DecisaoExtraidaListPage(
@@ -360,9 +342,7 @@ def list_decisoes(
     )
 
 
-def _decisao_to_item(
-    session: Session, decisao: NERDecisaoORM
-) -> schemas.DecisaoExtraidaItem:
+def _decisao_to_item(session: Session, decisao: NERDecisaoORM) -> schemas.DecisaoExtraidaItem:
     """Walk the bridge tables for one NERDecisão and gather (final_id,
     descricao, status) tuples for both kinds.
 
@@ -416,13 +396,11 @@ def _decisao_to_item(
             )
             .join(
                 ProcessedRecomendacaoORM,
-                ProcessedRecomendacaoORM.IdNerRecomendacao
-                == NERRecomendacaoORM.IdNerRecomendacao,
+                ProcessedRecomendacaoORM.IdNerRecomendacao == NERRecomendacaoORM.IdNerRecomendacao,
             )
             .join(
                 RecomendacaoORM,
-                RecomendacaoORM.IdRecomendacao
-                == ProcessedRecomendacaoORM.IdRecomendacao,
+                RecomendacaoORM.IdRecomendacao == ProcessedRecomendacaoORM.IdRecomendacao,
             )
             .outerjoin(
                 RecomendacaoStagingORM,
@@ -451,7 +429,7 @@ def _decisao_to_item(
     )
 
 
-def _status_from_staging(raw) -> Literal["pending", "approved", "rejected"]:
+def _status_from_staging(raw) -> Literal["pending", "approved", "rejected", "dispatched"]:
     if raw is None:
         return "pending"
     return raw.value if isinstance(raw, ReviewStatus) else str(raw)

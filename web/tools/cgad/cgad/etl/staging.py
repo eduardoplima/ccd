@@ -47,6 +47,7 @@ class ReviewStatus(str, enum.Enum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+    dispatched = "dispatched"
 
 
 _REVIEW_STATUS_ENUM = Enum(
@@ -111,6 +112,7 @@ class ObrigacaoStagingORM(Base):
     DataReserva = Column(DateTime, nullable=True)
     PayloadOriginal = Column(JSON, nullable=True)
     ObservacoesRevisao = Column(Text, nullable=True)
+    DataEnvio = Column(DateTime, nullable=True)
 
 
 class MultaStagingORM(Base):
@@ -154,6 +156,7 @@ class MultaStagingORM(Base):
     DataRevisao = Column(DateTime, nullable=True)
     PayloadOriginal = Column(JSON, nullable=True)
     ObservacoesRevisao = Column(Text, nullable=True)
+    DataEnvio = Column(DateTime, nullable=True)
 
 
 class RessarcimentoStagingORM(Base):
@@ -193,6 +196,7 @@ class RessarcimentoStagingORM(Base):
     DataRevisao = Column(DateTime, nullable=True)
     PayloadOriginal = Column(JSON, nullable=True)
     ObservacoesRevisao = Column(Text, nullable=True)
+    DataEnvio = Column(DateTime, nullable=True)
 
 
 class RecomendacaoStagingORM(Base):
@@ -240,3 +244,4 @@ class RecomendacaoStagingORM(Base):
     DataReserva = Column(DateTime, nullable=True)
     PayloadOriginal = Column(JSON, nullable=True)
     ObservacoesRevisao = Column(Text, nullable=True)
+    DataEnvio = Column(DateTime, nullable=True)

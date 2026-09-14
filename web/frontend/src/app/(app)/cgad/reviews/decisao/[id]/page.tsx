@@ -103,7 +103,8 @@ function Detail({ id }: { id: number }) {
   const preReserved = useRef<boolean | null>(null);
   useEffect(() => {
     if (!detail || !me || preReserved.current !== null) return;
-    preReserved.current = detail.claimed_by === me.login;
+    // Decisão já revisada abre em modo leitura: sem reservar nem liberar.
+    preReserved.current = detail.claimed_by === me.login || !!detail.revisado_por;
     if (!preReserved.current) claim.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail, me]);
@@ -412,22 +413,33 @@ function DecisaoBody({
         </Button>
       </div>
 
-      <ClaimBanner
-        currentUsername={currentUsername}
-        claimedBy={claimedBy}
-        onReclaim={onReclaim}
-        onBack={onBackToList}
-        isReclaiming={reclaimSubmitting}
-      />
+      {detail.revisado_por ? (
+        <div className="rounded-md border bg-muted px-4 py-2 text-sm">
+          Somente leitura · revisada por {detail.revisado_por}
+          {detail.data_revisao
+            ? ` em ${new Date(detail.data_revisao).toLocaleDateString("pt-BR")}`
+            : ""}
+        </div>
+      ) : (
+        <ClaimBanner
+          currentUsername={currentUsername}
+          claimedBy={claimedBy}
+          onReclaim={onReclaim}
+          onBack={onBackToList}
+          isReclaiming={reclaimSubmitting}
+        />
+      )}
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         {/* ponytail: sticky puro (o canvas já limita a 70vh); solta sozinho no fim do grid */}
         <div className="lg:sticky lg:top-4">
           <h2 className="mb-2 text-sm font-medium">
             Texto do acórdão
-            <span className="ml-2 font-normal text-muted-foreground">
-              (selecione um trecho para adicionar uma entidade)
-            </span>
+            {!formDisabled && (
+              <span className="ml-2 font-normal text-muted-foreground">
+                (selecione um trecho para adicionar uma entidade)
+              </span>
+            )}
           </h2>
           {textoLoading && !texto ? (
             <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
@@ -481,15 +493,17 @@ function DecisaoBody({
             disabled={formDisabled}
           />
 
-          <div className="mt-4 flex justify-end border-t pt-4">
-            <Button
-              onClick={onApprove}
-              disabled={formDisabled || approveSubmitting}
-              data-testid="approve-decisao-button"
-            >
-              {approveSubmitting ? "Aprovando..." : "Aprovar decisão"}
-            </Button>
-          </div>
+          {!detail.revisado_por && (
+            <div className="mt-4 flex justify-end border-t pt-4">
+              <Button
+                onClick={onApprove}
+                disabled={formDisabled || approveSubmitting}
+                data-testid="approve-decisao-button"
+              >
+                {approveSubmitting ? "Aprovando..." : "Aprovar decisão"}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

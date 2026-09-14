@@ -11,10 +11,17 @@ import {
   listAwaitingDispatch,
   listDecisoes,
   listOrgaos,
+  listReservas,
+  listRevisores,
   releaseDecisao,
 } from "@/lib/reviews-api";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { ClaimResponse, DecisaoDetail, DecisaoReviewPayload } from "@/schemas/review";
+import {
+  ClaimResponse,
+  DecisaoDetail,
+  DecisaoReviewPayload,
+  ReservaFiltro,
+} from "@/schemas/review";
 
 export const reviewKeys = {
   all: ["reviews"] as const,
@@ -23,13 +30,16 @@ export const reviewKeys = {
     pageSize: number;
     processo?: string;
     listaCompleta?: boolean;
-    reserva?: "pendentes" | "minhas";
+    reserva?: ReservaFiltro;
+    usuario?: string;
   }) => ["reviews", "decisoes", args] as const,
   detail: (id: number) => ["reviews", "decisao", id] as const,
   texto: (id: number) => ["reviews", "decisao-texto", id] as const,
   awaitingDispatch: (args: { page: number; pageSize: number }) =>
     ["reviews", "awaiting-dispatch", args] as const,
   orgaos: ["reviews", "orgaos"] as const,
+  reservas: ["reviews", "reservas"] as const,
+  revisores: ["reviews", "revisores"] as const,
 };
 
 export function useOrgaos() {
@@ -41,24 +51,42 @@ export function useOrgaos() {
   });
 }
 
+export function useReservas(enabled = true) {
+  return useQuery({
+    queryKey: reviewKeys.reservas,
+    queryFn: listReservas,
+    enabled,
+  });
+}
+
+export function useRevisores(enabled = true) {
+  return useQuery({
+    queryKey: reviewKeys.revisores,
+    queryFn: listRevisores,
+    enabled,
+  });
+}
+
 export function useDecisoes({
   page = 1,
   pageSize = 20,
   processo,
   listaCompleta,
   reserva,
+  usuario,
   enabled = true,
 }: {
   page?: number;
   pageSize?: number;
   processo?: string;
   listaCompleta?: boolean;
-  reserva?: "pendentes" | "minhas";
+  reserva?: ReservaFiltro;
+  usuario?: string;
   enabled?: boolean;
 } = {}) {
   return useQuery({
-    queryKey: reviewKeys.list({ page, pageSize, processo, listaCompleta, reserva }),
-    queryFn: () => listDecisoes({ page, pageSize, processo, listaCompleta, reserva }),
+    queryKey: reviewKeys.list({ page, pageSize, processo, listaCompleta, reserva, usuario }),
+    queryFn: () => listDecisoes({ page, pageSize, processo, listaCompleta, reserva, usuario }),
     enabled,
   });
 }

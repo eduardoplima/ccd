@@ -374,15 +374,24 @@ def test_approve_happy_path(env):
     # decisão sai da lista de pendentes
     assert client.get("/api/v1/cgad/reviews/decisoes").json()["total"] == 0
 
-    # awaiting-dispatch mostra os aprovados (4 = 3 extraídos + 1 manual)
+    # awaiting-dispatch agrupa por processo: 4 aprovadas (3 extraídas + 1 manual)
     dispatch = client.get("/api/v1/cgad/reviews/awaiting-dispatch").json()
-    assert dispatch["total"] == 4
-    assert {i["tipo"] for i in dispatch["items"]} == {
-        "multa",
-        "obrigacao",
-        "recomendacao",
-        "ressarcimento",
-    }
+    assert dispatch["total"] == 1
+    grupo = dispatch["items"][0]
+    assert (
+        grupo["multas"],
+        grupo["obrigacoes"],
+        grupo["recomendacoes"],
+        grupo["ressarcimentos"],
+    ) == (
+        1,
+        1,
+        1,
+        1,
+    )
+    assert grupo["status"] == "approved"
+    assert grupo["revisores"] == ["revisor1"]
+    assert grupo["ids_decisao"] == [ids["decisao"]]
 
 
 def test_lista_padrao_esconde_multa_e_ressarcimento(env):
@@ -499,3 +508,58 @@ def test_orgaos_degrada_para_lista_vazia_sem_mssql(env) -> None:
     resp = env["client"].get("/api/v1/cgad/reviews/orgaos")
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+def test_reservas_por_usuario_e_realizadas(env):
+    """Admin vê reservas abertas agrupadas por usuário e as decisões revisadas
+    por todos; usuário comum não acessa a reserva alheia."""
+    client, ids, factory, holder = env["client"], env["ids"], env["factory"], env["holder"]
+    ids_b = _seed_decisao(factory)
+    ids_c = _seed_decisao(factory)
+    with factory() as s:
+        for did, quem in ((ids["decisao"], "revisor1"), (ids_b["decisao"], "revisor1")):
+            d = s.get(NERDecisaoORM, did)
+            d.ReservadoPor = quem
+            d.DataReserva = datetime.utcnow()
+        d = s.get(NERDecisaoORM, ids_c["decisao"])
+        d.ReservadoPor = "revisor2"
+        d.DataReserva = datetime.utcnow()
+        s.commit()
+
+    base = f"/api/v1/cgad/reviews/decisoes/{ids['decisao']}"
+    assert client.post(f"{base}/approve", json=_payload_completo(ids)).status_code == 200
+
+    # revisor1 é reviewer: sem acesso à reserva alheia.
+    assert client.get("/api/v1/cgad/reviews/reservas").status_code == 403
+    assert (
+        client.get(
+            "/api/v1/cgad/reviews/decisoes", params={"reserva": "usuario", "usuario": "revisor2"}
+        ).status_code
+        == 403
+    )
+
+    holder.user.Papel = RoleEnum.admin
+    reservas = client.get("/api/v1/cgad/reviews/reservas").json()
+    assert reservas == [
+        {"usuario": "revisor1", "total": 1},
+        {"usuario": "revisor2", "total": 1},
+    ]
+    de_b = client.get(
+        "/api/v1/cgad/reviews/decisoes", params={"reserva": "usuario", "usuario": "revisor2"}
+    ).json()
+    assert [i["id"] for i in de_b["items"]] == [ids_c["decisao"]]
+
+    realizadas = client.get(
+        "/api/v1/cgad/reviews/decisoes", params={"reserva": "realizadas"}
+    ).json()
+    assert realizadas["total"] == 1
+    assert realizadas["items"][0]["id"] == ids["decisao"]
+    assert realizadas["items"][0]["revisado_por"] == "revisor1"
+    assert realizadas["items"][0]["data_revisao"] is not None
+
+    revisores = client.get("/api/v1/cgad/reviews/revisores").json()
+    assert revisores == [{"usuario": "revisor1", "total": 1}]
+    de_outro = client.get(
+        "/api/v1/cgad/reviews/decisoes", params={"reserva": "realizadas", "usuario": "revisor2"}
+    ).json()
+    assert de_outro["total"] == 0

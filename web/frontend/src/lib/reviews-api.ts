@@ -15,11 +15,24 @@ import {
   decisaoTextoSchema,
   Orgao,
   orgaoSchema,
+  ReservaFiltro,
+  ReservaUsuario,
+  reservaUsuarioSchema,
 } from "@/schemas/review";
 
 export async function listOrgaos(): Promise<Orgao[]> {
   const response = await apiClient.get("/api/v1/cgad/reviews/orgaos");
   return orgaoSchema.array().parse(response.data);
+}
+
+export async function listReservas(): Promise<ReservaUsuario[]> {
+  const response = await apiClient.get("/api/v1/cgad/reviews/reservas");
+  return reservaUsuarioSchema.array().parse(response.data);
+}
+
+export async function listRevisores(): Promise<ReservaUsuario[]> {
+  const response = await apiClient.get("/api/v1/cgad/reviews/revisores");
+  return reservaUsuarioSchema.array().parse(response.data);
 }
 
 export async function listDecisoes({
@@ -28,12 +41,14 @@ export async function listDecisoes({
   processo,
   listaCompleta,
   reserva,
+  usuario,
 }: {
   page?: number;
   pageSize?: number;
   processo?: string;
   listaCompleta?: boolean;
-  reserva?: "pendentes" | "minhas";
+  reserva?: ReservaFiltro;
+  usuario?: string;
 } = {}): Promise<DecisaoListPage> {
   const response = await apiClient.get("/api/v1/cgad/reviews/decisoes", {
     params: {
@@ -42,6 +57,7 @@ export async function listDecisoes({
       processo: processo || undefined,
       lista_completa: listaCompleta || undefined,
       reserva: reserva || undefined,
+      usuario: usuario || undefined,
     },
   });
   return decisaoListPageSchema.parse(response.data);

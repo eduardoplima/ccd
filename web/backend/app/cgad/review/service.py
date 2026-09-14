@@ -684,11 +684,14 @@ def _load_acordao_por_decisao(
     params: dict[str, int] = {}
     for i, (idp, idc, idv) in enumerate(unique):
         conds.append(
-            f"(d.IdProcesso = :p{i} AND d.IdComposicaoPauta = :c{i} AND d.idVotoPauta = :v{i})"
+            f"(d.IdProcesso = :p{i} AND d.IdComposicaoPauta = :c{i}"
+            f" AND ISNULL(d.idVotoPauta, 0) = :v{i})"
         )
         params.update({f"p{i}": idp, f"c{i}": idc, f"v{i}": idv})
     sql = (
-        "SELECT d.IdProcesso AS idp, d.IdComposicaoPauta AS idc, d.idVotoPauta AS idv, "
+        # NERDecisao.IdVotoPauta é NOT NULL: o ETL grava 0 quando a view tem NULL
+        "SELECT d.IdProcesso AS idp, d.IdComposicaoPauta AS idc, "
+        "ISNULL(d.idVotoPauta, 0) AS idv, "
         "d.numeroResultado AS numero, d.anoResultado AS ano, d.resultadoTipo AS tipo "
         "FROM processo.dbo.vw_ia_votos_acordaos_decisoes d "
         f"WHERE {' OR '.join(conds)}"
@@ -719,6 +722,7 @@ def list_decisoes(
     processo: Optional[str] = None,
     lista_completa: bool = False,
     reserva: str = "pendentes",
+    usuario: Optional[str] = None,
 ) -> schemas.DecisaoListPage:
     counts = {
         tipo: (
@@ -738,24 +742,29 @@ def list_decisoes(
         else counts["obrigacao"] + counts["recomendacao"]
     )
 
-    stmt = (
-        select(
-            NERDecisaoORM,
-            counts["multa"].label("multas"),
-            counts["obrigacao"].label("obrigacoes"),
-            counts["recomendacao"].label("recomendacoes"),
-            counts["ressarcimento"].label("ressarcimentos"),
-        )
-        .where(NERDecisaoORM.RevisadoPor.is_(None))
-        .where(na_fila > 0)
+    stmt = select(
+        NERDecisaoORM,
+        counts["multa"].label("multas"),
+        counts["obrigacao"].label("obrigacoes"),
+        counts["recomendacao"].label("recomendacoes"),
+        counts["ressarcimento"].label("ressarcimentos"),
     )
 
-    # `lista_completa` é a visão de auditoria: mostra tudo, inclusive reservadas.
-    if not lista_completa:
-        if reserva == "minhas":
-            stmt = stmt.where(NERDecisaoORM.ReservadoPor == current_user.NomeUsuario)
-        else:
-            stmt = stmt.where(NERDecisaoORM.ReservadoPor.is_(None))
+    if reserva == "realizadas":
+        # Revisadas por qualquer usuário, independentemente do que havia na fila.
+        stmt = stmt.where(NERDecisaoORM.RevisadoPor.is_not(None))
+        if usuario:
+            stmt = stmt.where(NERDecisaoORM.RevisadoPor == usuario)
+    else:
+        stmt = stmt.where(NERDecisaoORM.RevisadoPor.is_(None)).where(na_fila > 0)
+        if reserva == "usuario":
+            stmt = stmt.where(NERDecisaoORM.ReservadoPor == usuario)
+        # `lista_completa` é a visão de auditoria: mostra tudo, inclusive reservadas.
+        elif not lista_completa:
+            if reserva == "minhas":
+                stmt = stmt.where(NERDecisaoORM.ReservadoPor == current_user.NomeUsuario)
+            else:
+                stmt = stmt.where(NERDecisaoORM.ReservadoPor.is_(None))
 
     if processo and processo.strip():
         stmt = stmt.where(NERDecisaoORM.IdProcesso.in_(_resolve_processo_ids(processo)))
@@ -764,10 +773,13 @@ def list_decisoes(
         select(func.count()).select_from(stmt.order_by(None).subquery())
     ).scalar_one()
 
+    ordem = (
+        NERDecisaoORM.DataRevisao.desc()
+        if reserva == "realizadas"
+        else NERDecisaoORM.IdNerDecisao.asc()
+    )
     rows = session.execute(
-        stmt.order_by(NERDecisaoORM.IdNerDecisao.asc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+        stmt.order_by(ordem).offset((page - 1) * page_size).limit(page_size)
     ).all()
 
     numero_ano_by_id = _load_processo_numero_ano([row[0].IdProcesso for row in rows])
@@ -800,10 +812,35 @@ def list_decisoes(
                 ressarcimentos=ressarcimentos,
                 claimed_by=decisao.ReservadoPor,
                 claimed_at=decisao.DataReserva,
+                revisado_por=decisao.RevisadoPor,
+                data_revisao=decisao.DataRevisao,
             )
         )
 
     return schemas.DecisaoListPage(items=items, page=page, page_size=page_size, total=total)
+
+
+def list_reservas(session: Session) -> list[schemas.ReservaUsuarioOut]:
+    """Usuários com reserva em aberto (reservada e ainda não revisada) e quantas."""
+    rows = session.execute(
+        select(NERDecisaoORM.ReservadoPor, func.count())
+        .where(NERDecisaoORM.ReservadoPor.is_not(None))
+        .where(NERDecisaoORM.RevisadoPor.is_(None))
+        .group_by(NERDecisaoORM.ReservadoPor)
+        .order_by(NERDecisaoORM.ReservadoPor)
+    ).all()
+    return [schemas.ReservaUsuarioOut(usuario=u, total=n) for u, n in rows]
+
+
+def list_revisores(session: Session) -> list[schemas.ReservaUsuarioOut]:
+    """Usuários que já revisaram alguma decisão e quantas."""
+    rows = session.execute(
+        select(NERDecisaoORM.RevisadoPor, func.count())
+        .where(NERDecisaoORM.RevisadoPor.is_not(None))
+        .group_by(NERDecisaoORM.RevisadoPor)
+        .order_by(NERDecisaoORM.RevisadoPor)
+    ).all()
+    return [schemas.ReservaUsuarioOut(usuario=u, total=n) for u, n in rows]
 
 
 def get_decisao(session: Session, *, id: int, current_user: UserORM) -> schemas.DecisaoDetail:
@@ -879,67 +916,84 @@ def list_awaiting_dispatch(
     page_size: int,
     current_user: UserORM,
 ) -> schemas.AwaitingDispatchPage:
-    """Approved staging rows of all four types, ordered by review date desc."""
-    stmts = {
-        "multa": select(
-            MultaStagingORM.IdMultaStaging.label("id"),
-            MultaStagingORM.IdProcesso.label("id_processo"),
-            MultaStagingORM.DescricaoMulta.label("descricao"),
-            MultaStagingORM.Revisor.label("reviewer"),
-            MultaStagingORM.DataRevisao.label("reviewed_at"),
-        ).where(MultaStagingORM.Status == ReviewStatus.approved),
-        "obrigacao": select(
-            ObrigacaoStagingORM.IdObrigacaoStaging.label("id"),
-            ObrigacaoStagingORM.IdProcesso.label("id_processo"),
-            ObrigacaoStagingORM.DescricaoObrigacao.label("descricao"),
-            ObrigacaoStagingORM.Revisor.label("reviewer"),
-            ObrigacaoStagingORM.DataRevisao.label("reviewed_at"),
-        ).where(ObrigacaoStagingORM.Status == ReviewStatus.approved),
-        "recomendacao": select(
-            RecomendacaoStagingORM.IdRecomendacaoStaging.label("id"),
-            RecomendacaoStagingORM.IdProcesso.label("id_processo"),
-            RecomendacaoStagingORM.DescricaoRecomendacao.label("descricao"),
-            RecomendacaoStagingORM.Revisor.label("reviewer"),
-            RecomendacaoStagingORM.DataRevisao.label("reviewed_at"),
-        ).where(RecomendacaoStagingORM.Status == ReviewStatus.approved),
-        "ressarcimento": select(
-            RessarcimentoStagingORM.IdRessarcimentoStaging.label("id"),
-            RessarcimentoStagingORM.IdProcesso.label("id_processo"),
-            RessarcimentoStagingORM.DescricaoRessarcimento.label("descricao"),
-            RessarcimentoStagingORM.Revisor.label("reviewer"),
-            RessarcimentoStagingORM.DataRevisao.label("reviewed_at"),
-        ).where(RessarcimentoStagingORM.Status == ReviewStatus.approved),
+    """Entidades aprovadas/enviadas das quatro ``*Staging``, agrupadas por
+    processo e ordenadas pela revisão mais recente."""
+    cols = {
+        "multa": (MultaStagingORM, "multas"),
+        "obrigacao": (ObrigacaoStagingORM, "obrigacoes"),
+        "recomendacao": (RecomendacaoStagingORM, "recomendacoes"),
+        "ressarcimento": (RessarcimentoStagingORM, "ressarcimentos"),
+    }
+    # ponytail: agrega em memória como a versão por entidade; GROUP BY em SQL se crescer
+    grupos: dict[int, dict[str, Any]] = {}
+    for _tipo, (orm, campo) in cols.items():
+        rows = session.execute(
+            select(
+                orm.IdProcesso,
+                orm.IdComposicaoPauta,
+                orm.IdVotoPauta,
+                orm.Status,
+                orm.Revisor,
+                orm.DataRevisao,
+            ).where(orm.Status.in_((ReviewStatus.approved, ReviewStatus.dispatched)))
+        ).all()
+        for id_processo, id_pauta, id_voto, st, revisor, data in rows:
+            g = grupos.setdefault(
+                id_processo,
+                {
+                    "multas": 0,
+                    "obrigacoes": 0,
+                    "recomendacoes": 0,
+                    "ressarcimentos": 0,
+                    "status": "dispatched",
+                    "revisores": set(),
+                    "reviewed_at": None,
+                    "triplas": set(),
+                },
+            )
+            g[campo] += 1
+            g["triplas"].add((id_processo, id_pauta, id_voto))
+            if st in (ReviewStatus.approved, ReviewStatus.approved.value):
+                g["status"] = "approved"
+            if revisor:
+                g["revisores"].add(revisor)
+            if data and (g["reviewed_at"] is None or data > g["reviewed_at"]):
+                g["reviewed_at"] = data
+
+    ordenados = sorted(
+        grupos.items(), key=lambda kv: kv[1]["reviewed_at"] or datetime.min, reverse=True
+    )
+    total = len(ordenados)
+    start = (page - 1) * page_size
+    page_rows = ordenados[start : start + page_size]
+
+    numero_ano_by_id = _load_processo_numero_ano([idp for idp, _ in page_rows])
+    decisao_por_tripla = {
+        (d.IdProcesso, d.IdComposicaoPauta, d.IdVotoPauta): d.IdNerDecisao
+        for d in session.execute(
+            select(NERDecisaoORM).where(
+                NERDecisaoORM.IdProcesso.in_([idp for idp, _ in page_rows] or [-1])
+            )
+        ).scalars()
     }
 
-    combined = [
-        (tipo, row)
-        for tipo, stmt in stmts.items()
-        for row in session.execute(stmt).mappings().all()
-    ]
-    # Sort by reviewed_at desc, treating None as oldest.
-    combined.sort(
-        key=lambda pair: pair[1]["reviewed_at"] or datetime.min,
-        reverse=True,
-    )
-
-    total = len(combined)
-    start = (page - 1) * page_size
-    page_rows = combined[start : start + page_size]
-
-    numero_ano_by_id = _load_processo_numero_ano([row["id_processo"] for _, row in page_rows])
-
     items = [
-        schemas.AwaitingDispatchItem(
-            id=row["id"],
-            tipo=tipo,  # type: ignore[arg-type]
-            id_processo=row["id_processo"],
-            numero_processo=numero_ano_by_id.get(row["id_processo"], (None, None))[0],
-            ano_processo=numero_ano_by_id.get(row["id_processo"], (None, None))[1],
-            descricao=row["descricao"] or "",
-            reviewer=row["reviewer"],
-            reviewed_at=row["reviewed_at"],
+        schemas.AwaitingDispatchGroup(
+            id_processo=idp,
+            numero_processo=numero_ano_by_id.get(idp, (None, None))[0],
+            ano_processo=numero_ano_by_id.get(idp, (None, None))[1],
+            multas=g["multas"],
+            obrigacoes=g["obrigacoes"],
+            recomendacoes=g["recomendacoes"],
+            ressarcimentos=g["ressarcimentos"],
+            status=g["status"],
+            revisores=sorted(g["revisores"]),
+            reviewed_at=g["reviewed_at"],
+            ids_decisao=sorted(
+                {decisao_por_tripla[t] for t in g["triplas"] if t in decisao_por_tripla}
+            ),
         )
-        for tipo, row in page_rows
+        for idp, g in page_rows
     ]
 
     return schemas.AwaitingDispatchPage(items=items, page=page, page_size=page_size, total=total)
