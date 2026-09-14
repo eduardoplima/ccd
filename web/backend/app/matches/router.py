@@ -7,7 +7,6 @@ from app.auth.models import FRAPUsuario
 from app.deps import get_current_user, get_db_session
 from app.matches import service
 from app.matches.schemas import (
-    MatchDescontoFolhaListResponse,
     MatchGuiaListResponse,
     MatchOBListResponse,
     MatchPessoaListResponse,
@@ -64,16 +63,3 @@ def listar_guia(
     return service.list_matches_guia(
         session, ano=ano, mes=mes, conta=conta, q=q, page=page, size=size
     )
-
-
-@router.get("/desconto-folha", response_model=MatchDescontoFolhaListResponse)
-def listar_desconto_folha(
-    ano: int | None = Query(default=None),
-    mes: int | None = Query(default=None, ge=1, le=12),
-    q: str | None = Query(default=None, max_length=100),
-    page: int = Query(default=1, ge=1),
-    size: int = Query(default=50, ge=1, le=200),
-    session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(get_current_user),
-) -> MatchDescontoFolhaListResponse:
-    return service.list_matches_desconto_folha(session, ano=ano, mes=mes, q=q, page=page, size=size)

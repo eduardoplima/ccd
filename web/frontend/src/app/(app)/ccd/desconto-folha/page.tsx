@@ -1,9 +1,22 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { parseAsInteger, parseAsString, parseAsStringEnum, useQueryState } from "nuqs";
+import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectNative } from "@/components/ui/select-native";
 import {
   Table,
   TableBody,
@@ -12,381 +25,329 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useOrgaos, usePessoas } from "@/hooks/use-desconto-folha";
-import type { PessoasSortKey } from "@/lib/api/desconto-folha";
-import { formatBRL } from "@/lib/format";
-
-import { CadastrosTab } from "./_cadastros-tab";
-import { MonitoramentoTab } from "./_monitoramento-tab";
-import { Paginacao } from "./_paginacao";
-import { TipologiasTab } from "./_tipologias-tab";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useCadastros, useCriarCadastro, useLookupProcesso } from "@/hooks/use-desconto-folha";
+import { messageForError } from "@/lib/error-messages";
+import { formatCurrencyBRL } from "@/lib/format";
+import { STATUS_EXTRACAO, formatData } from "./_shared";
 
 const SIZE = 50;
 
-const SORT_KEYS = [
-  "nome",
-  "cpf",
-  "orgao",
-  "valor_atualizado",
-  "qtd_notificacoes",
-  "qtd_debitos_notificados",
-  "valor_debitos_notificados",
-  "esperado",
-] as const satisfies readonly PessoasSortKey[];
-
-const ORIGEM_LABEL: Record<string, string> = {
-  P: "Planilha",
-  M: "Manual",
-  S: "Rubrica",
-  C: "Notificação",
-};
-
-function formatOrigens(codes: readonly string[]): string {
-  if (codes.length === 0) return "—";
-  return codes.map((c) => ORIGEM_LABEL[c] ?? c).join(", ");
-}
-
 export default function DescontoFolhaPage() {
-  const router = useRouter();
+  const { data: me } = useCurrentUser();
+  const isAdmin = me?.papel === "admin";
+  const [qInput, setQInput] = useState("");
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [novoOpen, setNovoOpen] = useState(false);
 
-  const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("monitoramento"));
-  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [q, setQ] = useQueryState("q", parseAsString.withDefault(""));
-
-  function abrirPessoa(cpfCnpj: string) {
-    void router.push(`/ccd/desconto-folha/${encodeURIComponent(cpfCnpj)}`);
-  }
-
-  function abrirOrgao(idOrgao: number) {
-    void router.push(`/ccd/desconto-folha/orgao/${idOrgao}`);
-  }
-
-  const placeholder = tab === "orgaos" ? "Buscar órgão..." : "Buscar pessoa, CPF/CNPJ ou órgão...";
+  const { data, isLoading } = useCadastros({ q, page, size: SIZE });
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / SIZE));
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="section-heading text-2xl">Desconto em Folha</h1>
+    <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 p-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Desconto em Folha</h1>
+          <p className="text-sm text-muted-foreground">
+            Processos notificados para desconto em folha, a resposta do órgão no apensado e o
+            crédito correspondente no FRAP.
+          </p>
+        </div>
+        {isAdmin && <Button onClick={() => setNovoOpen(true)}>Novo cadastro</Button>}
+      </div>
 
-      <Tabs value={tab} onValueChange={(v) => void setTab(v)}>
-        <TabsList>
-          <TabsTrigger value="monitoramento">Monitoramento</TabsTrigger>
-          <TabsTrigger value="pessoas">Por pessoa</TabsTrigger>
-          <TabsTrigger value="orgaos">Por órgão</TabsTrigger>
-          <TabsTrigger value="cadastros">Cadastros</TabsTrigger>
-          <TabsTrigger value="tipologias">Tipologias</TabsTrigger>
-        </TabsList>
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setQ(qInput.trim());
+          setPage(1);
+        }}
+      >
+        <Input
+          value={qInput}
+          onChange={(e) => setQInput(e.target.value)}
+          placeholder="Processo (ex.: 100/2023), responsável ou órgão"
+          className="max-w-sm"
+        />
+        <Button type="submit" variant="outline">
+          Buscar
+        </Button>
+        {q && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setQInput("");
+              setQ("");
+              setPage(1);
+            }}
+          >
+            Limpar
+          </Button>
+        )}
+      </form>
 
-        {tab === "pessoas" || tab === "orgaos" ? (
-          <div className="pt-4">
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Processo</TableHead>
+              <TableHead>Órgão</TableHead>
+              <TableHead>Responsável</TableHead>
+              <TableHead>Notificação</TableHead>
+              <TableHead>AR</TableHead>
+              <TableHead>Resposta</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead className="w-0" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                  Carregando...
+                </TableCell>
+              </TableRow>
+            ) : (data?.items.length ?? 0) === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                  Nenhum cadastro.
+                </TableCell>
+              </TableRow>
+            ) : (
+              data!.items.map((c) => {
+                const st = STATUS_EXTRACAO[c.statusExtracao];
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell className="whitespace-nowrap font-mono text-xs font-medium">
+                      {c.processo}
+                    </TableCell>
+                    <TableCell className="max-w-[260px] truncate" title={c.orgao ?? ""}>
+                      {c.orgao ?? "—"}
+                    </TableCell>
+                    <TableCell className="max-w-[260px] truncate" title={c.responsavel ?? ""}>
+                      {c.responsavel ?? "—"}
+                      {c.idDebito == null && (
+                        <span className="ml-2 text-xs text-amber-700">sem débito</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
+                      {c.notificacao.numero ?? "—"}
+                      <div className="text-xs text-muted-foreground">
+                        {formatData(c.notificacao.data)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
+                      {c.ar.numeroPostagem ?? "—"}
+                      <div className="text-xs text-muted-foreground">{formatData(c.ar.data)}</div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
+                      {c.resposta.processo ? (
+                        <>
+                          <span className="font-mono text-xs">{c.resposta.processo}</span>
+                          {c.resposta.evento != null && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              Ev. {c.resposta.evento}
+                            </span>
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                            {formatData(c.resposta.data)}
+                          </div>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
+                      <div>{c.valorTotal != null ? formatCurrencyBRL(c.valorTotal) : "—"}</div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Badge variant={st.variant}>{st.label}</Badge>
+                        {c.qtdValores > 0 && (
+                          <span>
+                            {c.qtdMatches}/{c.qtdValores} FRAP
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/ccd/desconto-folha/${c.id}`}
+                        className={buttonVariants({ size: "sm", variant: "outline" })}
+                      >
+                        Detalhes
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          Página {page} de {totalPages} · {total} cadastro(s)
+        </span>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
+          >
+            Anterior
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={page >= totalPages}
+            onClick={() => setPage(page + 1)}
+          >
+            Próxima
+          </Button>
+        </div>
+      </div>
+
+      <NovoCadastroDialog open={novoOpen} onOpenChange={setNovoOpen} />
+    </main>
+  );
+}
+
+function NovoCadastroDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const [processoInput, setProcessoInput] = useState("");
+  const [processo, setProcesso] = useState("");
+  const [idDebito, setIdDebito] = useState("");
+  const [nomeOrgao, setNomeOrgao] = useState("");
+  const lookup = useLookupProcesso(processo);
+  const criar = useCriarCadastro();
+
+  const debitos = lookup.data?.debitos ?? [];
+  const orgaoSugerido = lookup.data?.orgao ?? "";
+
+  function fechar() {
+    onOpenChange(false);
+    setProcessoInput("");
+    setProcesso("");
+    setIdDebito("");
+    setNomeOrgao("");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(v) : fechar())}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Novo cadastro</DialogTitle>
+          <DialogDescription>
+            Informe o processo de execução. O débito e o responsável vêm do banco processo; a
+            notificação, o AR e o apensado são localizados ao salvar.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!lookup.data) return;
+            criar.mutate(
+              {
+                idProcesso: lookup.data.idProcesso,
+                idDebito: idDebito ? Number(idDebito) : null,
+                nomeOrgao: nomeOrgao.trim() || orgaoSugerido || null,
+              },
+              {
+                onSuccess: () => {
+                  toast.success("Cadastro criado.");
+                  fechar();
+                },
+                onError: (err) => toast.error(messageForError(err, "Erro ao criar o cadastro.")),
+              },
+            );
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="n-processo">Processo</Label>
+            <div className="flex gap-2">
+              <Input
+                id="n-processo"
+                value={processoInput}
+                onChange={(e) => setProcessoInput(e.target.value)}
+                placeholder="100/2023"
+                inputMode="numeric"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setProcesso(processoInput.trim());
+                  setIdDebito("");
+                }}
+              >
+                Localizar
+              </Button>
+            </div>
+            {lookup.isFetching && (
+              <p className="text-xs text-muted-foreground">Consultando o banco processo...</p>
+            )}
+            {lookup.isError && (
+              <p className="text-xs text-destructive">
+                {messageForError(lookup.error, "Processo não encontrado.")}
+              </p>
+            )}
+            {lookup.data && (
+              <p className="text-xs text-muted-foreground">
+                {lookup.data.processo} · {debitos.length} débito(s)
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="n-debito">Débito e responsável</Label>
+            <SelectNative
+              id="n-debito"
+              value={idDebito}
+              onChange={(e) => setIdDebito(e.target.value)}
+              disabled={!lookup.data}
+            >
+              <option value="">Sem débito (completar depois)</option>
+              {debitos.map((d) => (
+                <option key={d.idDebito} value={d.idDebito}>
+                  #{d.idDebito} · {d.tipo ?? "débito"} · {formatCurrencyBRL(d.valorOriginal)} ·{" "}
+                  {d.nomePessoa ?? "sem responsável"}
+                  {d.cancelado ? " (cancelado)" : ""}
+                </option>
+              ))}
+            </SelectNative>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="n-orgao">Órgão notificado</Label>
             <Input
-              value={q}
-              onChange={(e) => {
-                void setQ(e.target.value);
-                void setPage(1);
-              }}
-              placeholder={placeholder}
-              className="max-w-md"
+              id="n-orgao"
+              value={nomeOrgao}
+              onChange={(e) => setNomeOrgao(e.target.value)}
+              placeholder={orgaoSugerido || "Nome do órgão"}
             />
           </div>
-        ) : null}
 
-        <TabsContent value="monitoramento" className="pt-4">
-          <MonitoramentoTab />
-        </TabsContent>
-
-        <TabsContent value="cadastros" className="pt-4">
-          <CadastrosTab />
-        </TabsContent>
-
-        <TabsContent value="pessoas" className="pt-4">
-          <PessoasTab
-            q={q || undefined}
-            page={page}
-            setPage={(p) => void setPage(p)}
-            onSelect={abrirPessoa}
-          />
-        </TabsContent>
-
-        <TabsContent value="orgaos" className="pt-4">
-          <OrgaosTab
-            q={q || undefined}
-            page={page}
-            setPage={(p) => void setPage(p)}
-            onSelect={abrirOrgao}
-          />
-        </TabsContent>
-
-        <TabsContent value="tipologias" className="pt-4">
-          <TipologiasTab onAbrirPessoa={abrirPessoa} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Tab: Por pessoa
-// ---------------------------------------------------------------------------
-
-function PessoasTab({
-  q,
-  page,
-  setPage,
-  onSelect,
-}: {
-  q: string | undefined;
-  page: number;
-  setPage: (p: number) => void;
-  onSelect: (cpf: string) => void;
-}) {
-  const [sortBy, setSortBy] = useQueryState(
-    "sortBy",
-    parseAsStringEnum<PessoasSortKey>([...SORT_KEYS]).withDefault("qtd_notificacoes"),
-  );
-  const [sortDir, setSortDir] = useQueryState(
-    "sortDir",
-    parseAsStringEnum<"asc" | "desc">(["asc", "desc"]).withDefault("desc"),
-  );
-
-  function toggleSort(coluna: PessoasSortKey) {
-    if (sortBy !== coluna) {
-      void setSortBy(coluna);
-      void setSortDir("desc");
-      return;
-    }
-    if (sortDir === "desc") {
-      void setSortDir("asc");
-      return;
-    }
-    void setSortBy("qtd_notificacoes");
-    void setSortDir("desc");
-  }
-
-  const { data, isFetching } = usePessoas({
-    q,
-    page,
-    size: SIZE,
-    sortBy: sortBy ?? undefined,
-    sortDir,
-  });
-  const total = data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / SIZE));
-
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-xs text-muted-foreground">
-        {total.toLocaleString("pt-BR")} pessoas · página {page} de {totalPages}
-      </p>
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <SortableHead
-                label="Nome"
-                col="nome"
-                sortBy={sortBy}
-                sortDir={sortDir}
-                onClick={toggleSort}
-              />
-              <SortableHead
-                label="CPF/CNPJ"
-                col="cpf"
-                sortBy={sortBy}
-                sortDir={sortDir}
-                onClick={toggleSort}
-              />
-              <SortableHead
-                label="Órgão notificado"
-                col="orgao"
-                sortBy={sortBy}
-                sortDir={sortDir}
-                onClick={toggleSort}
-              />
-              <TableHead>Origem Informação</TableHead>
-              <TableHead className="text-right">Parcelas Conciliadas</TableHead>
-              <SortableHead
-                label="Total Multas em Aberto"
-                col="valor_atualizado"
-                sortBy={sortBy}
-                sortDir={sortDir}
-                onClick={toggleSort}
-                align="right"
-              />
-              <SortableHead
-                label="Total notificações"
-                col="qtd_notificacoes"
-                sortBy={sortBy}
-                sortDir={sortDir}
-                onClick={toggleSort}
-                align="right"
-              />
-              <SortableHead
-                label="Débitos notificados"
-                col="qtd_debitos_notificados"
-                sortBy={sortBy}
-                sortDir={sortDir}
-                onClick={toggleSort}
-                align="right"
-              />
-              <SortableHead
-                label="Valor Débitos Notificados"
-                col="valor_debitos_notificados"
-                sortBy={sortBy}
-                sortDir={sortDir}
-                onClick={toggleSort}
-                align="right"
-              />
-              <SortableHead
-                label="Agendado"
-                col="esperado"
-                sortBy={sortBy}
-                sortDir={sortDir}
-                onClick={toggleSort}
-                align="right"
-              />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data?.items.length === 0 && !isFetching ? (
-              <TableRow>
-                <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
-                  Nenhum registro.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data?.items.map((p) => (
-                <TableRow
-                  key={p.cpfCnpj ?? "?"}
-                  className="cursor-pointer hover:bg-muted/40"
-                  onClick={() => p.cpfCnpj && onSelect(p.cpfCnpj)}
-                >
-                  <TableCell>{p.nomePessoa ?? "—"}</TableCell>
-                  <TableCell className="font-mono text-xs">{p.cpfCnpj ?? "—"}</TableCell>
-                  <TableCell className="text-xs">
-                    {p.nomeOrgaoNotificado ?? (
-                      <span className="text-muted-foreground italic">sem órgão</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-xs">{formatOrigens(p.origens)}</TableCell>
-                  <TableCell className="text-right">
-                    {p.qtdConciliadas} / {p.qtdParcelas}
-                  </TableCell>
-                  <TableCell className="text-right">{formatBRL(p.valorAtualizadoTotal)}</TableCell>
-                  <TableCell className="text-right">{p.qtdProcessosNotificados}</TableCell>
-                  <TableCell className="text-right">{p.qtdDebitosNotificados}</TableCell>
-                  <TableCell className="text-right">
-                    {formatBRL(p.valorDebitosNotificadosTotal)}
-                  </TableCell>
-                  <TableCell className="text-right">{formatBRL(p.totalEsperado)}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <Paginacao page={page} totalPages={totalPages} setPage={setPage} disabled={isFetching} />
-    </div>
-  );
-}
-
-function SortableHead({
-  label,
-  col,
-  sortBy,
-  sortDir,
-  onClick,
-  align,
-}: {
-  label: string;
-  col: PessoasSortKey;
-  sortBy: PessoasSortKey | null;
-  sortDir: "asc" | "desc";
-  onClick: (c: PessoasSortKey) => void;
-  align?: "right";
-}) {
-  const active = sortBy === col;
-  const arrow = active ? (sortDir === "desc" ? "↓" : "↑") : "↕";
-  return (
-    <TableHead
-      onClick={() => onClick(col)}
-      className={`cursor-pointer select-none ${align === "right" ? "text-right" : ""}`}
-    >
-      <span className="inline-flex items-center gap-1">
-        {label}
-        <span className={active ? "text-foreground" : "text-muted-foreground/40"}>{arrow}</span>
-      </span>
-    </TableHead>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Tab: Por órgão
-// ---------------------------------------------------------------------------
-
-function OrgaosTab({
-  q,
-  page,
-  setPage,
-  onSelect,
-}: {
-  q: string | undefined;
-  page: number;
-  setPage: (p: number) => void;
-  onSelect: (id: number) => void;
-}) {
-  const { data, isFetching } = useOrgaos({ q, page, size: SIZE });
-  const total = data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / SIZE));
-
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-xs text-muted-foreground">
-        {total.toLocaleString("pt-BR")} órgãos · página {page} de {totalPages}
-      </p>
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Órgão</TableHead>
-              <TableHead className="text-right">Pessoas</TableHead>
-              <TableHead className="text-right">Parcelas</TableHead>
-              <TableHead className="text-right">Parcelas Conciliadas</TableHead>
-              <TableHead className="text-right">Esperado</TableHead>
-              <TableHead className="text-right">Quitado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data?.items.length === 0 && !isFetching ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                  Nenhum registro.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data?.items.map((o) => (
-                <TableRow
-                  key={o.idOrgao ?? "null"}
-                  className="cursor-pointer hover:bg-muted/40"
-                  onClick={() => onSelect(o.idOrgao ?? 0)}
-                >
-                  <TableCell>
-                    {o.nomeOrgao ?? (
-                      <span className="text-muted-foreground italic">Sem órgão notificado</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">{o.qtdPessoas}</TableCell>
-                  <TableCell className="text-right">{o.qtdParcelas}</TableCell>
-                  <TableCell className="text-right">{o.qtdConciliadas}</TableCell>
-                  <TableCell className="text-right">{formatBRL(o.totalEsperado)}</TableCell>
-                  <TableCell className="text-right">{formatBRL(o.totalQuitado)}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <Paginacao page={page} totalPages={totalPages} setPage={setPage} disabled={isFetching} />
-    </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={fechar}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={!lookup.data || criar.isPending}>
+              {criar.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

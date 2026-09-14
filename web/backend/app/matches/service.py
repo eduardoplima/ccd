@@ -6,8 +6,6 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 from app.matches.schemas import (
-    MatchDescontoFolhaListItem,
-    MatchDescontoFolhaListResponse,
     MatchGuiaListItem,
     MatchGuiaListResponse,
     MatchOBListItem,
@@ -20,7 +18,6 @@ from app.matches.schemas import (
 _SUCESSO_OB = ("EXATO", "EXATO_POR_ORDEM")
 _SUCESSO_PESSOA = ("EXATO_PESSOA_VALOR",)
 _SUCESSO_GUIA = ("EXATO_LOTE",)
-_SUCESSO_DF = ("OK_TUDO", "MATCH_MANUAL", "REPASSE_VIA_ORGAO")
 
 
 def _ano_filter(dialect: str, alias: str = "m") -> str:
@@ -339,92 +336,3 @@ def list_matches_guia(
         for r in rows
     ]
     return MatchGuiaListResponse(items=items, total=total, page=page, size=size)
-
-
-def list_matches_desconto_folha(
-    session: Session,
-    *,
-    ano: int | None = None,
-    mes: int | None = None,
-    q: str | None = None,
-    page: int = 1,
-    size: int = 50,
-) -> MatchDescontoFolhaListResponse:
-    dialect = session.bind.dialect.name if session.bind is not None else "mssql"
-    where: list[str] = []
-    params: dict[str, Any] = {}
-    placeholders, params_st = _in_clause("st_df_", _SUCESSO_DF)
-    where.append(f"st.Codigo IN ({placeholders})")
-    params.update(params_st)
-    if ano is not None and mes is not None:
-        where.append("p.AnoReferencia = :ano AND p.MesReferencia = :mes")
-        params["ano"] = ano
-        params["mes"] = mes
-    elif ano is not None:
-        where.append("p.AnoReferencia = :ano")
-        params["ano"] = ano
-    clause, q_params = _filtro_pessoa_q(
-        q=q, coluna_nome="df.NomePessoa", coluna_doc="df.CpfCnpj", dialect=dialect
-    )
-    if clause is not None:
-        where.append(clause)
-        params.update(q_params)
-    where_sql = "WHERE " + " AND ".join(where)
-
-    total = int(
-        session.execute(
-            text(
-                f"""
-                SELECT COUNT(*)
-                FROM FRAPMatchDescontoFolha m
-                JOIN FRAPDescontoFolhaParcela p ON p.IdFRAPDescontoFolhaParcela = m.IdFRAPDescontoFolhaParcela
-                JOIN FRAPDescontoFolha df ON df.IdFRAPDescontoFolha = p.IdFRAPDescontoFolha
-                JOIN FRAPStatusMatch st ON st.IdStatusMatch = m.IdStatusMatch
-                {where_sql}
-                """
-            ),
-            params,
-        ).scalar_one()
-    )
-    offset = (page - 1) * size
-    page_params = {**params, "offset": offset, "size": size}
-    sql = text(
-        f"""
-        SELECT
-            m.IdMatchDescontoFolha, st.Codigo AS Status, st.Descricao AS StatusDescricao,
-            p.IdFRAPDescontoFolhaParcela AS IdParcela, p.NumeroParcela,
-            p.MesReferencia, p.AnoReferencia, p.ValorEsperado,
-            df.CpfCnpj, df.NomePessoa,
-            m.ValorContracheque,
-            L.IdLancamento, L.DtMovimento, L.Valor AS ValorLancamento
-        FROM FRAPMatchDescontoFolha m
-        JOIN FRAPDescontoFolhaParcela p ON p.IdFRAPDescontoFolhaParcela = m.IdFRAPDescontoFolhaParcela
-        JOIN FRAPDescontoFolha df ON df.IdFRAPDescontoFolha = p.IdFRAPDescontoFolha
-        JOIN FRAPStatusMatch st ON st.IdStatusMatch = m.IdStatusMatch
-        LEFT JOIN FRAPLancamento L ON L.IdLancamento = m.IdLancamentoFRAP
-        {where_sql}
-        ORDER BY m.IdMatchDescontoFolha DESC
-        {_pagination(dialect)}
-        """
-    ).bindparams(bindparam("offset"), bindparam("size"))
-    rows = session.execute(sql, page_params).mappings().all()
-    items = [
-        MatchDescontoFolhaListItem(
-            id_match=int(r["IdMatchDescontoFolha"]),
-            status=r["Status"],
-            status_descricao=r["StatusDescricao"],
-            id_parcela=r["IdParcela"],
-            numero_parcela=r["NumeroParcela"],
-            mes_referencia=r["MesReferencia"],
-            ano_referencia=r["AnoReferencia"],
-            valor_esperado=r["ValorEsperado"],
-            cpfcnpj=r["CpfCnpj"],
-            nome_pessoa=r["NomePessoa"],
-            valor_contracheque=r["ValorContracheque"],
-            id_lancamento=r["IdLancamento"],
-            dt_movimento=r["DtMovimento"],
-            valor_lancamento=r["ValorLancamento"],
-        )
-        for r in rows
-    ]
-    return MatchDescontoFolhaListResponse(items=items, total=total, page=page, size=size)

@@ -58,28 +58,6 @@ class MatchGuiaListItem(_Common, _LancamentoCtx):
     cpfcnpj: str | None = None
 
 
-class MatchDescontoFolhaListItem(BaseModel):
-    matcher: Literal["DESCONTO_FOLHA"] = "DESCONTO_FOLHA"
-    id_match: int = Field(serialization_alias="idMatch")
-    status: str
-    status_descricao: str | None = Field(default=None, serialization_alias="statusDescricao")
-    id_parcela: int | None = Field(default=None, serialization_alias="idParcela")
-    numero_parcela: int | None = Field(default=None, serialization_alias="numeroParcela")
-    mes_referencia: int | None = Field(default=None, serialization_alias="mesReferencia")
-    ano_referencia: int | None = Field(default=None, serialization_alias="anoReferencia")
-    valor_esperado: Decimal | None = Field(default=None, serialization_alias="valorEsperado")
-    cpfcnpj: str | None = None
-    nome_pessoa: str | None = Field(default=None, serialization_alias="nomePessoa")
-    valor_contracheque: Decimal | None = Field(
-        default=None, serialization_alias="valorContracheque"
-    )
-    id_lancamento: int | None = Field(default=None, serialization_alias="idLancamento")
-    dt_movimento: date | None = Field(default=None, serialization_alias="dtMovimento")
-    valor_lancamento: Decimal | None = Field(default=None, serialization_alias="valorLancamento")
-
-    model_config = {"populate_by_name": True}
-
-
 class MatchOBListResponse(BaseModel):
     items: list[MatchOBListItem]
     total: int
@@ -96,13 +74,6 @@ class MatchPessoaListResponse(BaseModel):
 
 class MatchGuiaListResponse(BaseModel):
     items: list[MatchGuiaListItem]
-    total: int
-    page: int
-    size: int
-
-
-class MatchDescontoFolhaListResponse(BaseModel):
-    items: list[MatchDescontoFolhaListItem]
     total: int
     page: int
     size: int

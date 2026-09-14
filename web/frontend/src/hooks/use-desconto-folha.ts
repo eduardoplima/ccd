@@ -3,307 +3,109 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  atribuirOrgaoPessoa,
-  atualizarCadastro,
-  atualizarMonitoramento,
-  atualizarParcela,
+  atualizarProcesso,
   criarCadastro,
-  criarMatchManual,
-  criarMonitoramento,
-  criarParcela,
-  deletarCadastro,
-  deletarMatchManual,
-  deletarMonitoramento,
-  deletarParcela,
+  criarValor,
+  desvincular,
+  extrairResposta,
   getCadastro,
-  getDepositosOrgao,
-  getDepositosOrgaoLancamentos,
-  getMonitoramentoResumo,
-  getParcelasPessoa,
-  getPessoasProcesso,
-  getPessoasDoOrgao,
-  getTipologiaAtrasoSistemico,
-  getTipologiaCpfSemSiai,
-  getTipologiaParcelaDuplicada,
-  getTipologiaRepasseMulti,
   listCadastros,
-  listMonitoramento,
-  listOrgaos,
-  listOrgaosDisponiveis,
-  listPessoas,
-  type MonitoramentoFilters,
-  type OrgaosFilters,
-  type PessoasFilters,
-  type RepasseMultiFilters,
+  lookupProcesso,
+  matchAutomatico,
+  removerCadastro,
+  removerValor,
+  vincular,
 } from "@/lib/api/desconto-folha";
-import type {
-  CadastroManualUpdate,
-  GrupoMonitoramento,
-  MonitoramentoPayload,
-  ParcelaManualInput,
-  ParcelaManualUpdate,
-} from "@/schemas/desconto-folha";
+import type { CadastroInput, ValorInput } from "@/schemas/desconto-folha";
 
-const KEY = "desconto-folha";
+const KEY = ["ccd-desconto-folha"] as const;
 
-export function usePessoas(filters: PessoasFilters) {
+export function useCadastros(params: { q?: string; page: number; size: number }) {
   return useQuery({
-    queryKey: [KEY, "pessoas", filters],
-    queryFn: () => listPessoas(filters),
-    staleTime: 30_000,
+    queryKey: [...KEY, "lista", params],
+    queryFn: () => listCadastros(params),
     placeholderData: keepPreviousData,
   });
 }
 
-export function useParcelasPessoa(cpfCnpj: string | null, ano?: number) {
+export function useCadastro(id: number | null) {
   return useQuery({
-    queryKey: [KEY, "parcelas", cpfCnpj, ano],
-    queryFn: () => getParcelasPessoa(cpfCnpj!, ano),
-    enabled: !!cpfCnpj,
-    staleTime: 30_000,
+    queryKey: [...KEY, "detalhe", id],
+    queryFn: () => getCadastro(id as number),
+    enabled: id != null,
   });
 }
 
-export function useOrgaos(filters: OrgaosFilters) {
+export function useLookupProcesso(processo: string) {
   return useQuery({
-    queryKey: [KEY, "orgaos", filters],
-    queryFn: () => listOrgaos(filters),
-    staleTime: 30_000,
-    placeholderData: keepPreviousData,
+    queryKey: [...KEY, "lookup", processo],
+    queryFn: () => lookupProcesso(processo),
+    enabled: /^\d{1,6}\/\d{4}$/.test(processo),
+    retry: false,
   });
 }
 
-export function usePessoasDoOrgao(idOrgao: number | null, ano?: number, mes?: number) {
-  return useQuery({
-    queryKey: [KEY, "orgao-pessoas", idOrgao, ano, mes],
-    queryFn: () => getPessoasDoOrgao(idOrgao!, ano, mes),
-    enabled: idOrgao !== null,
-    staleTime: 30_000,
-  });
-}
-
-export function useDepositosOrgao(idOrgao: number | null) {
-  return useQuery({
-    queryKey: [KEY, "depositos-orgao", idOrgao],
-    queryFn: () => getDepositosOrgao(idOrgao!),
-    enabled: idOrgao !== null,
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function useDepositosOrgaoLancamentos(idOrgao: number | null) {
-  return useQuery({
-    queryKey: [KEY, "depositos-orgao-lancamentos", idOrgao],
-    queryFn: () => getDepositosOrgaoLancamentos(idOrgao!),
-    enabled: idOrgao !== null,
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function useOrgaosDisponiveis(busca: string) {
-  return useQuery({
-    queryKey: [KEY, "orgaos-disponiveis", busca],
-    queryFn: () => listOrgaosDisponiveis(busca || undefined),
-    staleTime: 5 * 60_000,
-    enabled: busca.length >= 2,
-  });
-}
-
-export function useCadastros(q: string, page: number, size: number) {
-  return useQuery({
-    queryKey: [KEY, "cadastros", q, page, size],
-    queryFn: () => listCadastros(q || undefined, page, size),
-    staleTime: 30_000,
-    placeholderData: keepPreviousData,
-  });
+function useInvalidar() {
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries({ queryKey: KEY });
 }
 
 export function useCriarCadastro() {
-  const qc = useQueryClient();
+  const invalidar = useInvalidar();
   return useMutation({
-    mutationFn: criarCadastro,
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    mutationFn: (payload: CadastroInput) => criarCadastro(payload),
+    onSuccess: invalidar,
   });
 }
 
-export function useDeletarCadastro() {
-  const qc = useQueryClient();
+export function useRemoverCadastro() {
+  const invalidar = useInvalidar();
+  return useMutation({ mutationFn: (id: number) => removerCadastro(id), onSuccess: invalidar });
+}
+
+export function useAtualizarProcesso() {
+  const invalidar = useInvalidar();
+  return useMutation({ mutationFn: (id: number) => atualizarProcesso(id), onSuccess: invalidar });
+}
+
+export function useExtrairResposta() {
+  return useMutation({ mutationFn: (id: number) => extrairResposta(id) });
+}
+
+export function useCriarValor(id: number) {
+  const invalidar = useInvalidar();
   return useMutation({
-    mutationFn: deletarCadastro,
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    mutationFn: (payload: ValorInput) => criarValor(id, payload),
+    onSuccess: invalidar,
   });
 }
 
-export function useCadastro(idDescontoFolha: number | null) {
-  return useQuery({
-    queryKey: [KEY, "cadastro", idDescontoFolha],
-    queryFn: () => getCadastro(idDescontoFolha!),
-    enabled: idDescontoFolha !== null,
-    staleTime: 10_000,
-  });
-}
-
-export function useAtualizarCadastro() {
-  const qc = useQueryClient();
+export function useRemoverValor(id: number) {
+  const invalidar = useInvalidar();
   return useMutation({
-    mutationFn: ({ id, input }: { id: number; input: CadastroManualUpdate }) =>
-      atualizarCadastro(id, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    mutationFn: (idValor: number) => removerValor(id, idValor),
+    onSuccess: invalidar,
   });
 }
 
-export function useCriarParcela() {
-  const qc = useQueryClient();
+export function useVincular(id: number) {
+  const invalidar = useInvalidar();
   return useMutation({
-    mutationFn: ({ id, input }: { id: number; input: ParcelaManualInput }) =>
-      criarParcela(id, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    mutationFn: (args: { idValor: number; idLancamento: number }) =>
+      vincular(id, args.idValor, args.idLancamento),
+    onSuccess: invalidar,
   });
 }
 
-export function useAtualizarParcela() {
-  const qc = useQueryClient();
+export function useDesvincular(id: number) {
+  const invalidar = useInvalidar();
   return useMutation({
-    mutationFn: ({
-      id,
-      idParcela,
-      input,
-    }: {
-      id: number;
-      idParcela: number;
-      input: ParcelaManualUpdate;
-    }) => atualizarParcela(id, idParcela, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    mutationFn: (idValor: number) => desvincular(id, idValor),
+    onSuccess: invalidar,
   });
 }
 
-export function useDeletarParcela() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, idParcela }: { id: number; idParcela: number }) =>
-      deletarParcela(id, idParcela),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function useMonitoramento(filters: MonitoramentoFilters) {
-  return useQuery({
-    queryKey: [KEY, "monitoramento", filters],
-    queryFn: () => listMonitoramento(filters),
-    staleTime: 30_000,
-    placeholderData: keepPreviousData,
-  });
-}
-
-export function useMonitoramentoResumo(grupo?: GrupoMonitoramento) {
-  return useQuery({
-    queryKey: [KEY, "monitoramento-resumo", grupo],
-    queryFn: () => getMonitoramentoResumo(grupo),
-    staleTime: 30_000,
-  });
-}
-
-export function useCriarMonitoramento() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: criarMonitoramento,
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function useAtualizarMonitoramento() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: MonitoramentoPayload }) =>
-      atualizarMonitoramento(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function usePessoasProcesso(processo: string) {
-  const proc = processo.trim();
-  return useQuery({
-    queryKey: [KEY, "monitoramento-pessoas", proc],
-    queryFn: () => getPessoasProcesso(proc),
-    enabled: /^\d{1,6}\s*\/\s*\d{4}$/.test(proc),
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function useDeletarMonitoramento() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: deletarMonitoramento,
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function useCriarMatchManual() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: criarMatchManual,
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function useAtribuirOrgaoPessoa() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ cpfCnpj, idOrgao }: { cpfCnpj: string; idOrgao: number }) =>
-      atribuirOrgaoPessoa(cpfCnpj, idOrgao),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function useDeletarMatchManual() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: deletarMatchManual,
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function useTipologiaRepasseMulti(filters: RepasseMultiFilters, enabled = true) {
-  return useQuery({
-    queryKey: [KEY, "tipologia-repasse-multi", filters],
-    queryFn: () => getTipologiaRepasseMulti(filters),
-    staleTime: 60_000,
-    enabled,
-  });
-}
-
-export function useTipologiaCpfSemSiai(enabled = true) {
-  return useQuery({
-    queryKey: [KEY, "tipologia-cpf-sem-siai"],
-    queryFn: () => getTipologiaCpfSemSiai(),
-    staleTime: 5 * 60_000,
-    enabled,
-  });
-}
-
-export function useTipologiaParcelaDuplicada(
-  ano: number | undefined,
-  mes: number | undefined,
-  enabled = true,
-) {
-  return useQuery({
-    queryKey: [KEY, "tipologia-parcela-duplicada", ano, mes],
-    queryFn: () => getTipologiaParcelaDuplicada(ano, mes),
-    staleTime: 60_000,
-    enabled,
-  });
-}
-
-export function useTipologiaAtrasoSistemico(
-  ano: number | undefined,
-  mesesConsecutivos: number,
-  pctMinimo: number,
-  enabled = true,
-) {
-  return useQuery({
-    queryKey: [KEY, "tipologia-atraso-sistemico", ano, mesesConsecutivos, pctMinimo],
-    queryFn: () => getTipologiaAtrasoSistemico(ano, mesesConsecutivos, pctMinimo),
-    staleTime: 60_000,
-    enabled,
-  });
+export function useMatchAutomatico(id: number) {
+  const invalidar = useInvalidar();
+  return useMutation({ mutationFn: () => matchAutomatico(id), onSuccess: invalidar });
 }
