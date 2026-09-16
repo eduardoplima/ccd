@@ -13,6 +13,8 @@ export async function listCandidatosDescontoFolha(todos: boolean): Promise<Candi
 }
 
 export async function gerarDescontoFolha(processos: string[]): Promise<Job> {
-  const { data } = await apiClient.post("/api/v1/ccd/automacao/desconto-folha/gerar", { processos });
+  const { data } = await apiClient.post("/api/v1/ccd/automacao/desconto-folha/gerar", {
+    processos,
+  });
   return jobSchema.parse(data);
 }

@@ -5,6 +5,7 @@ Revises: 0001_baseline_auth
 Create Date: 2026-05-06
 
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence

@@ -20,9 +20,7 @@ class PasswordTooLongError(ValueError):
 def hash_password(password: str) -> str:
     pw_bytes = password.encode("utf-8")
     if len(pw_bytes) > BCRYPT_MAX_BYTES:
-        raise PasswordTooLongError(
-            f"senha excede {BCRYPT_MAX_BYTES} bytes (limite do bcrypt)"
-        )
+        raise PasswordTooLongError(f"senha excede {BCRYPT_MAX_BYTES} bytes (limite do bcrypt)")
     return bcrypt.hashpw(pw_bytes, bcrypt.gensalt()).decode("utf-8")
 
 

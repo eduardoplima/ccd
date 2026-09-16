@@ -29,8 +29,7 @@ def upgrade() -> None:
     # 2) Email passa a aceitar NULL
     op.execute("ALTER TABLE dbo.Usuarios ALTER COLUMN Email varchar(255) NULL;")
     op.execute(
-        "CREATE UNIQUE INDEX ix_usuarios_email ON dbo.Usuarios(Email) "
-        "WHERE Email IS NOT NULL;"
+        "CREATE UNIQUE INDEX ix_usuarios_email ON dbo.Usuarios(Email) WHERE Email IS NOT NULL;"
     )
     # 3) nova coluna; existentes recebem 0 (não forçados a trocar)
     op.execute(

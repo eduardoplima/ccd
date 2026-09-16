@@ -52,8 +52,7 @@ def upgrade() -> None:
     # 2) preserva atribuição ao eduardo (FRAPUsuario.1 -> Usuarios.2)
     op.execute("UPDATE dbo.FRAPJob SET IdUsuario = 2 WHERE IdUsuario = 1;")
     op.execute(
-        "UPDATE dbo.FRAPMatchDescontoFolha SET IdUsuarioConcilia = 2 "
-        "WHERE IdUsuarioConcilia = 1;"
+        "UPDATE dbo.FRAPMatchDescontoFolha SET IdUsuarioConcilia = 2 WHERE IdUsuarioConcilia = 1;"
     )
 
     # 3) recria FKs apontando para Usuarios

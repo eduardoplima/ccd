@@ -65,7 +65,9 @@ def main(
     email_norm = email.strip().lower() if email else None
 
     for session in session_scope():
-        _upsert(session, login_norm, email_norm, nome.strip(), papel.lower(), senha_hash, forcar_troca)
+        _upsert(
+            session, login_norm, email_norm, nome.strip(), papel.lower(), senha_hash, forcar_troca
+        )
 
 
 def _upsert(

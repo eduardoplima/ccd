@@ -17,9 +17,7 @@ class DebitoLookupItem(BaseModel):
     cpfcnpj: str | None = None
     nome_pessoa: str | None = Field(default=None, serialization_alias="nomePessoa")
     id_debito: int | None = Field(default=None, serialization_alias="idDebito")
-    id_processo_execucao: int | None = Field(
-        default=None, serialization_alias="idProcessoExecucao"
-    )
+    id_processo_execucao: int | None = Field(default=None, serialization_alias="idProcessoExecucao")
     id_boleto: int | None = Field(default=None, serialization_alias="idBoleto")
     codigo_barras: str | None = Field(default=None, serialization_alias="codigoBarras")
     valor_pago: Decimal | None = Field(default=None, serialization_alias="valorPago")

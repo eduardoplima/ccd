@@ -24,9 +24,7 @@ def get_processo_session() -> Generator[Session, None, None]:
 
 # Rotas liberadas mesmo quando o usuário precisa trocar a senha (senão ele não
 # conseguiria nem ver os próprios dados nem efetuar a troca).
-_TROCA_SENHA_ALLOWLIST = frozenset(
-    {"/api/v1/auth/me", "/api/v1/auth/trocar-senha"}
-)
+_TROCA_SENHA_ALLOWLIST = frozenset({"/api/v1/auth/me", "/api/v1/auth/trocar-senha"})
 
 
 def get_current_user(
@@ -35,15 +33,11 @@ def get_current_user(
     session: Session = Depends(get_db_session),
 ) -> FRAPUsuario:
     if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="missing bearer token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="missing bearer token")
     try:
         payload = security.decode_access_token(credentials.credentials)
     except security.InvalidTokenError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
     sub = payload.get("sub")
     if sub is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid subject")
@@ -53,18 +47,14 @@ def get_current_user(
     # Defesa em profundidade: usuário com senha provisória só acessa /me e a
     # troca de senha; o frontend redireciona para /conta antes disso.
     if user.DeveTrocarSenha and request.url.path not in _TROCA_SENHA_ALLOWLIST:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="must change password"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="must change password")
     return user
 
 
 def require_role(*roles: str):
     def _enforce(user: FRAPUsuario = Depends(get_current_user)) -> FRAPUsuario:
         if user.Papel not in roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="role not authorized"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="role not authorized")
         return user
 
     return _enforce
