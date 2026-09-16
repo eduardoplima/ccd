@@ -94,3 +94,9 @@ export function formatCurrencyBRL(value: number | null | undefined): string {
     currency: "BRL",
   }).format(value);
 }
+
+export function formatCpf(cpf: string | null | undefined): string {
+  if (!cpf) return "—";
+  const d = cpf.replace(/\D/g, "");
+  return d.length === 11 ? d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4") : cpf;
+}

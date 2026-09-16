@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -25,13 +26,44 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useCcdJob } from "@/hooks/use-ccd-job";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useCadastros, useCriarCadastro, useLookupProcesso } from "@/hooks/use-desconto-folha";
+import {
+  useCadastros,
+  useCriarCadastro,
+  useLocalizarNotificacoes,
+  useRetencoes,
+  useSugestoes,
+  useLookupProcesso,
+} from "@/hooks/use-desconto-folha";
 import { messageForError } from "@/lib/error-messages";
-import { formatCurrencyBRL } from "@/lib/format";
-import { STATUS_EXTRACAO, formatData } from "./_shared";
+import { formatCpf, formatCurrencyBRL } from "@/lib/format";
+import {
+  JOB_LABEL,
+  STATUS_EXTRACAO,
+  TIPO_NOTIFICACAO,
+  TIPO_RECEBIMENTO,
+  formatData,
+} from "./_shared";
 
 const SIZE = 50;
+
+const FILTROS_PRESENCA = [
+  ["comNotificacao", "Com notificação"],
+  ["comRecebimento", "Com recebimento"],
+  ["comResposta", "Com resposta"],
+  ["comValores", "Com valores"],
+  ["comConciliacao", "Com conciliação"],
+] as const;
+
+type Selecao = { tipo: "pessoa" | "orgao"; valor: string; rotulo: string };
+
+const TOTAIS = [
+  ["processos", "Processos", false],
+  ["pessoas", "Pessoas", false],
+  ["valorAReceber", "A receber", true],
+  ["valorRecebido", "Recebido em conciliação", true],
+] as const;
 
 export default function DescontoFolhaPage() {
   const { data: me } = useCurrentUser();
@@ -40,10 +72,62 @@ export default function DescontoFolhaPage() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [novoOpen, setNovoOpen] = useState(false);
+  const [filtros, setFiltros] = useState({
+    comNotificacao: false,
+    comRecebimento: false,
+    comResposta: false,
+    comValores: false,
+    comConciliacao: false,
+  });
 
-  const { data, isLoading } = useCadastros({ q, page, size: SIZE });
+  const [selecao, setSelecao] = useState<Selecao | null>(null);
+  const [sugestoesAbertas, setSugestoesAbertas] = useState(false);
+  const { data: sugestoes } = useSugestoes(qInput);
+
+  const { data, isLoading, refetch } = useCadastros({
+    q,
+    page,
+    size: SIZE,
+    ...filtros,
+    cpf: selecao?.tipo === "pessoa" ? selecao.valor : undefined,
+    orgao: selecao?.tipo === "orgao" ? selecao.valor : undefined,
+  });
+  const totais = data?.totais;
+  const cpfSelecionado = selecao?.tipo === "pessoa" ? selecao.valor : null;
+  const { data: retencoes } = useRetencoes(cpfSelecionado);
+
+  const escolher = (s: Selecao) => {
+    setSelecao(s);
+    setQInput("");
+    setQ("");
+    setPage(1);
+    setSugestoesAbertas(false);
+  };
+  const limparTudo = () => {
+    setSelecao(null);
+    setQInput("");
+    setQ("");
+    setPage(1);
+  };
+  const temSugestoes =
+    sugestoesAbertas &&
+    qInput.trim().length >= 2 &&
+    !!sugestoes &&
+    (sugestoes.pessoas.length > 0 || sugestoes.orgaos.length > 0);
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / SIZE));
+
+  const localizar = useLocalizarNotificacoes();
+  const [idJob, setIdJob] = useState<number | null>(null);
+  const { data: job } = useCcdJob(idJob);
+  const jobAtivo = job != null && (job.status === "pending" || job.status === "running");
+  const [jobVisto, setJobVisto] = useState<number | null>(null);
+  if (job && !jobAtivo && idJob != null && jobVisto !== idJob) {
+    setJobVisto(idJob);
+    void refetch();
+    if (job.status === "done") toast.success(job.resultado ?? "Notificações localizadas.");
+    if (job.status === "failed") toast.error(job.erroMensagem ?? "A localização falhou.");
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 p-6">
@@ -55,27 +139,144 @@ export default function DescontoFolhaPage() {
             crédito correspondente no FRAP.
           </p>
         </div>
-        {isAdmin && <Button onClick={() => setNovoOpen(true)}>Novo cadastro</Button>}
+        {isAdmin && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={localizar.isPending || jobAtivo}
+              onClick={() =>
+                localizar.mutate(undefined, {
+                  onSuccess: (j) => setIdJob(j.idJob),
+                  onError: (err) =>
+                    toast.error(messageForError(err, "Erro ao enfileirar a localização.")),
+                })
+              }
+            >
+              {jobAtivo ? JOB_LABEL[job!.status] : "Localizar notificações"}
+            </Button>
+            <Button onClick={() => setNovoOpen(true)}>Novo cadastro</Button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-2 rounded-lg border px-4 py-3">
+        <span className="text-sm font-medium">
+          {selecao ? `Totais de ${selecao.rotulo}` : "Totais"}
+        </span>
+        {TOTAIS.map(([chave, rotulo, moeda]) => (
+          <div key={chave}>
+            <div className="text-xs text-muted-foreground">{rotulo}</div>
+            <div className="text-lg font-semibold">
+              {totais == null
+                ? "—"
+                : moeda
+                  ? formatCurrencyBRL(totais[chave])
+                  : totais[chave].toLocaleString("pt-BR")}
+            </div>
+          </div>
+        ))}
+        {cpfSelecionado && (
+          <div>
+            <div className="text-xs text-muted-foreground">Total de retenções (SIAI Pessoal)</div>
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              {retencoes == null ? "—" : formatCurrencyBRL(retencoes.total)}
+              <Link
+                href={`/ccd/desconto-folha/retencoes?cpf=${cpfSelecionado}`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Mapa de retenções
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       <form
-        className="flex gap-2"
+        className="flex flex-wrap items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           setQ(qInput.trim());
           setPage(1);
+          setSugestoesAbertas(false);
         }}
       >
-        <Input
-          value={qInput}
-          onChange={(e) => setQInput(e.target.value)}
-          placeholder="Processo (ex.: 100/2023), responsável ou órgão"
-          className="max-w-sm"
-        />
+        <div className="relative w-full max-w-sm">
+          <Input
+            value={qInput}
+            onChange={(e) => {
+              setQInput(e.target.value);
+              setSugestoesAbertas(true);
+            }}
+            onFocus={() => setSugestoesAbertas(true)}
+            onBlur={() => setSugestoesAbertas(false)}
+            onKeyDown={(e) => e.key === "Escape" && setSugestoesAbertas(false)}
+            placeholder="Processo (ex.: 100/2023), responsável, CPF ou órgão"
+          />
+          {temSugestoes && sugestoes && (
+            <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover p-1 text-sm shadow-md">
+              {sugestoes.pessoas.length > 0 && (
+                <div className="px-2 pt-1 text-xs font-medium text-muted-foreground">Pessoas</div>
+              )}
+              {sugestoes.pessoas.map((p) => (
+                <button
+                  key={p.cpf}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left hover:bg-muted"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() =>
+                    escolher({
+                      tipo: "pessoa",
+                      valor: p.cpf,
+                      rotulo: `${p.nome ?? "sem nome"} (${formatCpf(p.cpf)})`,
+                    })
+                  }
+                >
+                  <span className="truncate">
+                    {p.nome ?? "sem nome"}{" "}
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {formatCpf(p.cpf)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {p.qtd} cadastro{p.qtd === 1 ? "" : "s"}
+                  </span>
+                </button>
+              ))}
+              {sugestoes.orgaos.length > 0 && (
+                <div className="px-2 pt-1 text-xs font-medium text-muted-foreground">Órgãos</div>
+              )}
+              {sugestoes.orgaos.map((o) => (
+                <button
+                  key={o.nome}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left hover:bg-muted"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => escolher({ tipo: "orgao", valor: o.nome, rotulo: o.nome })}
+                >
+                  <span className="truncate">{o.nome}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {o.qtd} cadastro{o.qtd === 1 ? "" : "s"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <Button type="submit" variant="outline">
           Buscar
         </Button>
-        {q && (
+        {selecao && (
+          <>
+            <Badge variant="secondary" className="max-w-md truncate">
+              {selecao.tipo === "pessoa" ? "Pessoa: " : "Órgão: "}
+              {selecao.rotulo}
+            </Badge>
+            <Button type="button" variant="ghost" onClick={limparTudo}>
+              Limpar
+            </Button>
+          </>
+        )}
+        {q && !selecao && (
           <Button
             type="button"
             variant="ghost"
@@ -90,6 +291,24 @@ export default function DescontoFolhaPage() {
         )}
       </form>
 
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        {FILTROS_PRESENCA.map(([chave, rotulo]) => (
+          <div key={chave} className="flex items-center gap-2">
+            <Checkbox
+              id={`f-${chave}`}
+              checked={filtros[chave]}
+              onCheckedChange={(c) => {
+                setFiltros((f) => ({ ...f, [chave]: c === true }));
+                setPage(1);
+              }}
+            />
+            <Label htmlFor={`f-${chave}`} className="cursor-pointer font-normal">
+              {rotulo}
+            </Label>
+          </div>
+        ))}
+      </div>
+
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
@@ -98,7 +317,7 @@ export default function DescontoFolhaPage() {
               <TableHead>Órgão</TableHead>
               <TableHead>Responsável</TableHead>
               <TableHead>Notificação</TableHead>
-              <TableHead>AR</TableHead>
+              <TableHead>Recebimento</TableHead>
               <TableHead>Resposta</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead className="w-0" />
@@ -135,14 +354,18 @@ export default function DescontoFolhaPage() {
                       )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-sm">
-                      {c.notificacao.numero ?? "—"}
+                      {c.notificacao.numero ?? (c.notificacao.data ? "s/ nº" : "—")}
                       <div className="text-xs text-muted-foreground">
                         {formatData(c.notificacao.data)}
+                        {c.notificacao.tipo ? ` · ${TIPO_NOTIFICACAO[c.notificacao.tipo]}` : ""}
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-sm">
-                      {c.ar.numeroPostagem ?? "—"}
-                      <div className="text-xs text-muted-foreground">{formatData(c.ar.data)}</div>
+                      {c.ar.tipo ? TIPO_RECEBIMENTO[c.ar.tipo] : (c.ar.numeroPostagem ?? "—")}
+                      <div className="text-xs text-muted-foreground">
+                        {formatData(c.ar.data)}
+                        {c.ar.tipo && c.ar.numeroPostagem ? ` · ${c.ar.numeroPostagem}` : ""}
+                      </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-sm">
                       {c.resposta.processo ? (
@@ -167,7 +390,7 @@ export default function DescontoFolhaPage() {
                         <Badge variant={st.variant}>{st.label}</Badge>
                         {c.qtdValores > 0 && (
                           <span>
-                            {c.qtdMatches}/{c.qtdValores} FRAP
+                            {c.qtdMatches}/{c.qtdValores} conciliados
                           </span>
                         )}
                       </div>
@@ -249,7 +472,7 @@ function NovoCadastroDialog({
           <DialogTitle>Novo cadastro</DialogTitle>
           <DialogDescription>
             Informe o processo de execução. O débito e o responsável vêm do banco processo; a
-            notificação, o AR e o apensado são localizados ao salvar.
+            notificação, o recebimento e o apensado são localizados ao salvar.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -322,7 +545,7 @@ function NovoCadastroDialog({
                 <option key={d.idDebito} value={d.idDebito}>
                   #{d.idDebito} · {d.tipo ?? "débito"} · {formatCurrencyBRL(d.valorOriginal)} ·{" "}
                   {d.nomePessoa ?? "sem responsável"}
-                  {d.cancelado ? " (cancelado)" : ""}
+                  {d.cancelado ? " (cancelado)" : d.desdobrado ? " (original, desdobrado)" : ""}
                 </option>
               ))}
             </SelectNative>

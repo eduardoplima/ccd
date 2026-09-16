@@ -7,6 +7,8 @@ usuário autenticado.
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
@@ -30,10 +32,56 @@ def listar(
     q: str | None = Query(default=None, max_length=100),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=200),
+    com_notificacao: bool = Query(default=False),
+    com_recebimento: bool = Query(default=False),
+    com_resposta: bool = Query(default=False),
+    com_valores: bool = Query(default=False),
+    com_conciliacao: bool = Query(default=False),
+    cpf: str | None = Query(default=None, max_length=14),
+    orgao: str | None = Query(default=None, max_length=200),
     session: Session = Depends(get_db_session),
     _: FRAPUsuario = Depends(get_current_user),
 ) -> schemas.CadastroListResponse:
-    return service.listar(session, q=q, page=page, size=size)
+    return service.listar(
+        session,
+        q=q,
+        page=page,
+        size=size,
+        com_notificacao=com_notificacao,
+        com_recebimento=com_recebimento,
+        com_resposta=com_resposta,
+        com_valores=com_valores,
+        com_conciliacao=com_conciliacao,
+        cpf=cpf,
+        orgao=orgao,
+    )
+
+
+@router.get("/sugestoes", response_model=schemas.SugestoesOut)
+def sugestoes(
+    q: str = Query(..., min_length=2, max_length=100),
+    session: Session = Depends(get_db_session),
+    _: FRAPUsuario = Depends(get_current_user),
+) -> schemas.SugestoesOut:
+    return service.sugestoes(session, q)
+
+
+@router.get("/retencoes", response_model=schemas.RetencoesOut)
+def retencoes(
+    cpf: str = Query(..., min_length=11, max_length=14, pattern=r"^\d+$"),
+    session: Session = Depends(get_db_session),
+    _: FRAPUsuario = Depends(get_current_user),
+) -> schemas.RetencoesOut:
+    return service.retencoes(session, cpf)
+
+
+@router.get("/retencoes/mapa", response_model=schemas.MapaRetencoesOut)
+def mapa_retencoes(
+    cpf: str = Query(..., min_length=11, max_length=14, pattern=r"^\d+$"),
+    session: Session = Depends(get_db_session),
+    _: FRAPUsuario = Depends(get_current_user),
+) -> schemas.MapaRetencoesOut:
+    return service.mapa_retencoes(session, cpf)
 
 
 @router.get("/lookup", response_model=schemas.ProcessoLookup)
@@ -59,9 +107,10 @@ def criar(
 def detalhe(
     id_cadastro: int,
     session: Session = Depends(get_db_session),
+    sessao_processo: Session = Depends(get_processo_session),
     _: FRAPUsuario = Depends(get_current_user),
 ) -> schemas.CadastroDetalhe:
-    return service.detalhe(session, id_cadastro)
+    return service.detalhe(session, id_cadastro, sessao_processo)
 
 
 @router.patch("/{id_cadastro}", response_model=schemas.CadastroDetalhe)
@@ -110,6 +159,23 @@ async def extrair(
         tipo="ccd-desconto-folha-extrair",
         funcao="task_extrair_resposta_desconto_folha",
         argumentos={"id_cadastro": id_cadastro},
+    )
+    return JobOut.model_validate(job)
+
+
+@router.post("/localizar-notificacoes", response_model=JobOut, status_code=status.HTTP_202_ACCEPTED)
+async def localizar_notificacoes(
+    pool=Depends(get_arq_pool),
+    session: Session = Depends(get_db_session),
+    user: FRAPUsuario = Depends(require_role("admin")),
+) -> JobOut:
+    """Varre os cadastros ativos e localiza notificação e recebimento no banco `processo` (worker)."""
+    job = await jobs_service.enqueue_job(
+        pool,
+        session,
+        user=user,
+        tipo="ccd-desconto-folha-notificacoes",
+        funcao="task_localizar_notificacoes_desconto_folha",
     )
     return JobOut.model_validate(job)
 
@@ -173,3 +239,25 @@ def match_automatico(
     _: FRAPUsuario = Depends(get_current_user),
 ) -> schemas.MatchAutomaticoResultado:
     return service.match_automatico(session, id_cadastro)
+
+
+@router.get("/{id_cadastro}/frap-creditos", response_model=schemas.CreditosFrapResponse)
+def creditos_frap(
+    id_cadastro: int,
+    texto: str | None = Query(default=None, max_length=60),
+    valor: float | None = Query(default=None, gt=0),
+    desde: date | None = Query(default=None),
+    session: Session = Depends(get_db_session),
+    _: FRAPUsuario = Depends(get_current_user),
+) -> schemas.CreditosFrapResponse:
+    return service.creditos_frap(session, id_cadastro, texto=texto, valor=valor, desde=desde)
+
+
+@router.post("/{id_cadastro}/frap-creditos", response_model=schemas.CadastroDetalhe)
+def adotar_creditos_frap(
+    id_cadastro: int,
+    payload: schemas.AdotarCreditosInput,
+    session: Session = Depends(get_db_session),
+    user: FRAPUsuario = Depends(require_role("admin")),
+) -> schemas.CadastroDetalhe:
+    return service.adotar_creditos_frap(session, id_cadastro, payload, id_usuario=user.IdUsuario)

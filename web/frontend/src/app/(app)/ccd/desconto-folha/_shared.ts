@@ -1,4 +1,24 @@
-import type { StatusExtracao } from "@/schemas/desconto-folha";
+import type { StatusExtracao, TipoNotificacao, TipoRecebimento } from "@/schemas/desconto-folha";
+
+export const TIPO_NOTIFICACAO: Record<TipoNotificacao, string> = {
+  E: "eletrônica",
+  F: "postal",
+};
+
+export const TIPO_RECEBIMENTO: Record<TipoRecebimento, string> = {
+  E: "comunicação eletrônica",
+  T: "recebimento tácito",
+  AR: "AR (Correios)",
+  DE: "prazo iniciado (certidão da DE)",
+};
+
+export const JOB_LABEL: Record<string, string> = {
+  pending: "Na fila...",
+  running: "Executando...",
+  done: "Concluído",
+  failed: "Falhou",
+  cancelled: "Cancelado",
+};
 
 export const STATUS_EXTRACAO: Record<
   StatusExtracao,

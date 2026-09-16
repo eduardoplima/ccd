@@ -3,24 +3,60 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  adotarCreditosFrap,
   atualizarProcesso,
   criarCadastro,
   criarValor,
   desvincular,
   extrairResposta,
   getCadastro,
+  getCreditosFrap,
+  getMapaRetencoes,
+  getRetencoes,
+  getSugestoes,
   listCadastros,
+  localizarNotificacoes,
   lookupProcesso,
   matchAutomatico,
   removerCadastro,
   removerValor,
   vincular,
 } from "@/lib/api/desconto-folha";
-import type { CadastroInput, ValorInput } from "@/schemas/desconto-folha";
+import type { FiltrosCadastro } from "@/lib/api/desconto-folha";
+import type { CadastroInput, CreditosFrapParams, ValorInput } from "@/schemas/desconto-folha";
 
 const KEY = ["ccd-desconto-folha"] as const;
 
-export function useCadastros(params: { q?: string; page: number; size: number }) {
+export function useMapaRetencoes(cpf: string | null) {
+  return useQuery({
+    queryKey: [...KEY, "retencoes-mapa", cpf],
+    queryFn: () => getMapaRetencoes(cpf as string),
+    enabled: cpf != null,
+    staleTime: 60_000,
+  });
+}
+
+export function useRetencoes(cpf: string | null) {
+  return useQuery({
+    queryKey: [...KEY, "retencoes", cpf],
+    queryFn: () => getRetencoes(cpf as string),
+    enabled: cpf != null,
+    staleTime: 60_000,
+  });
+}
+
+export function useSugestoes(q: string) {
+  const texto = q.trim();
+  return useQuery({
+    queryKey: [...KEY, "sugestoes", texto],
+    queryFn: () => getSugestoes(texto),
+    enabled: texto.length >= 2,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useCadastros(params: FiltrosCadastro) {
   return useQuery({
     queryKey: [...KEY, "lista", params],
     queryFn: () => listCadastros(params),
@@ -72,6 +108,10 @@ export function useExtrairResposta() {
   return useMutation({ mutationFn: (id: number) => extrairResposta(id) });
 }
 
+export function useLocalizarNotificacoes() {
+  return useMutation({ mutationFn: () => localizarNotificacoes() });
+}
+
 export function useCriarValor(id: number) {
   const invalidar = useInvalidar();
   return useMutation({
@@ -108,4 +148,21 @@ export function useDesvincular(id: number) {
 export function useMatchAutomatico(id: number) {
   const invalidar = useInvalidar();
   return useMutation({ mutationFn: () => matchAutomatico(id), onSuccess: invalidar });
+}
+
+export function useCreditosFrap(id: number | null, params: CreditosFrapParams) {
+  return useQuery({
+    queryKey: [...KEY, "frap-creditos", id, params],
+    queryFn: () => getCreditosFrap(id as number, params),
+    enabled: id != null,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdotarCreditosFrap(id: number) {
+  const invalidar = useInvalidar();
+  return useMutation({
+    mutationFn: (idsLancamento: number[]) => adotarCreditosFrap(id, idsLancamento),
+    onSuccess: invalidar,
+  });
 }

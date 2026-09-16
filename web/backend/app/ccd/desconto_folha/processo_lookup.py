@@ -13,6 +13,7 @@ Armadilhas confirmadas no banco, todas tratadas aqui:
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import datetime
 from typing import Any, Optional
 
@@ -56,6 +57,14 @@ def resolver_processo(session: Session, texto: str) -> Optional[dict[str, Any]]:
     return dict(row) if row else None
 
 
+def primeiro_evento(session: Session, id_processo: int) -> Optional[int]:
+    """IdProcessoEvento do primeiro evento (Sequencial 0) — abre os autos do início."""
+    return session.execute(
+        text("SELECT MIN(IdProcessoEvento) FROM dbo.Pro_ProcessoEvento WHERE IdProcesso = :id"),
+        {"id": id_processo},
+    ).scalar()
+
+
 def processo_por_id(session: Session, id_processo: int) -> Optional[dict[str, Any]]:
     row = (
         session.execute(text(_SQL_PROCESSO.format(filtro="IdProcesso = :id")), {"id": id_processo})
@@ -66,24 +75,30 @@ def processo_por_id(session: Session, id_processo: int) -> Optional[dict[str, An
 
 
 def debitos_do_processo(session: Session, id_processo: int) -> list[dict[str, Any]]:
-    """Débitos do processo com o responsável: vigentes = sem filho vivo na cadeia
-    IdDebitoAnterior (a folha pode ter sido cancelada); cancelados vêm por último."""
+    """Débitos do processo com o responsável, toda a cadeia IdDebitoAnterior.
+
+    `desdobrado` = tem filho vivo (foi substituído/desmembrado: ex. 23057 do 99/2023 virou
+    29055 + 29282). O original continua selecionável porque é ele que o órgão usa como
+    referência do desconto em folha. Ordem: vigentes, desdobrados, cancelados.
+    """
     rows = session.execute(
         text(
             """
             SELECT d.IdDebito AS id_debito, d.valorOriginalDebito AS valor_original,
                    RTRIM(td.Descricao) AS tipo, RTRIM(sd.DescricaoStatusDivida) AS status,
                    d.DataCancelamento AS data_cancelamento,
-                   dp.IDPessoa AS id_pessoa, gp.Nome AS nome_pessoa, gp.Documento AS documento
+                   dp.IDPessoa AS id_pessoa, gp.Nome AS nome_pessoa, gp.Documento AS documento,
+                   CASE WHEN EXISTS (SELECT 1 FROM dbo.Exe_Debito f
+                                     WHERE f.IdDebitoAnterior = d.IdDebito
+                                       AND f.DataCancelamento IS NULL)
+                        THEN 1 ELSE 0 END AS desdobrado
             FROM dbo.Exe_Debito d
             LEFT JOIN dbo.Exe_TipoDebito td ON td.CodigoTipoDebito = d.CodigoTipoDebito
             LEFT JOIN dbo.Exe_StatusDivida sd ON sd.CodigoStatusDivida = d.CodigoStatusDivida
             LEFT JOIN dbo.Exe_DebitoPessoa dp ON dp.IDDebito = d.IdDebito
             LEFT JOIN dbo.GenPessoa gp ON gp.IdPessoa = dp.IDPessoa
             WHERE (d.IdProcessoExecucao = :id OR d.IdProcessoOrigem = :id)
-              AND NOT EXISTS (SELECT 1 FROM dbo.Exe_Debito f
-                              WHERE f.IdDebitoAnterior = d.IdDebito AND f.DataCancelamento IS NULL)
-            ORDER BY d.DataCancelamento, d.IdDebito
+            ORDER BY d.DataCancelamento, desdobrado, d.IdDebito
             """
         ),
         {"id": id_processo},
@@ -129,8 +144,9 @@ def informacoes(session: Session, numero: str, ano: str) -> list[dict[str, Any]]
         text(
             """
             SELECT inf.idInformacao AS id_informacao, ppe.SequencialProcessoEvento AS evento,
+                   ppe.IdProcessoEvento AS id_evento,
                    RTRIM(inf.setor) AS setor, inf.ordem, inf.nome_informacao, inf.resumo,
-                   inf.data_resumo,
+                   inf.data_resumo, inf.Inativa, inf.Titulo_Modelo_informacao AS titulo,
                    CONCAT(RTRIM(inf.setor), '_', inf.numero_processo, '_', inf.ano_processo, '_',
                           RIGHT(CONCAT('0000', inf.ordem), 4), '.pdf') AS arquivo
             FROM dbo.vw_ata_informacao inf
@@ -253,6 +269,57 @@ def apensados(session: Session, id_processo: int) -> list[dict[str, Any]]:
         {"id": id_processo},
     ).mappings()
     return [dict(r) for r in rows]
+
+
+def _sem_acento(texto: Any) -> str:
+    return (
+        unicodedata.normalize("NFKD", str(texto or "")).encode("ascii", "ignore").decode().lower()
+    )
+
+
+def respostas_no_principal(
+    infos_principal: list[dict[str, Any]],
+    *,
+    id_processo: int,
+    numero: str,
+    ano: str,
+    numero_notificacao: str | None,
+    data_notificacao: datetime | None,
+) -> list[dict[str, Any]]:
+    """Respostas do órgão digitalizadas no próprio principal, uma "fonte" por evento.
+
+    Sem apensado, a resposta entra como "Resposta à Comunicação - Notificação nº X"
+    no principal. Vale qualquer resumo alusivo a resposta, com o nº da notificação
+    (ou posterior à notificação, quando o resumo não traz o número). Shape igual ao
+    do apensado, para `_gravar`.
+    """
+    alvo = _sem_acento(numero_notificacao).strip()
+    por_evento: dict[int, dict[str, Any]] = {}
+    for i in infos_principal:
+        resumo = _sem_acento(i.get("resumo"))
+        if "resposta" not in resumo:
+            continue
+        dt = i.get("data_resumo")
+        if alvo and alvo in resumo:
+            pass
+        elif data_notificacao is not None and dt is not None and dt >= data_notificacao:
+            pass
+        else:
+            continue
+        ev = int(i["evento"])
+        fonte = por_evento.setdefault(
+            ev,
+            {
+                "id_processo": id_processo,
+                "numero": numero,
+                "ano": ano,
+                "data_registro": dt,
+                "evento": ev,
+                "infos": [],
+            },
+        )
+        fonte["infos"].append(i)
+    return list(por_evento.values())
 
 
 def evento_apensamento(

@@ -14,6 +14,7 @@ from app.ccd.automacao.antecedentes.router import router as ccd_automacao_antece
 from app.ccd.automacao.desconto_folha.router import router as ccd_automacao_desconto_folha_router
 from app.ccd.beneficios.router import router as ccd_beneficios_router
 from app.ccd.desconto_folha.router import router as ccd_desconto_folha_router
+from app.ccd.siai_pessoal.router import router as ccd_siai_pessoal_router
 from app.ccd.router import router as ccd_router
 from app.cgad.dashboards.router import router as cgad_dashboards_router
 from app.cgad.dataset.router import router as cgad_dataset_router
@@ -76,6 +77,7 @@ def create_app() -> FastAPI:
     # Módulo CCD
     app.include_router(ccd_router)
     app.include_router(ccd_desconto_folha_router)
+    app.include_router(ccd_siai_pessoal_router)
     app.include_router(ccd_automacao_desconto_folha_router)
     app.include_router(ccd_automacao_antecedentes_router)
     app.include_router(ccd_alertas_router)
