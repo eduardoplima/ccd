@@ -14,29 +14,36 @@ for line in Path(r"C:\Users\05911205424\Dev\ccd\web\.env").read_text(encoding="u
         k, v = line.split("=", 1)
         os.environ.setdefault(k, v)
 
-from langchain_openai import AzureChatOpenAI
-from sqlalchemy.orm import sessionmaker
-
-from cgad.utils import (
-    DB_DECISOES, get_connection, get_decisions_by_dates, process_decision_row, safe_int,
-)
 from cgad.etl.pipeline import (
     ExtractionFilters,
     enqueue_obrigacao_extraction,
     enqueue_recomendacao_extraction,
 )
 from cgad.schema import (
-    NERDecisao, Obrigacao, Recomendacao, ResponsibleChoice, CitationChoice,
+    CitationChoice,
+    NERDecisao,
+    Obrigacao,
+    Recomendacao,
+    ResponsibleChoice,
 )
+from cgad.utils import (
+    DB_DECISOES,
+    get_connection,
+    get_decisions_by_dates,
+    process_decision_row,
+    safe_int,
+)
+from frap.llm import DEFAULT_LLM_MODEL
+from frap.llm import structured as _structured
+from sqlalchemy.orm import sessionmaker
 
-DEP = "deepseek-v4-flash"
+DEP = os.environ.get("AZURE_OPENAI_DEPLOYMENT") or DEFAULT_LLM_MODEL  # só proveniência
 START, END = date(2024, 1, 1), date(2026, 12, 31)
 RUN_ID = "deepseek-2024_2026"
 
 
 def structured(cls):
-    llm = AzureChatOpenAI(deployment_name=DEP, model_name=DEP)
-    return llm.with_structured_output(cls, include_raw=False, method="function_calling")
+    return _structured(cls)
 
 
 def log(msg):

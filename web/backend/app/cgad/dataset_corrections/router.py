@@ -72,9 +72,7 @@ def _group_to_dto(state: State, group: EntityGroup) -> schemas.EntityGroupDto:
                 is_flagged=err is not None,
             )
         )
-    status_str, entity_label, decided_by, decided_at = service.group_status(
-        state, group
-    )
+    status_str, entity_label, decided_by, decided_at = service.group_status(state, group)
     return schemas.EntityGroupDto(
         group_id=group.group_id,
         document_id=group.document_id,
@@ -119,9 +117,7 @@ def list_documents(
         ]
         if not kept_groups:
             continue
-        decided = sum(
-            1 for g in kept_groups if service.group_status(state, g)[0] != "pending"
-        )
+        decided = sum(1 for g in kept_groups if service.group_status(state, g)[0] != "pending")
         if only_pending and decided >= len(kept_groups):
             continue
         doc = state.documents_by_id[doc_id]
@@ -136,9 +132,7 @@ def list_documents(
     items.sort(key=lambda x: x.document_id)
     total = len(items)
     page_items = items[(page - 1) * page_size : (page - 1) * page_size + page_size]
-    return schemas.DocumentListPage(
-        items=page_items, page=page, page_size=page_size, total=total
-    )
+    return schemas.DocumentListPage(items=page_items, page=page, page_size=page_size, total=total)
 
 
 @router.get("/documents/{document_id}", response_model=schemas.DocumentDetail)
@@ -149,9 +143,7 @@ def get_document(
     state = service.get_state()
     doc = state.documents_by_id.get(document_id)
     if doc is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="document not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="document not found")
     group_ids = state.groups_by_document.get(document_id, [])
     groups = [
         _group_to_dto(state, state.groups_by_id[gid])
@@ -162,9 +154,7 @@ def get_document(
         document_id=document_id,
         text=doc.text,
         ner_spans=[
-            schemas.NerSpanDto(
-                char_start=s.char_start, char_end=s.char_end, label=s.label
-            )
+            schemas.NerSpanDto(char_start=s.char_start, char_end=s.char_end, label=s.label)
             for s in doc.ner_spans
         ],
         groups=groups,
@@ -214,14 +204,10 @@ def decide_group(
             range_override=range_override,
         )
     except KeyError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="group not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="group not found")
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
-    status_str, entity_label, decided_by, decided_at = service.group_status(
-        state, group
-    )
+    status_str, entity_label, decided_by, decided_at = service.group_status(state, group)
     return schemas.GroupDecisionResponse(
         group_id=group.group_id,
         status=status_str,  # type: ignore[arg-type]
@@ -267,14 +253,10 @@ def list_unmapped(
                 decided_at=rec.decided_at if rec else None,
             )
         )
-    return schemas.UnmappedListPage(
-        items=items, page=page, page_size=page_size, total=total
-    )
+    return schemas.UnmappedListPage(items=items, page=page, page_size=page_size, total=total)
 
 
-@router.post(
-    "/unmapped/{row_id}/decide", response_model=schemas.UnmappedDecisionResponse
-)
+@router.post("/unmapped/{row_id}/decide", response_model=schemas.UnmappedDecisionResponse)
 def decide_unmapped(
     row_id: int,
     body: schemas.UnmappedDecisionRequest,
@@ -290,9 +272,7 @@ def decide_unmapped(
             decided_by=user.Email or user.NomeUsuario,
         )
     except KeyError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="row_id not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="row_id not found")
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     return schemas.UnmappedDecisionResponse(
@@ -393,9 +373,7 @@ def export_decisions() -> JSONResponse:
     )
     return JSONResponse(
         content=payload.model_dump(by_alias=True),
-        headers={
-            "Content-Disposition": 'attachment; filename="dataset-corrections.json"'
-        },
+        headers={"Content-Disposition": 'attachment; filename="dataset-corrections.json"'},
     )
 
 

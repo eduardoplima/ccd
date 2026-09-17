@@ -43,9 +43,7 @@ class EntityGroupDto(BaseModel):
     last_token_idx: int
     char_start: int
     char_end: int
-    gold_entity_label: Optional[str] = (
-        None  # MULTA / OBRIGACAO / ... or None for free groups
-    )
+    gold_entity_label: Optional[str] = None  # MULTA / OBRIGACAO / ... or None for free groups
     tokens: list[TokenInGroup]
     flagged_row_ids: list[int]
     status: DecisionStatus
@@ -74,8 +72,7 @@ class GroupDecisionRequest(BaseModel):
     last_token_idx: Optional[int] = Field(
         default=None,
         description=(
-            "Optional last token (inclusive) of the persisted entity. See "
-            "first_token_idx."
+            "Optional last token (inclusive) of the persisted entity. See first_token_idx."
         ),
     )
 

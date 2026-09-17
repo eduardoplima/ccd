@@ -17,7 +17,6 @@ As queries são copiadas verbatim das cells do notebook; o CPF do Nereu é hardc
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 
 import openpyxl
@@ -25,11 +24,7 @@ import pandas as pd
 
 from ccd.config import cpf
 from ccd.db import get_connection
-
-# gpt-4o (que o notebook usava) não está deployado neste recurso Azure, e o endpoint
-# em scripts/.env é o surface OpenAI-compatível (/openai/v1) — precisa de ChatOpenAI com
-# base_url, não AzureChatOpenAI. gpt-4.1 é o deployment disponível equivalente.
-DEFAULT_LLM_MODEL = "gpt-4.1"
+from ccd.llm import DEFAULT_LLM_MODEL
 
 CPF_NEREU = cpf("NEREU")
 DOCS = Path(__file__).resolve().parent / "docs"
@@ -86,14 +81,9 @@ def is_sesap(orgaos_servidores, orgao_envolvido) -> str:  # cell 124
 
 
 def build_llm(model: str):
-    from langchain_openai import ChatOpenAI
+    from ccd.llm import get_llm
 
-    return ChatOpenAI(
-        base_url=os.environ["AZURE_OPENAI_ENDPOINT"],
-        api_key=os.environ["AZURE_OPENAI_API_KEY"],
-        model=model,
-        temperature=0.0,
-    )
+    return get_llm(model)
 
 
 def get_verba_voto(llm, texto: str) -> str:  # cell 96
@@ -313,7 +303,9 @@ def main() -> None:
     ap.add_argument("--out", default=None, help="destino (default: <xlsx>_atualizada.xlsx)")
     ap.add_argument("--inplace", action="store_true", help="grava por cima do original")
     ap.add_argument("--dry-run", action="store_true", help="não grava e não chama o LLM")
-    ap.add_argument("--model", default=DEFAULT_LLM_MODEL, help="deployment LLM (default: gpt-4.1)")
+    ap.add_argument(
+        "--model", default=DEFAULT_LLM_MODEL, help=f"deployment LLM (default: {DEFAULT_LLM_MODEL})"
+    )
     args = ap.parse_args()
 
     xlsx = Path(args.xlsx)

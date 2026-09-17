@@ -1,0 +1,72 @@
+# Índice importado do Claude
+
+Cópia de 09/09/2026. Leia [as ressalvas e atualizações](../README.md) antes de aplicar estas notas. Resumos de andamento são históricos; consulte o corpo da nota e o estado atual da fonte.
+
+- [Nereu desconto em folha: progresso](nereu-desconto-folha-progresso.md) — 8 tramitados CCD→DIP 17/08/2026; conciliação 26/08: 04/2026 sem repasse FRAP, 1 OB 5.291,22 (29/07) p/ 2 competências, extrato só até 31/07
+- [Nereu baixa: arquivamento](nereu-baixa-arquivamento.md) — 100/106/1391/2023 ENVIADOS 01/09/2026 + 1417/2023 02/09/2026 (CCD→DIP, "ENVIO A GCCTH"); 3661/2022 pendente; gerador gerar_informacoes_nereu_arquivamento.py serve p/ os 7 restantes do lote
+- [Rastreio verificar FRAP + marcadores 5953](rastreio-verificar-frap.md) — ciclo Implementar→5953→Fim; rastreio_verificar_frap.py; 18 a marcar (18/08); CpfCnpjDepositante ~98% NULL
+- [e-Contas substitui Área Restrita](econtas-api-migracao.md) — processos.tce.rn.gov.br (SPA+REST); ccd/econtas.py; auth SSO tceauth (username=CPF=AR_USER); tramitarAutomatico; formfile a confirmar; assinatura segue Web PKI
+- [Tramitação CCD→gabinete bloqueada](ccd-tramitacao-gabinete-bloqueada.md) — desde 20/07/2026 servidor rejeita ("setor interno→externo"); falha silenciosa no requests; flag nao_tramita_setor_externo='S' na CCD
+- [Cancelar Tramitação de lote](cancelar-tramitacao-lote.md) — tela nova (radios rbTramitacao); só via navegador/frameset telaDeTrabalho.asp, requests volta vazio; lista pendentes do setor ativo
+- [Edição mínima + preservar versão](edicao-minima-preservar-versao.md) — só mexer nos pontos pedidos; backup timestamped antes de sobrescrever gerados; skill `.claude/skills/edicao-minima/`
+- [Sobrestamento: marcador + decisão](sobrestamento-via-pro-marcador.md) — DUAS vias: Pro_Marcador LIKE '%sobrest%' UNION informação 'Decis%sobrest%' (decisão do relator pode vir sem marcador); nereu = marcador 5846
+- [docxtpl: get_docx() descarta render](docxtpl-get-docx-descarta-render.md) — pós-processar via doc.docx entre render() e save()
+- [Repo moved, stale editable install](repo-moved-stale-editable-install.md) — `import ccd` fails after repo moved out of `Documents\Dev`; re-run `pip install -e .`
+- [MSSQL plain IP not named instance](mssql-plain-ip-not-named-instance.md) — connect with `10.24.0.77` + port 59678, never `\ControleExterno`
+- [LLM só via ccd.llm / frap.llm](azure-llm-v1-endpoint-gpt41.md) — DeepSeek no Foundry do SERPRO (LGPD); endpoint /openai/v1 exige ChatOpenAI(base_url=); guarda de host levanta fora de *.services.ai.azure.com
+- [GitHub SSH port 22 blocked](github-ssh-port-22-blocked.md) — `git push` times out on port 22 here; use SSH over 443 (`ssh.github.com:443`)
+- [Node fetch TLS intercepted](node-fetch-tls-corporate-mitm.md) — Node downloads fail with SELF_SIGNED_CERT_IN_CHAIN; use `NODE_EXTRA_CA_CERTS=~/.qmd-ca-bundle.pem`
+- [Cit_Citacoes é a fonte de citações](cit-citacoes-authoritative-source.md) — Tipo='C05'=5 dias; Data_envio_AR vazia; citação pode estar na origem OU execução; mais completa que LLM/PDF
+- [Nereu é presidente do IPERN](nereu-presidente-ipern.md) — citações 5d ao IPERN (raiz CNPJ 08242034) contam como dele na planilha_nereu
+- [Tabelas FRAP no BdDIP](frap-tables-in-bddip.md) — arrecadação = FRAPLancamento ValorDC='C', categorias 1/2/3/9; pix/cartão é CSV à parte
+- [Extrato BB FRAP: armadilhas](frap-extrato-bb-armadilhas.md) — Documento de TED = remetente; export pode vir com período errado (validação em ingest desde 07/2026); publica_extrato falha com FRAPMatchGuia
+- [CGAD: Cancelado quase sempre NULL](cgad-cancelado-mostly-null.md) — filtrar `IS NULL OR =0`; IPERN espalhado em IdOrgao 308/521
+- [Arrecadação: multa vs repasse PGE](arrecadacao-multa-vs-pge.md) — origem vem do banco processo: multa=Exe_Retorno_Boleto, PGE=PGE_Pagamento (não do FRAP)
+- [IPSAS: carteira da CCD](ipsas-carteira-ccd.md) — estudo p/ certificação ACCA; TCE como entidade que reporta; provisão 88,6% s/ R$ 356,7mi; 13 códigos de "Cancelada" ≠ equivalentes
+- [Exe_Debito.ValorAPagar é vazio](exe-debito-valorapagar-vazio.md) — NULL em 99,9% dos abertos; mensurar por valorOriginalDebito − ValorPago; Status_PGE é bit, não FK
+- [Semântica Exe_Parcelamento](exe-parcelamento-semantica.md) — SituacaoParcelamento sem domínio (2=em curso, 3/5=cancelado, 4=quitado); débito↔processo via Execucao OU Origem, nunca COALESCE
+- [Módulo WIKI da webapp](wiki-module-web.md) — .md em web/backend/wiki/; overrides prod em WIKI_EDITS_DIR; Button sem asChild
+- [Monitoramento desconto em folha: CRUD](monitoramento-desconto-folha-crud.md) — planilha aposentada 26/08/2026; FRAPMonitoramentoDescontoFolha (migração 0018, chave Grupo+Processo+CPF); job mensal SIAI (cron dia 10, FRAPVerificacaoSiaiFolha/0019, badge "SIAI"); UI conciliações OB/boleto removida (backend ficou)
+- [Webapp consolidada CCD](web-consolidacao-ccd.md) — web/ unifica frap-controle(FRAP)+decicontas(CGAD)+CCD; auth só em Usuarios; Fase 1 (esqueleto FRAP) feita; falta migração 0014 + Fase 2 CGAD
+- [web/ é uv workspace](web-uv-workspace-all-packages.md) — sincronize com `uv sync --all-packages`; `uv sync`/`uv run` no root do web/ esvazia o venv
+- [cgad.ner_metrics importa spacy](cgad-ner-metrics-importa-spacy.md) — não importar de web/backend (quebra o import da app); reimplemente a constante/função curta no backend
+- [src/lib/ é gitignorado](frontend-src-lib-gitignored.md) — `lib/` do .gitignore raiz pega web/frontend/src/lib/; negação já adicionada em web/.gitignore
+- [Host de deploy 10.24.0.197](deploy-host-var-disk-tight.md) — /var agora 24GB (não mais apertado); deploy auto via runner GitHub Actions no push à main (`.../actions-runner/_work/ccd/ccd/web`, compose `frap-controle`); sem root (só docker); CIFS só via volume docker
+- [Worker ARQ frágil ao CIFS](worker-arq-cifs-fragility.md) — frap-worker morre de vez se o mount CIFS falhar na criação (restart policy não cobre); `docker compose up -d worker` ressuscita; resiliência pendente
+- [Stage-2 CGAD duplica contra finais órfãos](cgad-stage2-dedup-orphan-finals.md) — dedup por IdNer*/staging, não pelo texto final; re-rodar NER duplica; driver gated por responsável de despesa (LEFT JOIN no script manual)
+- [Deploy prod: .env do host + migrações no git](github-deploy-secrets-empty.md) — deploy.yml lê /home/sudip/.env; migração aplicada em prod sem commit quebra todo deploy (0019, 31/08/2026); gh usa token do credential manager
+- [Área Restrita: fluxo de tramitação](area-restrita-tramitar-flow.md) — tramitar via oculto M→I (txtSetorDestino+txtFaseProcessual1); processo enviado some da listagem (sucesso, não "aguardando envio")
+- [Auditoria verbas saúde nereu_ms](nereu-ms-auditoria-verbas-saude.md) — 2 bugs corrigidos 23/07/2026 (órgão-SESAP sem checar transitória; vw_ata_informacao.IdProcesso NULL — filtrar por numero/ano!); errados r1 na CCD: 001390/2023, 003673/2022, 003691/2022, 003663/2022; 011525/2009 e 003070/2022 são OK
+- [Envio nereu_ms: progresso por relator](nereu-ms-envio-progresso.md) — rounds 1 e 2 ENVIADOS na perna CCD (13–22/07; exceção deliberada 003709/2022); perna DIP→gabinete não é da CCD; round_2 ainda não recebido pela DIP em 24/07
+- [Digitalizar exige distribuição prévia](area-restrita-digitalizar-requer-distribuicao.md) — inclusão de informação digitalizada falha silenciosa sem o processo distribuído ao usuário; rodar `distribuir` antes; alerts de data/numérico são JS estático (falso positivo)
+- [Contas: combos de auditoria no cadastro](contas-cadastro-combos-auditoria.md) — processos de CONTAS têm cboRelatorioInicialAuditoria (em branco, obrigatório); inclusão falha silenciosa se vazio; cadastrar_informacao_digitalizada preenche "N"
+- [Skill /enviar-antecedentes-gaana](../../../.agents/skills/enviar-antecedentes-gaana/SKILL.md) — runbook antecedentes: gerar_antecedentes.py (LLM+CPF) → distribuir → informacao-lote → assinar → tramitar ENVIO A GAANA
+- [Assinatura Web PKI via Playwright](webpki-playwright-assinatura.md) — extensão em ~/.ccd_webpki_ext + registro HKCU espelhado; Web Store bloqueada; Chrome ≥137 ignora --load-extension
+- [Antônio Ed é Conselheiro titular](antonio-ed-conselheiro-titular.md) — não usar "Substituto"; substitutos: Marco Antônio e Ana Paula
+- [Banco lag vs Área Restrita](read-db-lags-area-restrita.md) — o MSSQL processo (10.24.0.77) atrasa vs a Área Restrita ao vivo; p/ tramitação/recebimento recente, a Área Restrita é autoritativa
+- [vwDespesa* sem BdINFOCEX](vwdespesa-views-sem-bdinfocex.md) — uCCD não acessa BdINFOCEX; views do BdDIP alteradas 09/07/2026 (hash_edital removido, ELP local); usar vwDespesaPagamento p/ apurar pagamentos (credor vem do empenho)
+- [PGE_Processo é a fonte da dívida ativa](pge-processo-fonte-divida-ativa.md) — CDA/valor/status vêm de PGE_Processo por IdDebitoExecucao; Exe_Debito.Status_PGE vem vazio mesmo em débito inscrito
+- [Multa cominatória tem tabela própria](multa-cominatoria-tabela-propria.md) — Exe_Debito_MultaCominatoria (tipo 5); nº de diárias = total ÷ valor/dia, nunca diferença de datas
+- [Legendas nos quadros de gerar_informacao.py](gerar-informacao-legendas-quadros.md) — "Quadro N – título" acima de toda tabela, centralizado/negrito/#1A3D28; ref: processos/001454_2023
+- [Débito vigente é a FOLHA da cadeia](exe-debito-cadeia-folha-vigente.md) — IdDebitoAnterior cresce p/ frente; "IdDebitoAnterior IS NULL = head" do repo lê o original (1.602 cadeias afetadas); Exe_HistoricoDebito.dataInclusao = datainclusao do filho
+- [Relatório de auditoria financeira da carteira](relatorio-auditoria-financeira-ccd.md) — carteira+FRAP sob NBASP/NBC TASP; gerador md→docx→pdf; ativo R$ 353,2mi, provisão 83,89%, cobertura FRAP 62,7%
+- [Portaria do valor máximo da multa](portaria-valor-maximo-multa.md) — 2021 = Portaria 009/2021-GP/TCE, R$ 16.054,81 (DOE 2740, 18/01/2021); achar outros anos via API SISDOCS
+- [Multas da Res. 004/2013: gradação](multas-resolucao-004-2013-gradacao.md) — art. 29 gradua 5%→30% por dias de atraso (30% é TETO); art. 31, I: R$ 50/dia com piso de R$ 500
+- [SIAI: competência do item congelada](siai-item-competencia-congelada.md) — ALRN repete Mes='7' no item em todas as folhas; usar competência da FOLHA (view acerta, matcher tools/frap erra → falso NAO_DESCONTADA); caso 000731/2025 corrigido manual (IsManual=1)
+- [SIAI Despesa com Pessoal ≠ SIAI Pessoal](siai-despesa-pessoal-vs-siai-pessoal.md) — 2013-2020 em `SiaiDp_*`, o SIAI Pessoal só cobre 2021+; subsídio vem como "Vencimento Básico", não "Subsídio"
+- [Evento N = SequencialProcessoEvento](evento-e-sequencialprocessoevento.md) — o "Evento" exibido conta movimentações; vw_ata_informacao.ordem diverge (Mandado 002166/2024: ordem 17 = Evento 34)
+- [AR: baixa "01 Entregue" pode ser devolução](ar-baixa-entregue-pode-ser-devolucao.md) — Cit_ItensArquivoRetorno tem 1 linha por movimento; motivo 0 após motivos ≠0 = devolvido ao TCE; só a imagem do AR distingue
+- [005090/2018: execução sem citação](processo-005090-2018-citacao-frustrada.md) — marcador "Instaurar processo" mas sem prova de citação (art. 24 Res. 013/2015); sugerido completar art. 46, §2º (órgãos de vínculo) antes do edital
+- [SisBenefícios: CCD](sisbeneficios-ccd.md) — inciso IV (potencial+efetivo); questionário CGQ respondido; feature web/BdDIP: staging CCDBeneficio (migração 0020 aplicada), domínios lidos do BdBeneficio, export xlsx/json p/ SECEX; cron 1/15 vai inserir ~21k candidatos
+- [Fila de prioridade CCD/Início](fila-prioridade-ccd-inicio.md) — 3 abas (tempo/prescrição/todos); Tema 899 (tudo prescreve em 5a); MARCADORES_PERMANENCIA duplicado no backend web
+- [GitNexus quebrado no repo](gitnexus-index-quebrado.md) — storage v41 vs build v40; analyze segfaulta; impacto manual até consertar
+- [uvicorn --reload: worker órfão no Windows](uvicorn-reload-worker-orfao.md) — taskkill sem /T deixa órfão com a porta 8000 e código antigo; subir via Start-Process p/ sobreviver à sessão
+- [010613/2005 enviado à DIP](processo-010613-2005-enviado.md) — informação CCD tramitada 28/08/2026 (ENVIO A GCREN); desconto "IPERN" fica na folha SEAD/SIAI DP em "Descontos diversos" (degrau da parcela); Acórdão 135/2026: citar pela ementa (dispositivo impresso contaminado)
+- [Cit_Certidao situação 21 ambígua](cit-certidao-situacao-21-ambigua.md) — código 21 = tanto "tempestiva" quanto "não apresentação"; Data_Resposta pode ficar NULL; ler o PDF da certidão
+- [TAG São Bento: cadernos 1323/1325](tag-sao-bento-cadernos-1323-1325.md) — 001323 (Prefeito Aracleide) e 001325 (Juliana) defesas tempestivas, informações ENVIADAS 03/09/2026 (CCD→DIP, ENVIO A GCGEO); 001324 foi revelia
+- [Liquidação de multa cominatória na CCD](multa-cominatoria-liquidacao-ccd.md) — mora do dia seguinte ao prazo da DE; dias = (fim−ini); teto 2026 = Portaria 007/2026 R$ 21.493,07 (alínea f → R$ 10.746,54); caso 101053/2022 MACAUPREV (gerador em processos/101053_2022)
+- [Retorno de boleto: linha rejeitada](retorno-boleto-linha-rejeitada.md) — "já está com status pago" barra o pagamento real; 4 perdas reais em 6.205 rejeições (R$ 5.960,95); caso 004164/2020 = R$ 948,27 no crédito de 02/03/2026
+- [Monitoramento das obrigações curadas](monitoramento-obrigacoes-curadas.md) — staging approved do CGAD (813 e crescendo); só 16 no CGR, Obg_Obrigacao parada desde 02/2025; script + POP-CCD-013 sob NBASP 100
+- [Citação de LLM tem que ser conferida](llm-citacao-precisa-ser-conferida.md) — DeepSeek inventa trecho com confiança ALTA; conferir prefixo normalizado contra o material e rebaixar o veredito
+
+- [decisoes-etl extraído para outro repositório](project_decisoes_etl_extracted.md) — memória preservada da instalação antiga em Documents/Dev/ccd.

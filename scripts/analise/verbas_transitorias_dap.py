@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field  # noqa: E402
 
 from ccd.config import REPO_ROOT  # noqa: E402
 from ccd.db import run_query_df  # noqa: E402
+from ccd.llm import DEFAULT_LLM_MODEL as LLM_MODEL  # noqa: E402
 from ccd.pdf import extract_text_from_pdf  # noqa: E402
 from ccd.processo import get_info_file_path  # noqa: E402
 from scripts.analise.gerar_debitos_nereu_02072026 import build_enriched_df  # noqa: E402
@@ -35,7 +36,6 @@ MD_OUT = REPO_ROOT / "saidas" / "verbas_transitorias_dap.md"
 CACHE = REPO_ROOT / "saidas" / "verbas_transitorias_dap.csv"
 
 GRUPO_JA_FEITO = "Encaminhamento à DAP"
-LLM_MODEL = "gpt-4.1"  # endpoint /openai/v1 → ChatOpenAI(base_url=), não AzureChatOpenAI
 MAX_CHARS = 12_000
 
 _SQL_PRIMEIRA_DAP_BEN = """
@@ -74,19 +74,9 @@ class ClassificacaoVT(BaseModel):
 
 
 def build_llm():
-    import os
+    from ccd.llm import get_llm
 
-    from langchain_openai import ChatOpenAI
-
-    from ccd.config import load_env
-
-    load_env()
-    return ChatOpenAI(
-        base_url=os.environ["AZURE_OPENAI_ENDPOINT"],
-        api_key=os.environ["AZURE_OPENAI_API_KEY"],
-        model=LLM_MODEL,
-        temperature=0.0,
-    )
+    return get_llm()
 
 
 def _chave(n, a) -> str:

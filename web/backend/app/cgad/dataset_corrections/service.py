@@ -87,9 +87,7 @@ class State:
     available_labels: list[str]
     groups_by_id: dict[str, EntityGroup]
     groups_by_document: dict[int, list[str]]
-    decisions_by_token: dict[tuple[int, int], TokenDecision] = field(
-        default_factory=dict
-    )
+    decisions_by_token: dict[tuple[int, int], TokenDecision] = field(default_factory=dict)
     decisions_by_unmapped: dict[int, UnmappedDecision] = field(default_factory=dict)
 
 
@@ -229,9 +227,7 @@ def _compute_groups_for_doc(doc: Document, errors: list[ErrorRow]) -> list[Entit
         flagged_in_span = [i for i in span_range if i in flagged_idx_to_row]
         if not flagged_in_span:
             continue
-        flagged_rows = sorted(
-            rid for i in flagged_in_span for rid in flagged_idx_to_row[i]
-        )
+        flagged_rows = sorted(rid for i in flagged_in_span for rid in flagged_idx_to_row[i])
         groups.append(
             EntityGroup(
                 group_id=f"{doc.document_id}:{first}-{last}",
@@ -248,9 +244,7 @@ def _compute_groups_for_doc(doc: Document, errors: list[ErrorRow]) -> list[Entit
 
     # Phase 2 — free chains, with O-suggestion bridging within the same entity
     def implied(i: int) -> str:
-        return (
-            error_by_idx[i].label_sugerido if i in error_by_idx else doc.tokens[i].bio
-        )
+        return error_by_idx[i].label_sugerido if i in error_by_idx else doc.tokens[i].bio
 
     n = len(doc.tokens)
     i = 0
@@ -279,11 +273,7 @@ def _compute_groups_for_doc(doc: Document, errors: list[ErrorRow]) -> list[Entit
                 k = j + 1
                 while k < n and k not in used_token_idxs and implied(k) == "O":
                     k += 1
-                if (
-                    k < n
-                    and k not in used_token_idxs
-                    and _entity_or_none(implied(k)) == entity
-                ):
+                if k < n and k not in used_token_idxs and _entity_or_none(implied(k)) == entity:
                     end = k
                     j = k + 1
                     continue
@@ -480,14 +470,10 @@ def compute_group_token_labels(
 
     if decision == "accept":
         indices = [
-            i
-            for i in range(group.first_token_idx, group.last_token_idx + 1)
-            if i < len(doc.tokens)
+            i for i in range(group.first_token_idx, group.last_token_idx + 1) if i < len(doc.tokens)
         ]
         sequence = [
-            flagged_by_idx[i].label_sugerido
-            if i in flagged_by_idx
-            else doc.tokens[i].bio
+            flagged_by_idx[i].label_sugerido if i in flagged_by_idx else doc.tokens[i].bio
             for i in indices
         ]
         normalized = _normalize_bio(_fill_o_gaps_same_entity(sequence))
@@ -508,9 +494,7 @@ def compute_group_token_labels(
         if range_override is not None:
             first, last = range_override
             if first < 0 or last < 0 or first > last:
-                raise ValueError(
-                    "invalid range_override: first must be <= last and both >= 0"
-                )
+                raise ValueError("invalid range_override: first must be <= last and both >= 0")
             if last >= len(doc.tokens):
                 raise ValueError(
                     f"last_token_idx {last} is past the document's last token "
@@ -554,8 +538,7 @@ def record_group_decision(
         state, group, decision, entity_label, range_override=range_override
     )
     flagged_row_for_idx: dict[int, int] = {
-        state.errors_by_row_id[rid].token_idx_in_doc: rid
-        for rid in group.flagged_row_ids
+        state.errors_by_row_id[rid].token_idx_in_doc: rid for rid in group.flagged_row_ids
     }
     timestamp = now_iso()
     records: list[TokenDecision] = []

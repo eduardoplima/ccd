@@ -10,9 +10,9 @@ from ccd.db import get_connection
 
 conn = get_connection()
 
-from langchain_openai import AzureChatOpenAI
+from ccd.llm import get_llm, structured
 
-llm_mini = AzureChatOpenAI(model='gpt-5.4-mini')
+llm_mini = get_llm()
 
 CPF_NEREU = cpf("NEREU")
 # Nereu é presidente do IPERN; citações ao IPERN contam como dele. O IPERN tem mais de um
@@ -236,7 +236,7 @@ if not _ccd_cached:
         ('human', 'Texto da informação CCD:\n\n{texto}'),
     ])
 
-    chain_notif = prompt_notif | llm_mini.with_structured_output(schema=NotificacaoNereu)
+    chain_notif = prompt_notif | structured(NotificacaoNereu, llm_mini)
 
 if not _ccd_cached:
     # Classifica cada informação CCD com a LLM

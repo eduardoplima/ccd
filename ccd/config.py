@@ -19,10 +19,6 @@ SQL_DIR: Path = PACKAGE_DIR / "sql"
 # CCD_INFORMACOES_DIR env var (e.g. /mnt/informacoes_pdf on the Linux box).
 DEFAULT_INFORMACOES_DIR: str = r"\\10.24.0.6\tce$\Informacoes_PDF"
 
-# Default Azure OpenAI deployment name used by ccd.notebook.setup(). Override
-# with AZURE_OPENAI_DEPLOYMENT.
-DEFAULT_AZURE_DEPLOYMENT: str = "gpt-5.4-nano"
-
 _ENV_CANDIDATES = (
     REPO_ROOT / ".env",
     REPO_ROOT / "scripts" / ".env",

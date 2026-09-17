@@ -15,14 +15,23 @@ Levantamento em NEREU_PAGOS.md, revisto em 05/08/2026 contra a cadeia de débito
 [[exe-debito-cadeia-folha-vigente]]). Dois quadros distintos:
 
 - **Quitados**: 003269/2023 e 003661/2022 — pai "Pago Integralmente" e o saldo residual
-  do filho cancelado por erro de cadastro. Cabe o art. 26 na íntegra.
+  do filho cancelado por erro de cadastro. Não havendo o que cancelar, o parágrafo 5 toma a
+  conciliação como comprovação do recolhimento e pede o arquivamento pelo art. 26.
 - **Com saldo**: os outros oito — pai "Pago parcialmente" e filho(s) ainda "Em Aberto"
   (R$ 29,62 a R$ 158,58, atualização posterior ao desconto). O órgão pagador desconta e
   repassa o valor da notificação e não reprocessa a atualização perante o Tribunal, de
   modo que o resíduo não é imputável ao responsável; a conclusão sugere o cancelamento do
   valor residual, com quitação e arquivamento, e o encaminhamento traz o pedido subsidiário
   de arquivamento sem cancelamento (art. 159 da LC 464/2012 e art. 25, II e § 7º, da
-  Res. 013/2015).
+  Res. 013/2015). É esse resíduo — dívida ainda formalmente em aberto — que impediu o
+  arquivamento imediato após a baixa (parágrafo 3).
+
+O parágrafo 4 é comum aos dez e remete aos dois eventos do sobrestamento, buscados ao vivo por
+`eventos_sobrestamento`: a última informação da CCD anterior à decisão e a decisão do Relator.
+Em nove deles a informação é a instrutiva que noticiou o acórdão do Pleno do TJRN no Mandado de
+Segurança nº 0807247-93.2025.8.20.0000 (29/06/2026), e o mandado é citado. Em 003269/2023 não há
+instrutiva: a última informação da CCD (Evento 118) é o despacho sobre o próprio pagamento, e o
+parágrafo sai sem citar o mandado.
 
 Base: processos/modelos/nereu_baixa.docx.
 Rodar: .venv/Scripts/python.exe processos/gerar_informacoes_nereu_baixa.py
@@ -82,6 +91,13 @@ DEBITOS = [
      "ev_notificacao": 90, "oficio": "10281/2024", "apenso": "300043/2025", "ev_resposta": 93},
 ]
 
+# o acórdão do Pleno do TJRN (29/06/2026) no MS anulou as multas ligadas às vantagens
+# transitórias dos servidores da saúde; foi o que a CCD noticiou nos autos (Evento `ev_judicial`)
+# e o que levou o Relator a manter o sobrestamento (Evento `ev_decisao`)
+MANDADO = "Mandado de Segurança Cível nº 0807247-93.2025.8.20.0000"
+TITULO_DECISAO = "CCD - mantem sobrestamento"  # informação do gabinete (GCCTH)
+TITULO_INSTRUTIVA = "InformacaoInstrutiva"  # informações da CCD sobre o acórdão do MS
+
 DESCONTO = (
     "Notificado o órgão (Evento {ev_notificacao}), a Secretaria de Estado da Administração – SEAD "
     "respondeu por meio do Ofício nº {oficio}/SEAD (Evento {ev_resposta}), no qual informa a "
@@ -94,10 +110,10 @@ DESCONTO = (
 )
 
 CONCLUSAO_QUITADO = (
-    "Comprovado o recolhimento do valor devido, impõe-se a exclusão do nome do responsável do "
-    "Cadastro Informativo de Créditos não Quitados do Tribunal de Contas do Estado e o posterior "
-    "arquivamento do processo de execução, na forma do art. 26 da Resolução nº 013/2015 – TCE/RN, "
-    "devendo constar dos autos a certidão declaratória da quitação de que trata o seu parágrafo único."
+    "A conciliação realizada comprova o recolhimento do valor devido, portanto, impõe-se a "
+    "exclusão do nome do responsável do Cadastro Informativo de Créditos não Quitados do "
+    "Tribunal de Contas do Estado e o posterior arquivamento do processo de execução, na forma "
+    "do art. 26 da Resolução nº 013/2015 – TCE/RN."
 )
 CONCLUSAO_COM_SALDO = (
     "Verifica-se que o desconto consignado foi efetivado no valor fixado por este Tribunal no "
@@ -106,6 +122,11 @@ CONCLUSAO_COM_SALDO = (
     "cobrança custaria mais que o próprio valor a ser recuperado. Em face disso, sugere-se o "
     "cancelamento do valor residual, com expedição de quitação ao responsável e o consequente "
     "arquivamento do processo."
+)
+
+SOBRESTAMENTO = (
+    "{inicio} os fatos {referentes}relatados no Evento {ev_judicial} e a determinação do Exmo. "
+    "Conselheiro Relator exarada no Evento {ev_decisao}."
 )
 
 ENCAMINHAMENTO_QUITADO = (
@@ -122,6 +143,23 @@ ENCAMINHAMENTO_COM_SALDO = (
 
 def brl(valor: float) -> str:
     return f"{valor:,.2f}".replace(",", "@").replace(".", ",").replace("@", ".")
+
+
+def eventos_sobrestamento(ev) -> tuple[int | None, str, int | None]:
+    """(evento da informação da CCD, título dela, evento da decisão do Relator) do processo.
+
+    A decisão é a última do gabinete; a informação que a motivou é a última da CCD antes dela
+    (das instrutivas sobre o acórdão do MS, as anteriores são versões substituídas da mesma
+    matéria). O título importa: só a instrutiva trata do MS — em 003269/2023 a última é um
+    despacho sobre o próprio pagamento, e aí o parágrafo 4 sai sem citar o mandado."""
+    decisao = ev[ev.titulo.str.startswith(TITULO_DECISAO)].evento
+    if decisao.empty:
+        return None, "", None
+    y = int(decisao.max())
+    antes = ev[(ev.setor == "CCD") & (ev.evento < y)].sort_values("evento")
+    if antes.empty:
+        return None, "", y
+    return int(antes.iloc[-1].evento), antes.iloc[-1].titulo, y
 
 
 def carregar() -> list[dict]:
@@ -143,6 +181,16 @@ def carregar() -> list[dict]:
         LEFT JOIN Exe_StatusDivida s ON s.CodigoStatusDivida = f.CodigoStatusDivida
         WHERE f.IdDebitoAnterior IN ({ids}) AND s.DescricaoStatusDivida = 'Em Aberto'
         ORDER BY f.IdDebito""")
+    # eventos citados no parágrafo 3. `vw_ata_informacao.IdProcesso` vem NULL: filtrar por
+    # numero/ano. "Evento" na tela é o SequencialProcessoEvento (ver [[evento-e-sequencialprocessoevento]])
+    chaves = {f"p{n}": f'{r.numero}/{r.ano}' for n, r in enumerate(pais.itertuples())}
+    eventos = run_query_df(f"""
+        SELECT RTRIM(v.numero_processo)+'/'+RTRIM(v.ano_processo) processo, RTRIM(v.setor) setor,
+               RTRIM(v.Titulo_Modelo_informacao) titulo, ev.SequencialProcessoEvento evento
+        FROM vw_ata_informacao v
+        JOIN Pro_ProcessoEvento ev ON ev.idInformacao = v.idInformacao
+        WHERE RTRIM(v.numero_processo)+'/'+RTRIM(v.ano_processo)
+              IN ({",".join(f":{k}" for k in chaves)})""", **chaves)
     docs = ",".join(f"'{d['doc']}'" for d in DEBITOS)
     obs = run_query_df(f"""
         SELECT l.Documento, l.DocData, l.DtMovimento, l.Valor, c.Conta
@@ -156,7 +204,11 @@ def carregar() -> list[dict]:
         abertos = saldos[saldos.pai == deb["id"]]
         ob = obs.loc[deb["doc"]]
         pago = float(pai.ValorPago)
-        item = {**deb, "numero": pai.numero, "ano": pai.ano, "assunto": pai.assunto,
+        ev_judicial, titulo_judicial, ev_decisao = eventos_sobrestamento(
+            eventos[eventos.processo == f"{pai.numero}/{pai.ano}"])
+        item = {**deb, "ev_judicial": ev_judicial, "titulo_judicial": titulo_judicial,
+                "ev_decisao": ev_decisao,
+                "numero": pai.numero, "ano": pai.ano, "assunto": pai.assunto,
                 "relator": pai.relator, "setor": pai.setor, "situacao": pai.situacao,
                 "pago": pago, "saldo": float(abertos.valor.sum()),
                 "abertos": [(int(r.IdDebito), float(r.valor)) for r in abertos.itertuples()],
@@ -178,8 +230,11 @@ def status_debito(item: dict) -> str:
     # com um único resíduo o total já está dito: nada de "o que perfaz"
     if len(valores) > 1:
         detalhe += f", o que perfaz R$ {brl(item['saldo'])}"
-    return (f'O débito nº {item["id"]} consta como {item["situacao"]}, '
-            f'remanescendo em aberto débitos derivados de {detalhe}.')
+    plural = len(valores) > 1
+    return (f'O débito nº {item["id"]} consta como {item["situacao"]}, remanescendo em aberto '
+            f'{"os valores" if plural else "o valor"} de {detalhe}. '
+            f'{"Estes constituem" if plural else "Este constitui"} dívida em nome do responsável, '
+            f'o que obstou o arquivamento imediato dos autos por ocasião da baixa do pagamento.')
 
 
 def contexto(item: dict) -> dict:
@@ -189,9 +244,12 @@ def contexto(item: dict) -> dict:
         "abertura": 1,
         "desconto": 2,
         "status": 3,
-        "conclusao": 4,
-        "encaminhamento": 5,
+        "sobrestamento": 4,
+        "conclusao": 5,
+        "encaminhamento": 6,
     }
+    # só a informação instrutiva noticia o acórdão do MS; a do 003269/2023 trata do pagamento
+    referentes = f"referentes ao {MANDADO} " if item["titulo_judicial"] == TITULO_INSTRUTIVA else ""
     return {
         "processo": f'{item["numero"]}/{item["ano"]} - TC',
         "assunto": item["assunto"],
@@ -205,6 +263,10 @@ def contexto(item: dict) -> dict:
                                        "valor_par": brl(item["valor_par"]),
                                        "total": brl(item["total"])}),
         "status": f'{corpo["status"]}. {status_debito(item)}',
+        # sem resíduo o parágrafo 3 não termina no arquivamento obstado: nada a que dar seguimento
+        "sobrestamento": f'{corpo["sobrestamento"]}. ' + SOBRESTAMENTO.format(
+            inicio="Sobrevieram" if quitado else "Em seguida, sobrevieram",
+            referentes=referentes, **item),
         "conclusao": f'{corpo["conclusao"]}. ' + (
             CONCLUSAO_QUITADO if quitado else CONCLUSAO_COM_SALDO),
         "encaminhamento": f'{corpo["encaminhamento"]}. ' + (
@@ -253,20 +315,31 @@ if __name__ == "__main__":
         texto = "\n".join(p.text for p in docx.Document(str(out)).paragraphs)
         assert "{{" not in texto and "}}" not in texto, "placeholder não substituído"
         for trecho in (ctx["processo"], ctx["assunto"], RESPONSAVEL, CPF, item["doc"],
-                       ctx["valor"], ctx["desconto"], ctx["status"], ctx["conclusao"],
-                       ctx["encaminhamento"], DATA):
+                       ctx["valor"], ctx["desconto"], ctx["status"], ctx["sobrestamento"],
+                       ctx["conclusao"], ctx["encaminhamento"], DATA):
             assert trecho in texto, f'{item["numero"]}: faltou "{trecho[:40]}"'
         # a conciliação tem de vir rastreável: resposta do órgão, OB e as duas datas
         for trecho in (f'Evento {item["ev_notificacao"]}', f'Evento {item["ev_resposta"]}',
                        item["oficio"], item["doc"], item["data_ob"], item["data_extrato"],
                        item["par"], brl(item["total"]), brl(item["valor_par"])):
             assert trecho in ctx["desconto"], f'{item["numero"]}: faltou "{trecho}"'
-        # os cinco parágrafos do corpo saem numerados
-        for n in range(1, 6):
+        # os seis parágrafos do corpo saem numerados (o 4 é o do sobrestamento)
+        for n in range(1, 7):
             assert f"\n{n}. " in "\n" + texto, f'{item["numero"]}: faltou o parágrafo {n}'
-        # sem saldo, a conclusão é o art. 26 puro; havendo saldo, cancelamento do resíduo +
-        # quitação + arquivamento, com o pedido subsidiário no encaminhamento
+        assert "\n7. " not in "\n" + texto, f'{item["numero"]}: parágrafo a mais'
+        # os eventos citados têm de existir: sem eles o parágrafo 4 sai com "None". o mandado
+        # só é citado quando a informação da CCD é a instrutiva que noticiou o acórdão
+        assert item["ev_judicial"] and item["ev_decisao"], (
+            f'{item["numero"]}: eventos do sobrestamento não localizados')
+        for trecho in (f'Evento {item["ev_judicial"]}', f'Evento {item["ev_decisao"]}'):
+            assert trecho in ctx["sobrestamento"], f'{item["numero"]}: faltou "{trecho}"'
+        assert (MANDADO in ctx["sobrestamento"]) == (item["titulo_judicial"] == TITULO_INSTRUTIVA), (
+            f'{item["numero"]}: menção ao mandado não confere com o Evento {item["ev_judicial"]} '
+            f'({item["titulo_judicial"]})')
+        # sem saldo, atesta-se o pagamento e aplica-se o art. 26; havendo saldo, a conclusão pede
+        # cancelamento do resíduo + quitação + arquivamento, com o pedido subsidiário no encaminhamento
         if item["abertos"]:
+            assert ("Estes constituem" in ctx["status"]) == (len(item["abertos"]) > 1)
             for trecho in ("cancelamento do valor residual", "expedição de quitação",
                            "arquivamento do processo"):
                 assert trecho in ctx["conclusao"], f'{item["numero"]}: faltou "{trecho}"'
@@ -276,6 +349,7 @@ if __name__ == "__main__":
             # resíduo único: o total não se repete
             assert ("o que perfaz" in ctx["status"]) == (len(item["abertos"]) > 1)
         else:
-            assert "art. 26" in ctx["conclusao"]
+            for trecho in ("A conciliação realizada", "recolhimento do valor devido", "art. 26"):
+                assert trecho in ctx["conclusao"], f'{item["numero"]}: faltou "{trecho}"'
         assert out.with_suffix(".pdf").is_file(), "PDF não gerado"
         print(f"  salvo: {out.relative_to(BASE)} (+ .pdf)")

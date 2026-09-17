@@ -37,6 +37,15 @@ para terminar amanhã.
 >
 > Segue pendente só o item 4 (backlog ≤2023 + DataSessao NULL).
 
+> **ATUALIZAÇÃO 2026-09-14**: **2023 concluído** — 12 janelas mensais (Extracao 15–26, dez→jan) rodadas
+> no host 10.24.0.197 dentro do `frap-worker` (`handoff/run_extracoes.py` via
+> `handoff/lancar_extracoes_remoto.py`), + re-rodada de set/ago/mai/mar (Extracao 27–30).
+> Resultado: 3.215/3.657 decisões com NER (resíduo 442 = sem responsável de despesa / finais antigas),
+> 48 obrigações e 1 recomendação. **3 obrigações ainda barradas** (533280 e 553176 em mai, 556202 em mar):
+> DeepSeek devolve a string `"null"` em `periodo_multa_cominatoria`; fix = validador `before` em
+> `cgad/schema.py` (`Obrigacao._null_string`, **sem commit**). Depois do deploy, re-rodar
+> `python /tmp/run_extracoes.py 2023 5 3` no container. Backlog: 2022 (4.765 sem NER) + DataSessao NULL.
+
 ## ✅ ~~PENDENTE 1~~ — Commitar 2 alterações de código (não commitadas)
 
 `git status` mostra:
@@ -177,11 +186,13 @@ de Souza); só d)–f) batem com o voto. Suscitar o erro material à Relatoria/S
 
 ---
 
-# 📌 ABRIR SEGUNDA 10/08/2026 — Desconto em folha (Nereu): 9 processos aguardando tramitação
+# ✅ Desconto em folha (Nereu): 8 tramitados à DIP em 17/08/2026; resta o suspenso
 
 Em **07/08/2026** as informações de desconto em folha do Sr. **Nereu Batista Linhares**
 (CPF ***.064.444-**) foram geradas, cadastradas e **assinadas** na Área Restrita.
-**Nada foi tramitado** — é o que fica para segunda.
+Em **17/08/2026** os **8 processos não suspensos** foram tramitados **CCD → DIP**
+(providência "Envio DE Nereu Desconto"; verificado: saíram da listagem da CCD).
+**002564/2024 ficou de fora** (débito 27187 Suspenso) — separado para outro momento.
 
 Gerador: `processos/gerar_informacoes_nereu_desconto_folha.py`
 (modelo `scripts/automacao/templates/desconto_folha.docx`; órgão notificado = SEAD;
@@ -207,19 +218,16 @@ Substituições já feitas (a informação de hoje substituiu a anterior da CCD)
 **Retirado do lote**: 000130/2023 — desconto já implementado; diretório apagado e o
 processo removido de `PROCESSOS` no gerador.
 
-## A fazer segunda
+## Pendências remanescentes
 
-1. **Decidir o destino/tramitação** dos 9 (nada foi tramitado). Se for o fluxo usual:
-   `python -m scripts.automacao.area_restrita tramitar <procs> --destino <SETOR> --providencia "<...>" --dry-run`
-   e depois sem `--dry-run`. Verificação: os processos saem da listagem do CCD.
-2. **002564/2024**: o débito 27187 está **Suspenso** — conferir se cabe determinar o
-   desconto antes de resolver a suspensão. Há ainda a informação antiga
+1. **002564/2024** (não tramitado): o débito 27187 está **Suspenso** — conferir se cabe
+   determinar o desconto antes de resolver a suspensão. Há ainda a informação antiga
    `CCD_002564_2024_0060`, cadastrada antes de 07/08 e não assinada; sumiu da fila de
    pendentes durante o lote — verificar o que houve com ela.
-3. **000142/2023 e 003078/2022** estão no marcador "NEREU - verificar data" (não
-   "Implementar"): confirmar se a determinação de desconto já vale para eles ou se
-   falta a verificação de data.
-4. Ajustar os marcadores depois da tramitação (os 6 "Implementar Nereu" continuam
-   ativos, sem data de exclusão).
+2. Ajustar os marcadores quando a SEAD implementar o desconto (os 6 "Implementar Nereu"
+   continuam ativos, sem data de exclusão).
+
+Feito em 17/08/2026: 000142/2023 e 003078/2022 (marcador "NEREU - verificar data")
+entraram no lote por decisão do usuário e foram tramitados junto.
 
 Pendências de terceiros na fila de assinatura (não tocar): 000237/2026, 000460/2026.

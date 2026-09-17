@@ -37,4 +37,5 @@ INNER JOIN processo.dbo.GenPessoa gp
     ON gp.IdPessoa = pprd.IdPessoa
 WHERE d.IdProcesso        = {id_processo}
   AND d.IdComposicaoPauta = {id_composicao_pauta}
-  AND d.idVotoPauta       = {id_voto_pauta};
+  -- NERDecisao.IdVotoPauta é NOT NULL: o ETL grava 0 quando a view tem NULL
+  AND ISNULL(d.idVotoPauta, 0) = {id_voto_pauta};

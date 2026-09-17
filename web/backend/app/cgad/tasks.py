@@ -24,11 +24,11 @@ from typing import Any
 from sqlalchemy import update
 
 
-
 logger = logging.getLogger(__name__)
 
 
 # ---- factories (never called at import time) -----------------------------
+
 
 def _build_structured(schema_cls):
     """DeepSeek no Foundry do SERPRO — modelo e método vêm de ``frap.llm``."""
@@ -123,9 +123,7 @@ def _update_extracao(session, extracao_id: int, **fields) -> None:
     if not updates:
         return
     session.execute(
-        update(ExtracaoORM)
-        .where(ExtracaoORM.IdExtracao == extracao_id)
-        .values(**updates)
+        update(ExtracaoORM).where(ExtracaoORM.IdExtracao == extracao_id).values(**updates)
     )
     session.commit()
 
@@ -205,12 +203,15 @@ async def run_full_extraction(ctx: dict, filters_dict: dict, extracao_id: int) -
         ner_errors = 0
         try:
             for _, row in df.iterrows():
-                triple = (
-                    int(row.id_processo),
-                    int(row.id_composicao_pauta),
-                    int(row.id_voto_pauta),
-                )
+                triple = (None, None, None)
                 try:
+                    # Dentro do try: uma linha com identidade inválida vira erro
+                    # daquela decisão, não aborta a extração inteira.
+                    triple = (
+                        int(row.id_processo),
+                        int(row.id_composicao_pauta),
+                        int(row.id_voto_pauta),
+                    )
                     ner_id = process_decision_row(
                         session=ner_session,
                         row=row,
@@ -348,9 +349,7 @@ async def run_full_extraction(ctx: dict, filters_dict: dict, extracao_id: int) -
                 session,
                 extracao_id,
                 tipo,
-                {**payload, "stage": "recomendacoes"}
-                if kind != "extracted"
-                else payload,
+                {**payload, "stage": "recomendacoes"} if kind != "extracted" else payload,
             )
             if kind == "extracted":
                 rec_progress["extracted"] += 1

@@ -2,19 +2,41 @@
 
 - Origem='S': pessoa tem rubrica TCE/FRAP descontada no contracheque
   (vwSiaiPessoalFolhaCompletaTodas). 1 cadastro por (cpf, id_orgao), 1 parcela
-  por linha da view. Parcelas marcadas como SituacaoParcela='2' (paga) já que
-  o desconto está consumado no contracheque.
+  por (competência, valor) distinto. Parcelas marcadas como SituacaoParcela='2'
+  (paga) já que o desconto está consumado no contracheque.
 - Origem='C': pessoa notificada via CCD (FRAPNotificacaoDescontoFolha) mas
   ainda não necessariamente implementada. 1 cadastro por CPF; sem parcelas.
 
 Idempotência: identificação via (CpfCnpj, IdOrgaoNotificado, Origem). Para
 Origem='C' o IdOrgaoNotificado é NULL e a chave passa a ser (CpfCnpj, Origem).
+
+Três regras do Origem='S' que parecem detalhe e não são:
+
+1. **Nada de DELETE.** A versão anterior apagava as parcelas do cadastro antes
+   de reinserir. A FK FK_FRAPMatchDescontoFolha_Parcela é NO_ACTION, então isso
+   passou a estourar assim que houve match (2.209 deles, 8 manuais). A inserção
+   virou incremental por `NOT EXISTS` — o trabalho humano fica intocado por
+   construção, não por cuidado.
+2. **O grão é (cpf, órgão, ano, mês, valor), não a linha da view.** É o mesmo
+   grão com que o matcher casa e deduplica o contracheque
+   (`frap.matching.descontofolha`, merge em CPF+mês+ano+valor_cent). Agregar com
+   SUM por competência geraria uma parcela que não bate com item nenhum, ou
+   seja, NAO_DESCONTADA falso; e não deduplicar deixaria remessa retransmitida
+   virar parcela que nunca casa.
+3. **Valor diferente numa competência já gravada vira parcela nova, não
+   UPDATE.** Folha complementar e 13º são um segundo evento de desconto, não
+   correção do primeiro — e reescrever ValorEsperado invalidaria em silêncio um
+   match já conciliado. Retificação real de valor (rara) cai na tipologia
+   `parcela-duplicada`, que existe para isso.
+
+`NumeroParcela` é NOT NULL e, para Origem='S', significa ordem de chegada, não
+posição num plano de parcelamento: continua de MAX(NumeroParcela)+1 do cadastro
+e nunca reescreve linha existente.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
 from typing import Any
 
 import pandas as pd
@@ -41,129 +63,173 @@ class ResultadoDescontosExtras:
 # Origem='S' — rubrica TCE/FRAP em contracheque (SIAI)
 # ---------------------------------------------------------------------------
 
-_SQL_SIAI = """
-SELECT v.cpf, v.nome, v.id_orgao, v.nome_orgao,
-       v.ano, v.mes, v.valor_rubrica,
-       v.id_contracheque, v.codigo_rubrica, v.nome_rubrica
-FROM BdDIP.dbo.vwSiaiPessoalFolhaCompletaTodas v
-WHERE v.vantagem_desconto = 'D'
-  AND (v.nome_rubrica LIKE '%tce%' OR v.nome_rubrica LIKE '%frap%')
-  AND v.nome_rubrica NOT LIKE '%VANT%'
-ORDER BY v.cpf, v.id_orgao, v.ano, v.mes
+# Predicado único de "rubrica é do TCE/FRAP". Alias obrigatório: `v`.
+# Importado também por app/jobs/tasks.py (FRAPVerificacaoSiaiFolha) — as duas
+# pontas têm que concordar sobre o que é uma rubrica nossa. O que NÃO se
+# compartilha é o grão: lá a linha é agregada com SUM (uso analítico), aqui não
+# pode ser (o matcher casa por valor exato).
+FILTRO_RUBRICA_TCE = """
+    v.vantagem_desconto = 'D'
+    AND (v.nome_rubrica LIKE '%tce%' OR v.nome_rubrica LIKE '%frap%'
+         OR v.nome_rubrica LIKE '%tribunal de contas%')
+    AND v.nome_rubrica NOT LIKE '%VANT%'
 """
 
-_SQL_FIND_S = """
-SELECT IdFRAPDescontoFolha
-FROM dbo.FRAPDescontoFolha
-WHERE Origem = 'S'
-  AND CpfCnpj = :cpf
-  AND IdOrgaoNotificado = :id_orgao
+# CPF vem da view sem padding garantido; o matcher já faz zfill(11) dos dois
+# lados (frap/matching/descontofolha.py). Padronizar aqui evita que um CPF sem
+# zero à esquerda crie um cadastro paralelo.
+_CPF11 = "RIGHT('00000000000' + LTRIM(RTRIM({col})), 11)"
+
+# ano/mes na view são CHAR com padding -> TRY_CAST obrigatório; lixo vira NULL e
+# cai fora. valor <= 0 é estorno: parcela negativa não existe no domínio.
+_CTE_SIAI = f"""
+WITH valida AS (
+    SELECT {_CPF11.format(col="v.cpf")}              AS cpf,
+           v.id_orgao                                AS id_orgao,
+           TRY_CAST(LTRIM(RTRIM(v.ano)) AS INT)      AS ano,
+           TRY_CAST(LTRIM(RTRIM(v.mes)) AS INT)      AS mes,
+           CAST(v.valor_rubrica AS DECIMAL(18, 2))   AS valor,
+           LTRIM(RTRIM(v.nome))                      AS nome,
+           LTRIM(RTRIM(v.nome_orgao))                AS nome_orgao
+    FROM BdDIP.dbo.vwSiaiPessoalFolhaCompletaTodas v
+    WHERE {FILTRO_RUBRICA_TCE}
+      AND v.id_orgao IS NOT NULL
+      AND LTRIM(RTRIM(v.cpf)) <> ''
+      AND v.valor_rubrica > 0
+      AND TRY_CAST(LTRIM(RTRIM(v.ano)) AS INT) IS NOT NULL
+      AND TRY_CAST(LTRIM(RTRIM(v.mes)) AS INT) BETWEEN 1 AND 12
+),
+grao AS (
+    SELECT DISTINCT cpf, id_orgao, ano, mes, valor FROM valida
+)
 """
 
-_SQL_INSERT_S = """
+# Um cadastro por (cpf, órgão). Sem UPDATE: o antigo só existia para reescrever
+# Qtd/ValorTotal, que a etapa 3 refaz de qualquer jeito.
+_SQL_INSERT_CADASTROS = f"""
+{_CTE_SIAI}
 INSERT INTO dbo.FRAPDescontoFolha
     (IdDescontoFolha, Origem, CpfCnpj, NomePessoa,
      IdOrgaoNotificado, NomeOrgaoNotificado,
      QtdParcelasPlanejadas, ValorTotalEsperado, Ativo, DataInclusao)
-OUTPUT inserted.IdFRAPDescontoFolha
-VALUES (NULL, 'S', :cpf, :nome, :id_orgao, :nome_orgao,
-        :qtd, :valor_total, 1, SYSUTCDATETIME());
-"""
-
-_SQL_UPDATE_S = """
-UPDATE dbo.FRAPDescontoFolha
-SET NomePessoa = :nome,
-    NomeOrgaoNotificado = :nome_orgao,
-    QtdParcelasPlanejadas = :qtd,
-    ValorTotalEsperado = :valor_total,
-    Ativo = 1,
-    DataIngestao = SYSUTCDATETIME()
-WHERE IdFRAPDescontoFolha = :id_pai;
-"""
-
-_SQL_DELETE_PARCELAS_S = (
-    "DELETE FROM dbo.FRAPDescontoFolhaParcela WHERE IdFRAPDescontoFolha = :id_pai;"
+SELECT NULL, 'S', g.cpf, MAX(g.nome), g.id_orgao, MAX(g.nome_orgao),
+       0, 0, 1, SYSUTCDATETIME()
+FROM valida g
+WHERE NOT EXISTS (
+    SELECT 1 FROM dbo.FRAPDescontoFolha df
+     WHERE df.Origem = 'S'
+       AND {_CPF11.format(col="df.CpfCnpj")} = g.cpf
+       AND df.IdOrgaoNotificado = g.id_orgao
 )
+GROUP BY g.cpf, g.id_orgao;
+"""
 
-_SQL_INSERT_PARCELA_S = """
+_SQL_INSERT_PARCELAS = f"""
+{_CTE_SIAI},
+alvo AS (
+    SELECT df.IdFRAPDescontoFolha AS id_pai, g.ano, g.mes, g.valor,
+           ROW_NUMBER() OVER (PARTITION BY df.IdFRAPDescontoFolha
+                              ORDER BY g.ano, g.mes, g.valor) AS seq
+    FROM grao g
+    JOIN dbo.FRAPDescontoFolha df
+      ON df.Origem = 'S'
+     AND df.Ativo = 1
+     AND {_CPF11.format(col="df.CpfCnpj")} = g.cpf
+     AND df.IdOrgaoNotificado = g.id_orgao
+    WHERE NOT EXISTS (
+        SELECT 1 FROM dbo.FRAPDescontoFolhaParcela p
+         WHERE p.IdFRAPDescontoFolha = df.IdFRAPDescontoFolha
+           AND p.AnoReferencia = g.ano
+           AND p.MesReferencia = g.mes
+           AND p.ValorEsperado = g.valor
+    )
+),
+base AS (
+    SELECT a.id_pai,
+           ISNULL((SELECT MAX(p.NumeroParcela)
+                     FROM dbo.FRAPDescontoFolhaParcela p
+                    WHERE p.IdFRAPDescontoFolha = a.id_pai), 0) AS ultimo
+    FROM alvo a
+    GROUP BY a.id_pai
+)
 INSERT INTO dbo.FRAPDescontoFolhaParcela
     (IdFRAPDescontoFolha, IdParcela, NumeroParcela, MesReferencia, AnoReferencia,
      ValorEsperado, DataVencimento, DataPagamentoParcela, SituacaoParcela, TipoDeBaixa)
-VALUES
-    (:id_pai, NULL, :numero_parcela, :mes, :ano, :valor, :dt_venc, :dt_pgto, '2', NULL);
+SELECT a.id_pai, NULL, b.ultimo + a.seq, a.mes, a.ano, a.valor,
+       DATEFROMPARTS(a.ano, a.mes, 1), DATEFROMPARTS(a.ano, a.mes, 15), '2', NULL
+FROM alvo a
+JOIN base b ON b.id_pai = a.id_pai;
+"""
+
+_SQL_RECALCULAR_CABECALHO = """
+UPDATE df
+   SET df.QtdParcelasPlanejadas = agg.Qtd,
+       df.ValorTotalEsperado    = agg.Total,
+       df.DataIngestao          = SYSUTCDATETIME()
+FROM dbo.FRAPDescontoFolha df
+CROSS APPLY (
+    SELECT COUNT(*) AS Qtd, COALESCE(SUM(p.ValorEsperado), 0) AS Total
+      FROM dbo.FRAPDescontoFolhaParcela p
+     WHERE p.IdFRAPDescontoFolha = df.IdFRAPDescontoFolha
+) agg
+WHERE df.Origem = 'S';
+"""
+
+# Contagens do dry-run. O LEFT JOIN (em vez do JOIN de _SQL_INSERT_PARCELAS) faz
+# as parcelas dos cadastros ainda inexistentes entrarem na conta.
+_SQL_DRY_CADASTROS = f"""
+{_CTE_SIAI}
+SELECT COUNT(*) FROM (
+    SELECT g.cpf, g.id_orgao
+    FROM valida g
+    WHERE NOT EXISTS (
+        SELECT 1 FROM dbo.FRAPDescontoFolha df
+         WHERE df.Origem = 'S'
+           AND {_CPF11.format(col="df.CpfCnpj")} = g.cpf
+           AND df.IdOrgaoNotificado = g.id_orgao
+    )
+    GROUP BY g.cpf, g.id_orgao
+) x;
+"""
+
+_SQL_DRY_PARCELAS = f"""
+{_CTE_SIAI}
+SELECT COUNT(*)
+FROM grao g
+LEFT JOIN dbo.FRAPDescontoFolha df
+       ON df.Origem = 'S'
+      AND df.Ativo = 1
+      AND {_CPF11.format(col="df.CpfCnpj")} = g.cpf
+      AND df.IdOrgaoNotificado = g.id_orgao
+WHERE df.IdFRAPDescontoFolha IS NULL
+   OR NOT EXISTS (
+        SELECT 1 FROM dbo.FRAPDescontoFolhaParcela p
+         WHERE p.IdFRAPDescontoFolha = df.IdFRAPDescontoFolha
+           AND p.AnoReferencia = g.ano
+           AND p.MesReferencia = g.mes
+           AND p.ValorEsperado = g.valor
+   );
 """
 
 
 def popular_descontos_siai(engine: Engine, *, dry_run: bool = False) -> ResultadoDescontosExtras:
-    """Popula FRAPDescontoFolha Origem='S' a partir da view SIAI."""
-    res = ResultadoDescontosExtras()
-    with engine.connect() as conn:
-        df = pd.read_sql(text(_SQL_SIAI), conn)
-    if df.empty:
-        return res
+    """Materializa FRAPDescontoFolha/Parcela Origem='S' a partir da view SIAI.
 
-    df["cpf"] = df["cpf"].astype(str).str.strip()
-    df["id_orgao"] = pd.to_numeric(df["id_orgao"], errors="coerce")
-    df = df[df["cpf"].str.len() > 0]
-    df = df[df["id_orgao"].notna()]
-    df["id_orgao"] = df["id_orgao"].astype(int)
-    df["ano"] = df["ano"].astype(int)
-    df["mes"] = df["mes"].astype(int)
+    Incremental e idempotente: pode rodar quantas vezes quiser, só insere o que
+    falta. Uma segunda execução seguida tem que reportar parcelas_inseridas=0.
+    """
+    res = ResultadoDescontosExtras()
 
     if dry_run:
-        grupos = df.groupby(["cpf", "id_orgao"])
-        res.cadastros_criados = len(grupos)
-        res.parcelas_inseridas = len(df)
+        with engine.connect() as conn:
+            res.cadastros_criados = int(conn.execute(text(_SQL_DRY_CADASTROS)).scalar_one())
+            res.parcelas_inseridas = int(conn.execute(text(_SQL_DRY_PARCELAS)).scalar_one())
         return res
 
     with engine.begin() as conn:
-        for (cpf, id_orgao), grupo in df.groupby(["cpf", "id_orgao"], sort=True):
-            grupo = grupo.sort_values(["ano", "mes"]).reset_index(drop=True)
-            cabeca = grupo.iloc[0]
-            valor_total = float(grupo["valor_rubrica"].fillna(0).sum())
-            qtd_parcelas = int(len(grupo))
-
-            existente = conn.execute(
-                text(_SQL_FIND_S), {"cpf": cpf, "id_orgao": int(id_orgao)}
-            ).scalar()
-
-            params_cab = {
-                "cpf": cpf,
-                "nome": _str_or_none(cabeca["nome"]),
-                "id_orgao": int(id_orgao),
-                "nome_orgao": _str_or_none(cabeca["nome_orgao"]),
-                "qtd": qtd_parcelas,
-                "valor_total": valor_total,
-            }
-            if existente is not None:
-                id_pai = int(existente)
-                conn.execute(text(_SQL_UPDATE_S), {**params_cab, "id_pai": id_pai})
-                res.cadastros_atualizados += 1
-            else:
-                id_pai = int(conn.execute(text(_SQL_INSERT_S), params_cab).scalar_one())
-                res.cadastros_criados += 1
-
-            conn.execute(text(_SQL_DELETE_PARCELAS_S), {"id_pai": id_pai})
-
-            parcelas_params = []
-            for idx, row in grupo.iterrows():
-                ano = int(row["ano"])
-                mes = int(row["mes"])
-                valor = float(row["valor_rubrica"] or 0)
-                parcelas_params.append(
-                    {
-                        "id_pai": id_pai,
-                        "numero_parcela": int(idx) + 1,
-                        "mes": mes,
-                        "ano": ano,
-                        "valor": valor,
-                        "dt_venc": date(ano, mes, 1),
-                        "dt_pgto": date(ano, mes, 15),
-                    }
-                )
-            if parcelas_params:
-                conn.execute(text(_SQL_INSERT_PARCELA_S), parcelas_params)
-                res.parcelas_inseridas += len(parcelas_params)
+        res.cadastros_criados = int(conn.execute(text(_SQL_INSERT_CADASTROS)).rowcount or 0)
+        res.parcelas_inseridas = int(conn.execute(text(_SQL_INSERT_PARCELAS)).rowcount or 0)
+        res.cadastros_atualizados = int(conn.execute(text(_SQL_RECALCULAR_CABECALHO)).rowcount or 0)
 
     return res
 

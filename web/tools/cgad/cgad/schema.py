@@ -130,6 +130,13 @@ class Obrigacao(BaseModel):
     e_multa_cominatoria_solidaria: bool | None = Field(default=False, description="Indica se a multa cominatória é solidária.")
     solidarios_multa_cominatoria: list[str] | None = Field(default=None, description="Lista de responsáveis solidários da multa cominatória.")
 
+    @field_validator("*", mode="before")
+    @classmethod
+    def _null_string(cls, v):
+        # DeepSeek devolve a string "null" em campos opcionais (visto em
+        # periodo_multa_cominatoria, 5 obrigações perdidas no lote de 2023).
+        return None if v == "null" else v
+
 
 class Recomendacao(BaseModel):
     """

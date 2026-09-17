@@ -16,6 +16,7 @@ import pandas as pd
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from ccd.llm import structured as _structured
 from ccd.notebook import setup
 from ccd.processo import get_informacoes_processo
 
@@ -162,7 +163,7 @@ def triar_processo(info: dict, engine, llm, aplicar_filtro_setor: bool = True) -
         f"Material para análise ({descricao_material}):\n\n{texto}"
     )
 
-    structured = llm.with_structured_output(schema=RelatorioCrivo)
+    structured = _structured(RelatorioCrivo, llm)
     relatorio: RelatorioCrivo = structured.invoke(
         [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=user_message)]
     )

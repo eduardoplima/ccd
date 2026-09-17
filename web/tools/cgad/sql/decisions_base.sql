@@ -20,7 +20,9 @@ SELECT
     d.[numeroResultado] as numero_resultado,
     d.[anoResultado] as ano_resultado,
     d.[resultadoTipo] as resultado_tipo,
-    d.[idVotoPauta] as id_voto_pauta,
+    -- NERDecisao.IdVotoPauta é NOT NULL e o ETL grava 0 quando a view traz
+    -- NULL; sem o ISNULL o valor chega como NaN e o int() do pipeline quebra.
+    ISNULL(d.[idVotoPauta], 0) as id_voto_pauta,
     d.[idVotoDecisao] as id_voto_decisao,
     d.[ementa],
     d.[assunto],

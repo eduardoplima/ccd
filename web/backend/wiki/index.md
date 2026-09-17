@@ -46,6 +46,7 @@ Os procedimentos da CCD são documentados como **POPs**, estruturados conforme a
 | POP-CCD-010 | [Reabertura de parcelamento](procedimentos/reabertura-parcelamento) | **Minuta** — novo parcelamento após encerramento por inadimplência. |
 | POP-CCD-011 | [Verificação de transferência ao FRAP](procedimentos/verificacao-frap) | Conciliação entre descontos em folha e repasses ao FRAP. |
 | POP-CCD-012 | [Baixa e saldo residual](procedimentos/baixa-saldo-residual) | Baixa da dívida paga por desconto e tratamento do resíduo. |
+| POP-CCD-013 | [Monitoramento de obrigações e recomendações](procedimentos/monitoramento-obrigacoes) | **Minuta** — triagem e varredura do acervo curado do CGAD, sob a NBASP 100. |
 
 ### POPs pendentes de elaboração
 

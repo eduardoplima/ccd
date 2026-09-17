@@ -5,7 +5,7 @@ Para cada processo com setor_atual='CCD' (sem apensados):
 2. exclui os com marcador de permanência (parcelamento em curso, acompanhamentos,
    sobrestados, protesto efetivado/enviado, pagamento integral);
 3. lê o despacho remetente (última informação de setor != CCD) no share de PDFs;
-4. extrai a tarefa pedida via LLM (gpt-4.1) e agrupa tarefas semelhantes.
+4. extrai a tarefa pedida via LLM (DeepSeek/SERPRO) e agrupa tarefas semelhantes.
 
 Saídas: saidas/analise/instrucao_ccd.csv (por processo) e saidas/analise/instrucao_ccd.md (relatório).
 Reexecutar retoma do CSV parcial (não reprocessa PDFs/LLM já feitos).
@@ -28,7 +28,6 @@ CSV_OUT = REPO_ROOT / "saidas" / "analise" / "instrucao_ccd.csv"
 MD_OUT = REPO_ROOT / "saidas" / "analise" / "instrucao_ccd.md"
 
 ID_SETOR_CCD = 762
-LLM_MODEL = "gpt-4.1"  # endpoint /openai/v1 → ChatOpenAI(base_url=), não AzureChatOpenAI
 MAX_CHARS = 12_000
 
 # Marcadores que indicam permanência na CCD (acompanhamento/aguardando/suspenso).
@@ -130,16 +129,9 @@ class Grupos(BaseModel):
 
 
 def build_llm():
-    import os
+    from ccd.llm import get_llm
 
-    from langchain_openai import ChatOpenAI
-
-    return ChatOpenAI(
-        base_url=os.environ["AZURE_OPENAI_ENDPOINT"],
-        api_key=os.environ["AZURE_OPENAI_API_KEY"],
-        model=LLM_MODEL,
-        temperature=0.0,
-    )
+    return get_llm()
 
 
 def carregar_base() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -174,7 +166,9 @@ def texto_despacho(row: pd.Series) -> str:
 def extrair_tarefas(df: pd.DataFrame, llm) -> pd.DataFrame:
     from langchain_core.prompts import PromptTemplate
 
-    chain = PromptTemplate.from_template(_PROMPT_TAREFA) | llm.with_structured_output(schema=Tarefa)
+    from ccd.llm import structured
+
+    chain = PromptTemplate.from_template(_PROMPT_TAREFA) | structured(Tarefa, llm)
 
     feitos: dict[str, dict] = {}
     if CSV_OUT.exists():
@@ -225,9 +219,11 @@ def extrair_tarefas(df: pd.DataFrame, llm) -> pd.DataFrame:
 def agrupar(df: pd.DataFrame, llm) -> pd.DataFrame:
     from langchain_core.prompts import PromptTemplate
 
+    from ccd.llm import structured
+
     contagens = df["tarefa"].value_counts()
     rotulos = "\n".join(f"- {t} ({n} processos)" for t, n in contagens.items())
-    chain = PromptTemplate.from_template(_PROMPT_GRUPOS) | llm.with_structured_output(schema=Grupos)
+    chain = PromptTemplate.from_template(_PROMPT_GRUPOS) | structured(Grupos, llm)
     grupos: Grupos = chain.invoke({"rotulos": rotulos})
 
     mapa = {r: g.nome for g in grupos.grupos for r in g.rotulos}

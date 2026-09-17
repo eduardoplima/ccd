@@ -1,0 +1,177 @@
+% !TEX root = ../dissertacao.tex
+%
+% Seção sobre o pipeline de validação humana das entidades identificadas por IA
+% na interface CGAD/Revisões. Desenhada para ser incluída via \input{} a partir
+% do capítulo correspondente da dissertação.
+%
+% Requisitos no preâmbulo do arquivo principal:
+%   \usepackage{tikz}
+%   \usetikzlibrary{arrows.meta, positioning, fit}
+%   \usepackage[alf]{abntex2cite}   % citações ABNT
+%
+% Citações em BibTeX referenciam docs/refs_validacao_cgad.bib (adicionar ao
+% \bibliography{} do arquivo principal, junto às referências já existentes).
+
+\section{Validação humana das entidades extraídas}
+\label{sec:validacao-revisoes}
+
+A extração automática de entidades por modelos de linguagem, ainda que
+competitiva, permanece sujeita a erros de fronteira, omissões e alucinações,
+o que é inaceitável quando as entidades extraídas --- multas, obrigações,
+ressarcimentos e recomendações --- alimentam rotinas de acompanhamento de
+decisões com efeitos concretos sobre jurisdicionados. Por isso, o módulo CGAD
+incorpora uma etapa obrigatória de validação humana, no paradigma
+\emph{human-in-the-loop} \cite{monarch2021humanintheloop, wu2022hitl}: nenhuma
+entidade identificada pelo modelo é considerada definitiva antes de ser
+examinada, corrigida ou rejeitada por um revisor na interface de Revisões.
+Esta seção descreve o pipeline completo, da extração à consolidação,
+ilustrado na Figura~\ref{fig:pipeline-validacao-cgad}.
+
+\begin{figure}[htb]
+  \centering
+  \begin{tikzpicture}[
+      font=\small,
+      node distance=7mm and 6mm,
+      caixa/.style={draw, rounded corners, align=center, minimum height=11mm,
+                    text width=25mm, inner sep=2pt},
+      ia/.style={caixa, fill=blue!12},
+      humano/.style={caixa, fill=green!15},
+      dado/.style={caixa, fill=gray!15},
+      seta/.style={-Stealth, thick},
+      grupo/.style={draw, dashed, gray, rounded corners, inner sep=3mm}
+    ]
+    % linha superior: extração automática
+    \node[dado] (fonte) {Decisões colegiadas\\ (\emph{view} do sistema processual)};
+    \node[ia, right=of fonte] (ner) {Estágio 1:\\ NER \emph{few-shot}\\ (LLM)};
+    \node[ia, right=of ner] (estr) {Estágio 2:\\ estruturação\\ (obrig.\ e recom.)};
+
+    % linha inferior: validação humana e consolidação (sentido inverso)
+    \node[humano, below=16mm of estr] (fila) {Fila de revisão\\ reserva exclusiva\\ (15 min)};
+    \node[humano, left=of fila] (revisor) {Revisão humana\\ {\footnotesize aprovar, corrigir,\\ rejeitar, adicionar}};
+    \node[dado, left=of revisor] (staging) {Tabelas de\\ \emph{staging}\\ (auditoria)};
+    \node[dado, left=of staging] (paineis) {Painéis e\\ ``aguardando\\ envio''};
+
+    % setas
+    \draw[seta] (fonte) -- (ner);
+    \draw[seta] (ner) -- (estr);
+    \draw[seta] (estr) -- (fila);
+    \draw[seta] (fila) -- (revisor);
+    \draw[seta] (revisor) -- (staging);
+    \draw[seta] (staging) -- (paineis);
+
+    % agrupamentos
+    \node[grupo, fit=(ner)(estr),
+          label={[font=\footnotesize\itshape, gray]above:extração automática}] {};
+    \node[grupo, fit=(fila)(revisor),
+          label={[font=\footnotesize\itshape, gray]below:validação humana}] {};
+    \node[grupo, fit=(staging)(paineis),
+          label={[font=\footnotesize\itshape, gray]below:consolidação}] {};
+  \end{tikzpicture}
+  \caption{Pipeline de validação humana das entidades extraídas por IA na
+    interface CGAD/Revisões. As entidades produzidas pelos dois estágios de
+    extração entram em uma fila de revisão com reserva exclusiva; o revisor
+    aprova, corrige, rejeita ou adiciona entidades, e o resultado é gravado em
+    tabelas de \emph{staging} que preservam a trilha de auditoria.}
+  \label{fig:pipeline-validacao-cgad}
+\end{figure}
+
+\subsection{Extração automática em dois estágios}
+\label{subsec:validacao-extracao}
+
+Os elementos submetidos à validação são produzidos por um pipeline de extração
+em dois estágios, executado sobre o texto integral dos acórdãos e decisões
+obtido de uma \emph{view} do sistema processual. No primeiro estágio, um
+modelo de linguagem da família DeepSeek \cite{deepseekai2024v3} --- acessado
+com saída estruturada validada por esquema (\emph{function calling}) e um
+\emph{prompt} com exemplos \emph{few-shot} \cite{brown2020language} ---
+realiza o reconhecimento de entidades, produzindo, para cada decisão, listas
+de trechos classificados nas quatro classes de interesse
+(\textsc{multa}, \textsc{obrigacao}, \textsc{ressarcimento} e
+\textsc{recomendacao}). No segundo estágio, restrito a obrigações e
+recomendações, extratores dedicados estruturam cada trecho em campos
+normalizados (descrição, responsável e prazo, este último inferido com apoio
+dos registros de citação do processo).
+
+Cada execução registra metadados de proveniência --- identificador do modelo,
+versão do \emph{prompt}, identificador da rodada e a resposta bruta do modelo
+--- de modo que toda entidade candidata é rastreável até a chamada que a
+produziu. A identidade da decisão ao longo de todo o pipeline é dada pela
+tripla \texttt{(IdProcesso, IdComposicaoPauta, IdVotoPauta)}, o que torna a
+extração idempotente: decisões já processadas não são reextraídas.
+
+\subsection{Fila de revisão e reserva exclusiva}
+\label{subsec:validacao-fila}
+
+Uma decisão torna-se pendente de revisão quando possui ao menos uma entidade
+candidata e ainda não foi revisada. Para permitir revisão concorrente por
+múltiplos revisores sem conflito, a abertura de uma decisão estabelece uma
+reserva exclusiva (\emph{claim}) com validade de quinze minutos, implementada
+como uma atualização condicional atômica no banco de dados: entre chamadores
+concorrentes, exatamente um obtém a reserva. A reserva é liberada quando o
+revisor deixa a tela e expira automaticamente em caso de abandono, devolvendo
+a decisão à fila.
+
+\subsection{A interface de revisão}
+\label{subsec:validacao-interface}
+
+A tela de revisão apresenta, lado a lado, o texto integral do acórdão e o
+painel de entidades. No texto, cada trecho identificado pelo modelo é
+destacado com uma cor por classe, permitindo ao revisor verificar a entidade
+em seu contexto original. Como o modelo devolve apenas o trecho textual, e
+não posições no documento, os deslocamentos (\emph{offsets}) de cada destaque
+são recalculados no momento da leitura por um alinhador em cascata: busca
+exata, busca insensível a maiúsculas e, por fim, alinhamento aproximado
+baseado em distância de edição \cite{levenshtein1966} com limiar de
+similaridade de 90\%. Trechos que não podem ser localizados no texto são
+sinalizados e permanecem visíveis apenas no painel lateral --- o revisor os
+avalia mesmo assim, o que evita que erros de transcrição do modelo escapem da
+validação.
+
+No painel de entidades, cada candidata é apresentada como um formulário
+específico de sua classe, com os campos estruturados propostos pelo modelo. O
+revisor dispõe de quatro ações: \emph{aprovar} a entidade tal como extraída;
+\emph{corrigir}, editando qualquer campo antes da aprovação;
+\emph{rejeitar}, caso em que uma justificativa textual mínima é obrigatória;
+e \emph{adicionar} entidades que o modelo deixou de identificar, selecionando
+diretamente o trecho correspondente no texto do acórdão e atribuindo-lhe uma
+classe. Entidades adicionadas manualmente são registradas sem vínculo com a
+extração automática, o que permite medir, a posteriori, a taxa de omissão do
+modelo.
+
+\subsection{Aprovação transacional e trilha de auditoria}
+\label{subsec:validacao-aprovacao}
+
+A validação é concluída por decisão, e não por entidade: o revisor submete o
+conjunto completo de vereditos em uma única transação. O servidor rejeita a
+submissão se a reserva não pertencer ao chamador, se a decisão já tiver sido
+revisada, se houver entidades duplicadas ou desconhecidas no envio, ou se
+alguma entidade pendente tiver sido omitida --- garantindo que toda decisão
+revisada teve todas as suas entidades explicitamente apreciadas.
+
+O resultado é persistido em tabelas de \emph{staging}, uma linha por entidade,
+contendo os campos validados, o veredito (aprovada ou rejeitada), o revisor, a
+data da revisão, a justificativa de rejeição quando houver e uma cópia do
+conteúdo originalmente proposto pelo modelo. As tabelas finais de extração
+nunca são alteradas pela revisão: o desenho é deliberadamente
+\emph{append-only}, de modo que a saída bruta do modelo e a versão validada
+pelo humano coexistem no banco. Essa separação preserva a trilha de auditoria
+--- essencial no contexto de um órgão de controle --- e viabiliza a comparação
+sistemática entre o que o modelo propôs e o que o revisor aprovou. As
+entidades aprovadas alimentam a etapa de consolidação, exposta na própria
+interface como a listagem ``aguardando envio'' e resumida em painéis de
+indicadores (volume revisado, taxa de aprovação, pendências por classe).
+
+\subsection{Limitações}
+\label{subsec:validacao-limitacoes}
+
+Três limitações do pipeline merecem registro. Primeiro, não há realimentação
+automática do modelo: as correções e rejeições dos revisores não são
+incorporadas ao \emph{prompt}, aos exemplos \emph{few-shot} ou a qualquer
+procedimento de ajuste --- o aproveitamento desse sinal permanece como
+trabalho futuro. Segundo, multas e ressarcimentos não passam pelo segundo
+estágio de estruturação e chegam ao revisor apenas com o trecho identificado,
+exigindo preenchimento manual integral dos campos. Terceiro, os
+deslocamentos dos destaques não são persistidos, sendo recalculados a cada
+leitura; alterações no texto-fonte podem, em tese, degradar o alinhamento de
+revisões antigas, ainda que a cascata de casamento aproximado mitigue o
+problema.

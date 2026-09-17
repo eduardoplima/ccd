@@ -41,19 +41,36 @@ ccd = ["sql/*.sql"]
 line-length = 100
 target-version = "py312"
 extend-exclude = [
-    "*.ipynb",
     "scripts/consultas",
-    "scripts/erros",
     "scripts/json_antecedentes",
+    # célula com sintaxe inválida (erro de parse não é suprimível por regra)
+    "scripts/analise/preparacao_ontologia.ipynb",
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+select = ["E", "F", "I", "UP", "B", "SIM", "TID"]
 ignore = ["E501"]  # line length handled by formatter, avoid noisy notebook-style strings
+
+# LGPD: cliente de LLM só pode nascer em ccd/llm.py, que garante o destino
+# (DeepSeek no Foundry do SERPRO). Qualquer outro arquivo que importe um cliente
+# direto quebra o CI.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"langchain_openai.ChatOpenAI".msg = "use ccd.llm.get_llm() — LLM só pela Azure do SERPRO (LGPD)"
+"langchain_openai.AzureChatOpenAI".msg = "use ccd.llm.get_llm() — LLM só pela Azure do SERPRO (LGPD)"
+"langchain_openai.OpenAIEmbeddings".msg = "embeddings fora do SERPRO são vedados (LGPD)"
+"langchain_openai.AzureOpenAIEmbeddings".msg = "use ccd.llm — embeddings só pela Azure do SERPRO (LGPD)"
+"openai.OpenAI".msg = "use ccd.llm.get_llm() — LLM só pela Azure do SERPRO (LGPD)"
+"openai.AzureOpenAI".msg = "use ccd.llm.get_llm() — LLM só pela Azure do SERPRO (LGPD)"
 
 [tool.ruff.lint.per-file-ignores]
 # script em células de notebook (imports por seção, expressões de exibição)
 "scripts/analise/planilha_nereu.py" = ["E402", "E702", "I001", "B018"]
+# o factory é o único lugar autorizado a construir o cliente
+"ccd/llm.py" = ["TID251"]
+# notebooks entram no lint só pela regra de LLM (TID251): estilo de célula
+# (imports por seção, expressões soltas) não é erro aqui.
+"*.ipynb" = ["E", "F", "I", "UP", "B", "SIM"]
+"scripts/erros/*" = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -236,3 +236,21 @@ scripts/docs/info_pix_cartao_042026.csv
 scripts/**/*.xlsx
 scripts/**/*.xls
 scripts/**/*.pkl
+
+# Planilhas trocadas com a diretoria — contêm CPF dos responsáveis.
+docs/**/*.xlsx
+/docs/nereu_copag/
+/docs/nereu_descontos/
+
+# Corpus de votos extraídos dos PDFs (gerado por scripts/analise/extrair_votos.py)
+/votos/
+
+# Saídas locais / artefatos gerados com dados de processos
+/tmp/
+/outputs/
+/votos.zip
+/processos/[0-9]*_[0-9]*/
+/processos/verificacao_frap/completo/
+/processos/verificacao_frap/curso/
+web/backend/worker.err
+**/~$*

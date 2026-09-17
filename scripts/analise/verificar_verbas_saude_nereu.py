@@ -3,7 +3,7 @@ transitórias de servidores da saúde.
 
 Critério: no processo de ORIGEM da execução deve haver informação do setor
 DAP_BEN cujo teor trate de vantagens remuneratórias transitórias de servidor
-da área da saúde. Veredito: LLM (gpt-4.1) em TODAS as origens com texto —
+da área da saúde. Veredito: LLM (DeepSeek/SERPRO) em TODAS as origens com texto —
 órgão da origem e keywords ficam só como cross-check (o 003070/2022 mostrou
 que keyword sem semântica dá falso OK: "vantagens transitórias" em frase
 imprecisa do monitoramento, quando a irregularidade era erro de cálculo).
@@ -203,8 +203,8 @@ def main() -> None:
     # LLM em todas as origens com texto
     amb = df[df["veredito"] == "AMBIGUO"]
     if not amb.empty:
-        from scripts.analise.atualizar_debitos_nereu_definitiva import build_llm
-        llm = build_llm("gpt-4.1")
+        from ccd.llm import get_llm
+        llm = get_llm()
         print(f"LLM: classificando {amb['origem'].nunique()} origens…")
         textos = infos.groupby("origem")["texto"].apply(" ".join)
         mapa = {"sim": "OK", "nao": "NAO_SAUDE", "indeterminado": "MANUAL"}

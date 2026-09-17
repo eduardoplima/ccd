@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from ccd.config import REPO_ROOT
+from ccd.llm import structured
 from ccd.notebook import setup
 from ccd.pdf import extract_text_from_pdf
 from ccd.processo import get_info_file_path
@@ -109,7 +110,7 @@ def redigir(llm, hdr: dict, processo: str, contexto: str, fonte: tuple[str, str]
          "AÇÃO REALIZADA / CONTEXTO (verdade para os §§ do meio e encerramento):\n{contexto}\n\n"
          "Redija a INFORMAÇÃO INSTRUTIVA."),
     ])
-    out: Informacao = (prompt | llm.with_structured_output(schema=Informacao)).invoke({
+    out: Informacao = (prompt | structured(Informacao, llm)).invoke({
         "exemplos": exemplos(), "processo": processo, "contexto": contexto, "base": base_msg,
         "assunto": hdr["assunto"], "relator": hdr["relator"],
     })

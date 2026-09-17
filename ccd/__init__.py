@@ -1,6 +1,5 @@
 from ccd.area_restrita import AreaRestrita, parse_processo
 from ccd.config import (
-    DEFAULT_AZURE_DEPLOYMENT,
     DEFAULT_INFORMACOES_DIR,
     PACKAGE_DIR,
     REPO_ROOT,
@@ -16,6 +15,7 @@ from ccd.docs import (
     docx_to_pdf_word,
     render_template,
 )
+from ccd.llm import DEFAULT_LLM_MODEL, get_llm, structured
 from ccd.pdf import extract_text_from_pdf, merge_pdfs
 from ccd.processo import (
     download_processo,
@@ -27,8 +27,10 @@ from ccd.processo import (
 __all__ = [
     "AreaRestrita",
     "parse_processo",
-    "DEFAULT_AZURE_DEPLOYMENT",
     "DEFAULT_INFORMACOES_DIR",
+    "DEFAULT_LLM_MODEL",
+    "get_llm",
+    "structured",
     "PACKAGE_DIR",
     "REPO_ROOT",
     "SQL_DIR",

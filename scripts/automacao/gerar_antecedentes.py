@@ -19,7 +19,6 @@ import argparse
 import contextlib
 import locale
 import math
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -34,7 +33,6 @@ from ccd.docs import docx_to_pdf, render_template
 from ccd.pdf import extract_text_from_pdf
 
 ID_SETOR_CCD = 762
-DEFAULT_LLM_MODEL = "gpt-4.1"  # endpoint /openai/v1 → ChatOpenAI(base_url=), não AzureChatOpenAI
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATE = BASE_DIR / "templates" / "antecedentes.docx"
 SAIDA_DEFAULT = REPO_ROOT / "saidas" / "automacao" / "antecedentes" / f"gaana_{datetime.now():%Y%m%d}"
@@ -67,15 +65,10 @@ def descobrir_candidatos(conn) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
-def build_llm(model: str = DEFAULT_LLM_MODEL):
-    from langchain_openai import ChatOpenAI
+def build_llm(model: str | None = None):
+    from ccd.llm import get_llm
 
-    return ChatOpenAI(
-        base_url=os.environ["AZURE_OPENAI_ENDPOINT"],
-        api_key=os.environ["AZURE_OPENAI_API_KEY"],
-        model=model,
-        temperature=0.0,
-    )
+    return get_llm(model)
 
 
 def _format_currency(value: Any) -> str:
@@ -93,8 +86,10 @@ def _format_currency(value: Any) -> str:
 def _extrair_pessoas(llm, texto_despacho: str) -> list[str]:
     from langchain_core.prompts import PromptTemplate
 
+    from ccd.llm import structured
+
     prompt = PromptTemplate.from_template(_PROMPT_PESSOAS)
-    chain = prompt | llm.with_structured_output(schema=PessoasAntecedentes)
+    chain = prompt | structured(PessoasAntecedentes, llm)
     resultado: PessoasAntecedentes = chain.invoke(texto_despacho)
     nomes: list[str] = []
     for p in resultado.pessoas:

@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import bindparam, text
 
 from ccd.config import cpf
+from ccd.llm import structured
 from ccd.notebook import setup
 from ccd.pdf import extract_text_from_pdf
 from ccd.processo import get_info_file_path
@@ -84,7 +85,7 @@ def main() -> None:
          "HISTÓRICO (informações, mais recentes ao fim):\n{timeline}\n\n"
          "ÚLTIMA INFORMAÇÃO DA CCD (texto):\n{texto_ccd}\n\nÚLTIMA MOVIMENTAÇÃO (texto):\n{texto_ult}"),
     ])
-    chain = prompt | ctx.llm.with_structured_output(schema=Analise)
+    chain = prompt | structured(Analise, ctx.llm)
 
     rows = []
     parados = []

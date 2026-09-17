@@ -13,6 +13,7 @@ Base: scripts/automacao/templates/desconto_folha.docx (modelo atualizado pelo us
 Rodar: .venv/Scripts/python.exe processos/gerar_informacoes_nereu_desconto_folha.py
 """
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -28,7 +29,8 @@ DESTINO = Path(__file__).parent / "nereu_desconto_folha"
 
 CPF = cpf("NEREU")
 ORGAO = "SECRETARIA DE ADMINISTRAÇÃO DO ESTADO (SEAD)"
-PROCESSOS = [  # 000130/2023 saiu: desconto já implementado
+# ex.: ... gerar_informacoes_nereu_desconto_folha.py 000134/2022 003006/2022 (sem args = lote de 07/08)
+PROCESSOS = sys.argv[1:] or [  # 000130/2023 saiu: desconto já implementado
     "000101/2022", "000133/2022", "000142/2023", "002062/2024",
     "002564/2024", "003023/2022", "003064/2022", "003078/2022", "003659/2022",
 ]

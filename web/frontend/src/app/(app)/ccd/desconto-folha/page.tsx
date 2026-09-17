@@ -38,6 +38,7 @@ import {
 } from "@/hooks/use-desconto-folha";
 import { messageForError } from "@/lib/error-messages";
 import { formatCpf, formatCurrencyBRL } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
   JOB_LABEL,
   STATUS_EXTRACAO,
@@ -176,18 +177,31 @@ export default function DescontoFolhaPage() {
           </div>
         ))}
         {cpfSelecionado && (
-          <div>
-            <div className="text-xs text-muted-foreground">Total de retenções (SIAI Pessoal)</div>
-            <div className="flex items-center gap-2 text-lg font-semibold">
-              {retencoes == null ? "—" : formatCurrencyBRL(retencoes.total)}
-              <Link
-                href={`/ccd/desconto-folha/retencoes?cpf=${cpfSelecionado}`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                Mapa de retenções
-              </Link>
+          <>
+            <div>
+              <div className="text-xs text-muted-foreground">Total de retenções</div>
+              <div className="text-lg font-semibold">
+                {retencoes == null ? "—" : formatCurrencyBRL(retencoes.total)}
+              </div>
             </div>
-          </div>
+            <div>
+              <div className="text-xs text-muted-foreground">SIAI Pessoal</div>
+              <div className="flex gap-1">
+                <Link
+                  href={`/ccd/siai-pessoal/contracheque?cpf=${cpfSelecionado}`}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-6 text-xs")}
+                >
+                  Contracheques
+                </Link>
+                <Link
+                  href={`/ccd/desconto-folha/retencoes?cpf=${cpfSelecionado}`}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-6 text-xs")}
+                >
+                  Retenções
+                </Link>
+              </div>
+            </div>
+          </>
         )}
       </div>
 

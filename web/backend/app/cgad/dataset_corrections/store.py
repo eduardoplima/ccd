@@ -125,9 +125,7 @@ def _iter_records(path: Path) -> Iterator[dict]:
             try:
                 yield json.loads(line)
             except ValueError:
-                logger.warning(
-                    "decisions.jsonl: skipping malformed line: %r", line[:80]
-                )
+                logger.warning("decisions.jsonl: skipping malformed line: %r", line[:80])
 
 
 def load_decisions(path: Path = DECISIONS_JSONL) -> LoadedDecisions:
@@ -189,9 +187,7 @@ def load_decisions(path: Path = DECISIONS_JSONL) -> LoadedDecisions:
     return LoadedDecisions(by_token=by_token, by_unmapped_row=by_unmapped)
 
 
-def append_token_decisions(
-    records: list[TokenDecision], path: Path = DECISIONS_JSONL
-) -> None:
+def append_token_decisions(records: list[TokenDecision], path: Path = DECISIONS_JSONL) -> None:
     """Atomic batch write — used when committing a group decision."""
     if not records:
         return
@@ -202,9 +198,7 @@ def append_token_decisions(
                 fh.write(record.to_jsonl_line())
 
 
-def append_unmapped_decision(
-    record: UnmappedDecision, path: Path = DECISIONS_JSONL
-) -> None:
+def append_unmapped_decision(record: UnmappedDecision, path: Path = DECISIONS_JSONL) -> None:
     with _lock:
         _ensure_header(path)
         with path.open("a", encoding="utf-8") as fh:

@@ -4,6 +4,11 @@
 > reais neste repositório, com um exercício prático por norma. Perspectiva única: **o TCE/Estado
 > como entidade que reporta** — auditoria de convergência dos jurisdicionados está fora de escopo.
 > Gerado em 03/08/2026.
+>
+> **Números superados em 14/08/2026.** A consulta lia a raiz da cadeia `IdDebitoAnterior`, e não a
+> folha; corrigido o grão, o ativo bruto passou a R$ 353,2 mi, a provisão a 83,89% e a recuperação a
+> R$ 7,81 mi. Use `RELATORIO_AUDITORIA_FINANCEIRA_CCD.md` §6.3 para a sensibilidade entre os dois
+> critérios. O mapa norma → dado → exercício abaixo continua válido.
 
 ---
 

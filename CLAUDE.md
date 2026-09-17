@@ -13,13 +13,14 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
   - `pip install -e .` (makes the `ccd` package importable from anywhere).
 - Runtime config lives in `scripts/.env` (gitignored). `ccd.config.load_env()` finds it from `Path(__file__)`, not the CWD — it works regardless of where Python is launched. Both `<repo>/.env` and `<repo>/scripts/.env` are accepted; the first hit wins. Provided keys:
   - `SQL_SERVER_HOST` / `SQL_SERVER_USER` / `SQL_SERVER_PASS` / `SQL_SERVER_PORT` — MSSQL credentials (legacy `SQLSERVER_*` names are accepted as fallback).
-  - `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` / `OPENAI_API_VERSION` — Azure OpenAI credentials used by every LLM notebook.
-  - `AZURE_OPENAI_DEPLOYMENT` (optional) — Azure deployment name. Defaults to `gpt-4o` (`ccd.config.DEFAULT_AZURE_DEPLOYMENT`).
+  - `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` / `OPENAI_API_VERSION` — credenciais do **Azure AI Foundry do SERPRO**. O endpoint é a base OpenAI-compatível terminada em `/openai/v1`.
+  - `AZURE_OPENAI_DEPLOYMENT` (optional) — deployment. Defaults to `DeepSeek-V4-Flash` (`ccd.llm.DEFAULT_LLM_MODEL`).
+  - `CCD_LLM_HOST_ALLOWED` (optional) — sufixo de host permitido pela guarda de LGPD. Defaults to `.services.ai.azure.com`.
   - `CCD_INFORMACOES_DIR` (optional) — overrides the default PDF share path. Defaults to `\\10.24.0.6\tce$\Informacoes_PDF` (`ccd.config.DEFAULT_INFORMACOES_DIR`); resolve at runtime with `ccd.config.informacoes_dir()`.
 
 ## Running things
 
-- **Notebooks** (the primary surface): launch from anywhere. New notebooks should use `from ccd.notebook import setup; ctx = setup()` to get an `engine` + `llm` ready to go (replaces the boilerplate `sys.path` + `load_dotenv` + `AzureChatOpenAI(...)` block). Or, for finer control, import from the submodules directly: `from ccd.db import get_connection`, `from ccd.config import informacoes_dir`. The legacy preamble (`sys.path.append("..")` + `from utils_ccd import ...`) still works because `scripts/utils_ccd.py` is a thin shim that re-exports the new package.
+- **Notebooks** (the primary surface): launch from anywhere. New notebooks should use `from ccd.notebook import setup; ctx = setup()` to get an `engine` + `llm` ready to go (replaces the boilerplate `sys.path` + `load_dotenv` + construção do cliente LLM). Or, for finer control, import from the submodules directly: `from ccd.db import get_connection`, `from ccd.config import informacoes_dir`. The legacy preamble (`sys.path.append("..")` + `from utils_ccd import ...`) still works because `scripts/utils_ccd.py` is a thin shim that re-exports the new package.
 - **Antecedentes CLI**: `python -m scripts.automacao.antecedentes --nome "<nome LIKE pattern>" --json <context.json> --doc_name <out.docx>`. Note the parameter is `--nome`, not `--cpf` — the underlying SQL filters by responsável name.
 - **CI**: GitHub Actions runs `ruff check` + `mypy ccd` on push/PR (see `.github/workflows/ci.yml`). No test suite at the moment.
 
@@ -27,7 +28,8 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 
 ### `ccd/` — the package (importable from anywhere after `pip install -e .`)
 
-- `ccd.config` — `PACKAGE_DIR`, `REPO_ROOT`, `SQL_DIR`, `DEFAULT_INFORMACOES_DIR`, `DEFAULT_AZURE_DEPLOYMENT`, `load_env()`, `read_sql(name)`, `informacoes_dir()`. All paths are resolved from `Path(__file__)`, killing the CWD trap. Single source of truth for env-var-overridable infra paths/names.
+- `ccd.config` — `PACKAGE_DIR`, `REPO_ROOT`, `SQL_DIR`, `DEFAULT_INFORMACOES_DIR`, `load_env()`, `read_sql(name)`, `informacoes_dir()`, `cpf(chave)`. All paths are resolved from `Path(__file__)`, killing the CWD trap. Single source of truth for env-var-overridable infra paths/names.
+- `ccd.llm` — **único** ponto de construção de cliente LLM da árvore raiz: `get_llm(model=None)` e `structured(schema, llm=None)`. Por LGPD, todo texto de processo só pode ser inferido no DeepSeek do Azure AI Foundry do SERPRO — o factory levanta `RuntimeError` se `AZURE_OPENAI_ENDPOINT` apontar para outro host, e não há fallback silencioso. Nunca instanciar `ChatOpenAI`/`AzureChatOpenAI` fora dele. (A árvore `web/` tem o irmão `frap.llm`, com as mesmas regras.) `structured()` fixa `method="function_calling"` — o `json_schema` nativo não é garantido no DeepSeek.
 - `ccd.notebook` — `setup(db='processo', llm=True) -> NotebookContext` with `engine` and (optionally) `llm`. Replaces the per-notebook prelude. Requires the `notebooks` extra (`pip install -e ".[notebooks]"`) for the LLM path.
 - `ccd.db` — `get_connection(db='processo') -> Engine`, plus `run_query(sql, **params)` and `run_query_df(sql, **params)`. Always use **named parameters** (`:foo`) and pass values as kwargs — never `.format()` SQL with user input.
 - `ccd.pdf` — `extract_text_from_pdf(path)`, `merge_pdfs(paths, out)`.
@@ -52,7 +54,8 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 - New SQL must use named parameters (`:foo`) with `ccd.db.run_query_df(sql, **params)`. Don't extend the legacy `.format()` pattern in `scripts/consultas/`; if you touch one of those queries, migrate it to `ccd/sql/` and parameters at the same time.
 - All user-facing strings (template variable names, LLM prompts, generated text) are in **Portuguese (pt-BR)**.
 - `templates/~$*.docx` are Word lockfiles — never commit them. Generated artifacts accumulate in the top-level `saidas/<area>/` (`saidas/analise/`, `saidas/automacao/`, gitignored); scripts resolve it via `ccd.config.REPO_ROOT / "saidas"`, notebooks via `../../saidas/<area>/`.
-- The PDF share path and Azure deployment name live in `ccd/config.py` as `DEFAULT_INFORMACOES_DIR` / `DEFAULT_AZURE_DEPLOYMENT`. Override per-host via `CCD_INFORMACOES_DIR` / `AZURE_OPENAI_DEPLOYMENT` env vars rather than editing the source.
+- The PDF share path lives in `ccd/config.py` as `DEFAULT_INFORMACOES_DIR`; o deployment do LLM, em `ccd/llm.py` como `DEFAULT_LLM_MODEL`. Override per-host via `CCD_INFORMACOES_DIR` / `AZURE_OPENAI_DEPLOYMENT` env vars rather than editing the source.
+- **LLM só via `ccd.llm` (ou `frap.llm` no `web/`)**: extração de PDF continua local, mas todo texto que vai para um modelo sai pela Azure do SERPRO. Isso é **imposto pelo lint**: `ruff` (regra `TID251`, `banned-api` nos três `pyproject.toml`) rejeita importar `ChatOpenAI`/`AzureChatOpenAI`/`*Embeddings`/`openai.OpenAI` em qualquer arquivo que não seja um dos dois factories — inclusive em notebooks. Se precisar de um provedor novo, mude o factory, não o call site.
 - Commits: use **mensagens curtas** (uma linha, estilo dos commits recentes) e **sem `Co-Authored-By: Claude`** no rodapé.
 
 <!-- gitnexus:start -->
