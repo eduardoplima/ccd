@@ -72,6 +72,7 @@ class UsuarioPermissao(Base):
         Integer, ForeignKey("Usuarios.IdUsuario", ondelete="CASCADE"), primary_key=True
     )
     Modulo: Mapped[str] = mapped_column(String(40), primary_key=True)
+    PodeVer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     PodeEditar: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 

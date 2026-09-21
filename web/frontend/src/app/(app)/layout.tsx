@@ -34,7 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [mustChangePassword, router]);
 
-  // Usuário restrito: rota de módulo que ele não vê → primeira rota visível.
+  // Módulo com visualização removida → primeira rota visível.
   const modulo = pathname ? moduloDaRota(pathname) : null;
   const semAcesso = !!user && !mustChangePassword && !!modulo && !podeVer(user, modulo);
   useEffect(() => {

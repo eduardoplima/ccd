@@ -1,5 +1,8 @@
 // mirrors backend app/permissoes.py (MODULOS + pode)
-type Permissoes = { papel: string; permissoes: { modulo: string; editar: boolean }[] };
+type Permissoes = {
+  papel: string;
+  permissoes: { modulo: string; ver: boolean; editar: boolean }[];
+};
 
 export const MODULOS = [
   { key: "ccd.inicio", grupo: "ccd", label: "Início", href: "/ccd" },
@@ -32,14 +35,14 @@ const PREFIXOS_EXTRAS: [string, Modulo][] = [
 
 export function podeVer(me: Permissoes | undefined, modulo: Modulo): boolean {
   if (!me) return false;
-  if (me.papel !== "restrito") return true;
-  return me.permissoes.some((p) => p.modulo === modulo);
+  if (me.papel === "admin") return true;
+  return me.permissoes.find((p) => p.modulo === modulo)?.ver ?? true;
 }
 
 export function podeEditar(me: Permissoes | undefined, modulo: Modulo): boolean {
   if (!me) return false;
   if (me.papel === "admin") return true;
-  return me.permissoes.some((p) => p.modulo === modulo && p.editar);
+  return me.permissoes.some((p) => p.modulo === modulo && p.ver && p.editar);
 }
 
 /** Módulo dono da rota (prefixo mais longo); `null` para rotas livres (/conta, /admin). */

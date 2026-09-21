@@ -19,6 +19,7 @@ export type TokenPair = z.infer<typeof tokenPairSchema>;
 // mirrors backend PermissaoItem
 export const permissaoItemSchema = z.object({
   modulo: z.string(),
+  ver: z.boolean().default(true),
   editar: z.boolean(),
 });
 export type PermissaoItem = z.infer<typeof permissaoItemSchema>;
@@ -27,7 +28,7 @@ export type PermissaoItem = z.infer<typeof permissaoItemSchema>;
 export const userOutSchema = z.object({
   idUsuario: z.number(),
   login: z.string(),
-  email: z.string().email().nullable(),
+  email: z.string().nullable(),
   nomeCompleto: z.string(),
   papel: z.string(),
   ativo: z.boolean(),

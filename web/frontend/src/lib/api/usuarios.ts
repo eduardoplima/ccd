@@ -13,7 +13,7 @@ import {
 } from "@/schemas/usuario";
 
 export interface UsuariosFilters {
-  papel?: "user" | "admin" | "restrito";
+  papel?: "user" | "admin";
   ativo?: boolean;
   q?: string;
   page: number;

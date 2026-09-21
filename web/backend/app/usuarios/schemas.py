@@ -15,7 +15,8 @@ _LOGIN_PATTERN = r"^[a-z0-9][a-z0-9._-]{1,63}$"
 class UsuarioOut(BaseModel):
     id_usuario: int = Field(validation_alias="IdUsuario", serialization_alias="idUsuario")
     login: str = Field(validation_alias="Login")
-    email: EmailStr | None = Field(default=None, validation_alias="Email")
+    # str, não EmailStr: saída não revalida o que já está no banco (ex.: "admin@local").
+    email: str | None = Field(default=None, validation_alias="Email")
     nome_completo: str = Field(validation_alias="NomeCompleto", serialization_alias="nomeCompleto")
     papel: str = Field(validation_alias="Papel")
     ativo: bool = Field(validation_alias="Ativo")
@@ -44,7 +45,7 @@ class UsuarioCreateRequest(BaseModel):
     login: str = Field(min_length=3, max_length=64, pattern=_LOGIN_PATTERN)
     email: EmailStr | None = None
     nome_completo: str = Field(min_length=1, max_length=255, validation_alias="nomeCompleto")
-    papel: Literal["user", "admin", "restrito"] = "user"
+    papel: Literal["user", "admin"] = "user"
 
     model_config = {"populate_by_name": True}
 
@@ -60,7 +61,7 @@ class UsuarioUpdateRequest(BaseModel):
     nome_completo: str | None = Field(
         default=None, min_length=1, max_length=255, validation_alias="nomeCompleto"
     )
-    papel: Literal["user", "admin", "restrito"] | None = None
+    papel: Literal["user", "admin"] | None = None
     ativo: bool | None = None
     # Quando presente, substitui a matriz inteira do usuário.
     permissoes: list[PermissaoItem] | None = None

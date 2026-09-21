@@ -128,9 +128,9 @@ def atualizar_usuario(
     nome_completo: str | None = None,
     papel: str | None = None,
     ativo: bool | None = None,
-    permissoes: dict[str, bool] | None = None,
+    permissoes: dict[str, tuple[bool, bool]] | None = None,
 ) -> FRAPUsuario:
-    """`permissoes` (módulo → pode editar), quando dado, substitui a matriz inteira."""
+    """`permissoes` (módulo → (ver, editar)), quando dado, substitui a matriz inteira."""
     user = obter_usuario(session, id_usuario)
     # `nome_completo` não é persistido (Usuarios não tem essa coluna); ignorado.
     _ = nome_completo
@@ -141,12 +141,16 @@ def atualizar_usuario(
         if not ativo:
             _revogar_refresh_tokens(session, user.IdUsuario)
     if permissoes is not None:
+        # "vê e não edita" é o default: não vira linha.
+        permissoes = {m: (v, e and v) for m, (v, e) in permissoes.items() if e or not v}
         atuais = {p.Modulo: p for p in user.permissoes}
-        for modulo, editar in permissoes.items():
+        for modulo, (ver, editar) in permissoes.items():
             if modulo in atuais:
-                atuais[modulo].PodeEditar = editar
+                atuais[modulo].PodeVer, atuais[modulo].PodeEditar = ver, editar
             else:
-                user.permissoes.append(UsuarioPermissao(Modulo=modulo, PodeEditar=editar))
+                user.permissoes.append(
+                    UsuarioPermissao(Modulo=modulo, PodeVer=ver, PodeEditar=editar)
+                )
         user.permissoes[:] = [p for p in user.permissoes if p.Modulo in permissoes]
     user.DataAtualizacao = datetime.now(UTC).replace(tzinfo=None)
     session.commit()

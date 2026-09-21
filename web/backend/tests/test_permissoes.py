@@ -20,15 +20,14 @@ DF = "ccd.desconto-folha"
 VER_DF = "/api/v1/ccd/desconto-folha/retencoes"
 
 
-def _usuario(papel: str, **modulos: bool) -> FRAPUsuario:
+def _linhas(modulos: dict[str, tuple[bool, bool]]) -> list[UsuarioPermissao]:
+    return [UsuarioPermissao(Modulo=m, PodeVer=v, PodeEditar=e) for m, (v, e) in modulos.items()]
+
+
+def _usuario(papel: str, **modulos: tuple[bool, bool]) -> FRAPUsuario:
+    """`modulos`: módulo → (ver, editar)."""
     return FRAPUsuario(
-        Login=papel,
-        SenhaHash="x",
-        Papel=papel,
-        Ativo=True,
-        permissoes=[
-            UsuarioPermissao(Modulo=m.replace("_", "."), PodeEditar=e) for m, e in modulos.items()
-        ],
+        Login=papel, SenhaHash="x", Papel=papel, Ativo=True, permissoes=_linhas(modulos)
     )
 
 
@@ -36,13 +35,11 @@ def _usuario(papel: str, **modulos: bool) -> FRAPUsuario:
     ("usuario", "ver", "editar"),
     [
         (_usuario("admin"), True, True),
+        (_usuario("admin", wiki=(False, False)), True, True),
         (_usuario("user"), True, False),
-        (_usuario("user", wiki=True), True, True),
-        (_usuario("user", wiki=False), True, False),
-        (_usuario("restrito"), False, False),
-        (_usuario("restrito", wiki=False), True, False),
-        (_usuario("restrito", wiki=True), True, True),
-        (_usuario("restrito", frap_jobs=True), False, False),
+        (_usuario("user", wiki=(True, True)), True, True),
+        (_usuario("user", wiki=(False, False)), False, False),
+        (_usuario("user", wiki=(False, True)), False, False),
     ],
 )
 def test_pode_tabela_verdade(usuario: FRAPUsuario, ver: bool, editar: bool) -> None:
@@ -68,10 +65,10 @@ def _client(factory: sessionmaker[Session], usuario: FRAPUsuario) -> TestClient:
     return TestClient(app)
 
 
-def _seed(factory: sessionmaker[Session], papel: str, **modulos: bool) -> FRAPUsuario:
+def _seed(factory: sessionmaker[Session], papel: str, **modulos: tuple[bool, bool]) -> FRAPUsuario:
     with factory() as s:
         u = FRAPUsuario(Login=papel, SenhaHash="x", Papel=papel, Ativo=True)
-        u.permissoes = [UsuarioPermissao(Modulo=m, PodeEditar=e) for m, e in modulos.items()]
+        u.permissoes = _linhas(modulos)
         s.add(u)
         s.commit()
         s.refresh(u)
@@ -85,29 +82,41 @@ def test_user_so_cadastra_com_editar(factory: sessionmaker[Session]) -> None:
 
 
 def test_user_com_editar_passa_do_gate(factory: sessionmaker[Session]) -> None:
-    with _client(factory, _seed(factory, "user", **{DF: True})) as c:
+    with _client(factory, _seed(factory, "user", **{DF: (True, True)})) as c:
         # 422 = passou do gate de permissão e parou na validação do payload vazio
         assert c.post("/api/v1/ccd/desconto-folha", json={}).status_code == 422
 
 
-def test_restrito_so_ve_o_modulo_marcado(factory: sessionmaker[Session]) -> None:
-    with _client(factory, _seed(factory, "restrito", **{DF: False})) as c:
+def test_visualizacao_removida_barra_o_modulo(factory: sessionmaker[Session]) -> None:
+    with _client(factory, _seed(factory, "user", **{"frap.extratos": (False, False)})) as c:
         assert c.get(VER_DF).status_code == 422
         assert c.post("/api/v1/ccd/desconto-folha", json={}).status_code == 403
         assert c.get("/api/v1/frap/lancamentos").status_code == 403
 
 
 def test_admin_substitui_matriz_do_usuario(factory: sessionmaker[Session]) -> None:
-    alvo = _seed(factory, "user", wiki=True)
+    alvo = _seed(factory, "user", wiki=(True, True))
     admin = _seed(factory, "admin")
     with _client(factory, admin) as c:
         r = c.patch(
             f"/api/v1/usuarios/{alvo.IdUsuario}",
-            json={"papel": "restrito", "permissoes": [{"modulo": DF, "editar": True}]},
+            json={
+                "permissoes": [
+                    {"modulo": DF, "ver": True, "editar": True},
+                    {"modulo": "wiki", "ver": False, "editar": False},
+                    {"modulo": "frap.jobs", "ver": True, "editar": False},  # default: não grava
+                ]
+            },
         )
         assert r.status_code == 200, r.text
-        assert r.json()["papel"] == "restrito"
-        assert r.json()["permissoes"] == [{"modulo": DF, "editar": True}]
+        assert sorted(r.json()["permissoes"], key=lambda p: p["modulo"]) == [
+            {"modulo": DF, "ver": True, "editar": True},
+            {"modulo": "wiki", "ver": False, "editar": False},
+        ]
+        assert (
+            c.patch(f"/api/v1/usuarios/{alvo.IdUsuario}", json={"papel": "restrito"}).status_code
+            == 422
+        )
         r = c.patch(
             f"/api/v1/usuarios/{alvo.IdUsuario}",
             json={"permissoes": [{"modulo": "nao.existe", "editar": False}]},

@@ -2,13 +2,13 @@ import { z } from "zod";
 
 import { permissaoItemSchema } from "@/schemas/auth";
 
-const papelSchema = z.enum(["user", "admin", "restrito"]);
+const papelSchema = z.enum(["user", "admin"]);
 export type Papel = z.infer<typeof papelSchema>;
 
 export const usuarioSchema = z.object({
   idUsuario: z.number(),
   login: z.string(),
-  email: z.string().email(),
+  email: z.string().nullable(),
   nomeCompleto: z.string(),
   papel: papelSchema,
   ativo: z.boolean(),

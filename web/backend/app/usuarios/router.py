@@ -39,7 +39,7 @@ def criar(
 
 @router.get("", response_model=UsuarioListResponse)
 def listar(
-    papel: str | None = Query(default=None, pattern=r"^(user|admin|restrito)$"),
+    papel: str | None = Query(default=None, pattern=r"^(user|admin)$"),
     ativo: bool | None = Query(default=None),
     q: str | None = Query(default=None, min_length=2, max_length=100),
     page: int = Query(default=1, ge=1),
@@ -87,7 +87,7 @@ def atualizar(
             permissoes=(
                 None
                 if payload.permissoes is None
-                else {p.modulo: p.editar for p in payload.permissoes}
+                else {p.modulo: (p.ver, p.editar) for p in payload.permissoes}
             ),
         )
     except service.UsuarioNaoEncontradoError as exc:

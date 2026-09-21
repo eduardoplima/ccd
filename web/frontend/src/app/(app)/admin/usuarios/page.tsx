@@ -56,7 +56,7 @@ export default function AdminUsuariosPage() {
 
   const { data, isFetching } = useUsuarios({
     q: q || undefined,
-    papel: papel === "user" || papel === "admin" || papel === "restrito" ? papel : undefined,
+    papel: papel === "user" || papel === "admin" ? papel : undefined,
     page,
     size: SIZE,
   });
@@ -100,7 +100,6 @@ export default function AdminUsuariosPage() {
             <option value="">Todos</option>
             <option value="user">user</option>
             <option value="admin">admin</option>
-            <option value="restrito">restrito</option>
           </SelectNative>
         </div>
       </div>
@@ -285,7 +284,6 @@ function CriarDialog({
             <SelectNative id="c-papel" {...register("papel")}>
               <option value="user">user</option>
               <option value="admin">admin</option>
-              <option value="restrito">restrito</option>
             </SelectNative>
           </div>
           <DialogFooter>
@@ -317,8 +315,8 @@ function EditarDialog({
   const [nome, setNome] = useState("");
   const [papel, setPapel] = useState<Papel>("user");
   const [ativo, setAtivo] = useState(true);
-  // módulo → pode editar; ter a chave = pode ver (só pesa para o papel "restrito")
-  const [perms, setPerms] = useState<Record<string, boolean>>({});
+  // módulo → permissão; módulo ausente = default (vê, não edita)
+  const [perms, setPerms] = useState<Record<string, { ver: boolean; editar: boolean }>>({});
 
   const editingId = usuario?.idUsuario ?? null;
   const open = usuario !== null;
@@ -328,7 +326,11 @@ function EditarDialog({
       setNome(usuario.nomeCompleto);
       setPapel(usuario.papel);
       setAtivo(usuario.ativo);
-      setPerms(Object.fromEntries(usuario.permissoes.map((p) => [p.modulo, p.editar])));
+      setPerms(
+        Object.fromEntries(
+          usuario.permissoes.map((p) => [p.modulo, { ver: p.ver, editar: p.editar }]),
+        ),
+      );
     }
   }, [usuario]);
 
@@ -359,9 +361,8 @@ function EditarDialog({
               value={papel}
               onChange={(e) => setPapel(e.target.value as Papel)}
             >
-              <option value="user">user: vê tudo, edita o marcado</option>
+              <option value="user">user: vê e edita o marcado</option>
               <option value="admin">admin: vê e edita tudo</option>
-              <option value="restrito">restrito: só vê o marcado</option>
             </SelectNative>
           </div>
           {papel !== "admin" && (
@@ -383,14 +384,15 @@ function EditarDialog({
                       <input
                         type="checkbox"
                         aria-label={`Ver ${m.label}`}
-                        disabled={papel === "user"}
-                        checked={papel === "user" || m.key in perms}
+                        checked={perms[m.key]?.ver ?? true}
                         onChange={(e) =>
-                          setPerms((p) =>
-                            e.target.checked
-                              ? { ...p, [m.key]: false }
-                              : Object.fromEntries(Object.entries(p).filter(([k]) => k !== m.key)),
-                          )
+                          setPerms((p) => ({
+                            ...p,
+                            [m.key]: {
+                              ver: e.target.checked,
+                              editar: e.target.checked && (p[m.key]?.editar ?? false),
+                            },
+                          }))
                         }
                       />
                     </td>
@@ -398,8 +400,16 @@ function EditarDialog({
                       <input
                         type="checkbox"
                         aria-label={`Editar ${m.label}`}
-                        checked={perms[m.key] === true}
-                        onChange={(e) => setPerms((p) => ({ ...p, [m.key]: e.target.checked }))}
+                        checked={perms[m.key]?.editar ?? false}
+                        onChange={(e) =>
+                          setPerms((p) => ({
+                            ...p,
+                            [m.key]: {
+                              ver: e.target.checked || (p[m.key]?.ver ?? true),
+                              editar: e.target.checked,
+                            },
+                          }))
+                        }
                       />
                     </td>
                   </tr>
@@ -446,9 +456,7 @@ function EditarDialog({
                     nomeCompleto: nome,
                     papel,
                     ativo,
-                    permissoes: Object.entries(perms)
-                      .filter(([, editar]) => papel === "restrito" || editar)
-                      .map(([modulo, editar]) => ({ modulo, editar })),
+                    permissoes: Object.entries(perms).map(([modulo, p]) => ({ modulo, ...p })),
                   },
                 });
                 toast.success("Usuário atualizado.");

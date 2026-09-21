@@ -1,8 +1,8 @@
 """Permissões por módulo (matriz usuário × módulo em `UsuarioPermissoes`).
 
 - `admin`: vê e edita tudo;
-- `user`: vê tudo; edita os módulos com `PodeEditar`;
-- `restrito`: só vê os módulos com linha; edita os com `PodeEditar`.
+- `user`: vê tudo por default; linha com `PodeVer=0` esconde o módulo (e barra a
+  edição); linha com `PodeEditar=1` libera a edição. Sem linha = só vê.
 
 "Editar" cobre tudo do módulo (criar, alterar, excluir, disparar jobs). As
 chaves espelham o subnav do frontend (`src/lib/permissoes.ts`).
@@ -36,9 +36,9 @@ def pode(user: FRAPUsuario, modulo: str, *, editar: bool = False) -> bool:
         return True
     # getattr: os testes do CGAD injetam o `UserORM` de tools/cgad, que não tem a relação.
     linha = next((p for p in getattr(user, "permissoes", ()) if p.Modulo == modulo), None)
-    if editar:
-        return linha is not None and linha.PodeEditar
-    return user.Papel != "restrito" or linha is not None
+    if linha is None:
+        return not editar
+    return linha.PodeVer and (linha.PodeEditar or not editar)
 
 
 def require_modulo(modulo: str, *, editar: bool = False):

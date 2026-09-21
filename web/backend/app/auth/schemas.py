@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
@@ -23,6 +23,7 @@ class TokenPair(BaseModel):
 
 class PermissaoItem(BaseModel):
     modulo: str = Field(validation_alias="Modulo")
+    ver: bool = Field(default=True, validation_alias="PodeVer")
     editar: bool = Field(default=False, validation_alias="PodeEditar")
 
     model_config = {"from_attributes": True, "populate_by_name": True}
@@ -31,7 +32,8 @@ class PermissaoItem(BaseModel):
 class UserOut(BaseModel):
     id_usuario: int = Field(validation_alias="IdUsuario", serialization_alias="idUsuario")
     login: str = Field(validation_alias="Login")
-    email: EmailStr | None = Field(default=None, validation_alias="Email")
+    # str, não EmailStr: saída não revalida o que já está no banco (ex.: "admin@local").
+    email: str | None = Field(default=None, validation_alias="Email")
     nome_completo: str = Field(validation_alias="NomeCompleto", serialization_alias="nomeCompleto")
     papel: str = Field(validation_alias="Papel")
     ativo: bool = Field(validation_alias="Ativo")
