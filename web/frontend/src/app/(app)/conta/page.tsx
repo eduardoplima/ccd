@@ -35,7 +35,7 @@ export default function ContaPage() {
         // Troca obrigatória cumprida: atualiza a flag e libera o app.
         await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
         toast.success("Senha definida com sucesso.");
-        router.replace("/frap/extratos");
+        router.replace("/");
       } else {
         toast.success("Senha trocada. Faça login novamente nos próximos acessos.");
       }

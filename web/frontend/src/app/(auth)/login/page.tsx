@@ -26,7 +26,7 @@ export default function LoginPage() {
     setPending(true);
     try {
       await login(values);
-      router.replace("/frap/extratos");
+      router.replace("/");
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       const msg =
