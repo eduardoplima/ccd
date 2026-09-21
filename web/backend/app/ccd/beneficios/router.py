@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -19,11 +20,23 @@ from app.ccd.beneficios.schemas import (
     ExportInput,
     TransicaoInput,
 )
-from app.deps import get_arq_pool, get_current_user, get_db_session, require_role
+from app.deps import get_arq_pool, get_current_user, get_db_session
 from app.jobs import service as jobs_service
 from app.jobs.schemas import JobOut
+from app.permissoes import require_modulo
 
-router = APIRouter(prefix="/api/v1/ccd/beneficios", tags=["ccd:beneficios"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("ccd.beneficios"))],
+    prefix="/api/v1/ccd/beneficios",
+    tags=["ccd:beneficios"],
+)
+
+
+def _validar_periodo(data_de: date | None, data_ate: date | None) -> None:
+    if data_de and data_ate and data_de > data_ate:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="dataDe must be <= dataAte"
+        )
 
 
 @router.get("", response_model=BeneficioListResponse)
@@ -34,6 +47,8 @@ def listar(
     id_tipo: int | None = Query(default=None, alias="idTipo"),
     origem: str | None = Query(default=None, max_length=20),
     fonte: Literal["propostas", "carteira"] | None = Query(default=None),
+    data_de: date | None = Query(default=None, alias="dataDe"),
+    data_ate: date | None = Query(default=None, alias="dataAte"),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=200),
     sort_by: Literal["processo", "nome", "valor", "dataOcorrencia", "origem", "dataInclusao"]
@@ -42,6 +57,7 @@ def listar(
     session: Session = Depends(get_db_session),
     _: FRAPUsuario = Depends(get_current_user),
 ) -> BeneficioListResponse:
+    _validar_periodo(data_de, data_ate)
     return service.listar(
         session,
         q=q,
@@ -50,6 +66,8 @@ def listar(
         id_tipo=id_tipo,
         origem=origem,
         fonte=fonte,
+        data_de=data_de,
+        data_ate=data_ate,
         page=page,
         size=size,
         sort_by=sort_by,
@@ -59,10 +77,13 @@ def listar(
 
 @router.get("/resumo", response_model=BeneficioResumo)
 def resumo(
+    data_de: date | None = Query(default=None, alias="dataDe"),
+    data_ate: date | None = Query(default=None, alias="dataAte"),
     session: Session = Depends(get_db_session),
     _: FRAPUsuario = Depends(get_current_user),
 ) -> BeneficioResumo:
-    return service.resumo(session)
+    _validar_periodo(data_de, data_ate)
+    return service.resumo(session, data_de=data_de, data_ate=data_ate)
 
 
 @router.get("/dominios", response_model=DominiosResponse)
@@ -170,6 +191,7 @@ def exportar(
     session: Session = Depends(get_db_session),
     user: FRAPUsuario = Depends(get_current_user),
 ) -> Response:
+    _validar_periodo(payload.data_de, payload.data_ate)
     try:
         nome, conteudo, media = export_service.exportar(
             session,
@@ -177,6 +199,8 @@ def exportar(
             formato=payload.formato,
             marcar_enviado=payload.marcar_enviado,
             id_usuario=user.IdUsuario,
+            data_de=payload.data_de,
+            data_ate=payload.data_ate,
         )
     except export_service.ExportVazio:
         raise HTTPException(
@@ -193,7 +217,7 @@ def exportar(
 async def disparar_deteccao(
     pool=Depends(get_arq_pool),
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(require_modulo("ccd.beneficios", editar=True)),
 ) -> JobOut:
     """Disparo manual da detecção (o cron quinzenal roda sem FRAPJob)."""
     job = await jobs_service.enqueue_job(

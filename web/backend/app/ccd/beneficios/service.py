@@ -8,6 +8,7 @@ por engano.
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -84,6 +85,25 @@ def _to_item(r: Any) -> BeneficioItem:
     )
 
 
+def filtro_periodo(
+    where: list[str],
+    params: dict[str, Any],
+    data_de: date | None,
+    data_ate: date | None,
+    alias: str = "b.",
+) -> None:
+    """Acrescenta a `where`/`params` o recorte por data do fato gerador.
+    PROPOSTA não tem DataOcorrencia — cai na data de inclusão no staging."""
+    # ponytail: COALESCE não é sargável; ok p/ ~21k linhas. Coluna computada + índice se crescer.
+    ref = f"COALESCE({alias}DataOcorrencia, CAST({alias}DataInclusao AS DATE))"
+    if data_de:
+        where.append(f"{ref} >= :data_de")
+        params["data_de"] = data_de
+    if data_ate:
+        where.append(f"{ref} <= :data_ate")
+        params["data_ate"] = data_ate
+
+
 def listar(
     session: Session,
     *,
@@ -93,6 +113,8 @@ def listar(
     id_tipo: int | None = None,
     origem: str | None = None,
     fonte: str | None = None,
+    data_de: date | None = None,
+    data_ate: date | None = None,
     page: int = 1,
     size: int = 50,
     sort_by: str | None = None,
@@ -124,6 +146,7 @@ def listar(
         where.append("b.Origem = 'PROPOSTA'")
     elif fonte == "carteira":
         where.append("b.Origem <> 'PROPOSTA'")
+    filtro_periodo(where, params, data_de, data_ate)
     where_sql = "WHERE " + " AND ".join(where)
 
     total = int(
@@ -150,11 +173,16 @@ def listar(
     )
 
 
-def resumo(session: Session) -> BeneficioResumo:
+def resumo(
+    session: Session, *, data_de: date | None = None, data_ate: date | None = None
+) -> BeneficioResumo:
+    where = ["Ativo = 1"]
+    params: dict[str, Any] = {}
+    filtro_periodo(where, params, data_de, data_ate, alias="")
     row = (
         session.execute(
             text(
-                """
+                f"""
             SELECT
                 COUNT(*) AS Total,
                 SUM(CASE WHEN Status = 'RASCUNHO' THEN 1 ELSE 0 END) AS Rascunho,
@@ -168,9 +196,10 @@ def resumo(session: Session) -> BeneficioResumo:
                 SUM(CASE WHEN IdBeneficioSituacaoEfetivacao = 1 AND Status <> 'DESCARTADO'
                     THEN COALESCE(ValorQuantidade, 0) ELSE 0 END) AS ValorEfetivo
             FROM dbo.CCDBeneficio
-            WHERE Ativo = 1
+            WHERE {" AND ".join(where)}
             """
-            )
+            ),
+            params,
         )
         .mappings()
         .one()

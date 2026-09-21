@@ -13,6 +13,7 @@ import {
   listBeneficios,
   transicionarBeneficio,
   type BeneficiosFilters,
+  type BeneficiosPeriodo,
 } from "@/lib/api/beneficios";
 import type { BeneficioPayload, StatusBeneficio } from "@/schemas/beneficios";
 
@@ -27,10 +28,10 @@ export function useBeneficios(filters: BeneficiosFilters) {
   });
 }
 
-export function useBeneficiosResumo() {
+export function useBeneficiosResumo(periodo: BeneficiosPeriodo = {}) {
   return useQuery({
-    queryKey: [KEY, "resumo"],
-    queryFn: getBeneficiosResumo,
+    queryKey: [KEY, "resumo", periodo],
+    queryFn: () => getBeneficiosResumo(periodo),
     staleTime: 30_000,
   });
 }
@@ -84,11 +85,13 @@ export function useExportarBeneficios() {
       formato,
       ids,
       marcarEnviado,
+      periodo,
     }: {
       formato: "xlsx" | "json";
       ids?: number[];
       marcarEnviado?: boolean;
-    }) => exportarBeneficios(formato, ids, marcarEnviado),
+      periodo?: BeneficiosPeriodo;
+    }) => exportarBeneficios(formato, ids, marcarEnviado, periodo),
     onSuccess: () => void qc.invalidateQueries({ queryKey: [KEY] }),
   });
 }

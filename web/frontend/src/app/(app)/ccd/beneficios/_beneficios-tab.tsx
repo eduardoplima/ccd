@@ -1,6 +1,7 @@
 "use client";
 
 import { parseAsInteger, parseAsString, parseAsStringEnum, useQueryState } from "nuqs";
+import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -78,12 +79,16 @@ const ACOES: Record<StatusBeneficio, Array<[string, StatusBeneficio]>> = {
 export function BeneficiosTab({
   status,
   fonte,
+  dataDe,
+  dataAte,
   selecao,
   onSelecao,
   onEditar,
 }: {
   status?: StatusBeneficio;
   fonte?: "propostas" | "carteira";
+  dataDe?: string;
+  dataAte?: string;
   selecao?: Set<number>;
   onSelecao?: (ids: Set<number>) => void;
   onEditar: (item: BeneficioItem) => void;
@@ -107,6 +112,8 @@ export function BeneficiosTab({
     status: status ?? statusFiltro ?? undefined,
     origem: origem ?? undefined,
     fonte,
+    dataDe,
+    dataAte,
     situacaoEfetivacao: efetivacao ?? undefined,
     page,
     size: SIZE,
@@ -120,6 +127,12 @@ export function BeneficiosTab({
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / SIZE));
+  // O período vem da página e muda o total sem passar pelos handlers daqui
+  // (inclusive com a aba desmontada): página fora do alcance volta para a 1.
+  useEffect(() => {
+    if (data && !isFetching && page > totalPages) void setPage(1);
+  }, [data, isFetching, page, totalPages, setPage]);
+
   const tipoDesc = new Map((dominios?.tipos ?? []).map((d) => [d.id, d.descricao]));
 
   const comSelecao = !!selecao && !!onSelecao;

@@ -10,7 +10,7 @@ resolve para IdBeneficioAnterior após inserir os potenciais do lote).
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from io import BytesIO
 from typing import Any
@@ -22,6 +22,7 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 from app.ccd.beneficios.dominios import obter_dominios
+from app.ccd.beneficios.service import filtro_periodo
 from app.config import get_settings
 
 # staging -> nome no Beneficio_PropostaBeneficio (ordem do arquivo exportado)
@@ -58,12 +59,21 @@ class ExportVazio(Exception):
     pass
 
 
-def _selecionar(session: Session, ids: list[int] | None) -> list[dict[str, Any]]:
-    where = "b.Ativo = 1 AND b.Status = 'VALIDADO'"
+def _selecionar(
+    session: Session,
+    ids: list[int] | None,
+    data_de: date | None = None,
+    data_ate: date | None = None,
+) -> list[dict[str, Any]]:
+    conds = ["b.Ativo = 1", "b.Status = 'VALIDADO'"]
     params: dict[str, Any] = {}
     if ids:
-        where += " AND b.IdCCDBeneficio IN :ids"
+        conds.append("b.IdCCDBeneficio IN :ids")
         params["ids"] = ids
+    else:
+        # o período só recorta o "todos": seleção explícita não perde linha em silêncio
+        filtro_periodo(conds, params, data_de, data_ate)
+    where = " AND ".join(conds)
     stmt = text(f"SELECT b.* FROM dbo.CCDBeneficio b WHERE {where} ORDER BY b.IdCCDBeneficio")
     if ids:
         stmt = stmt.bindparams(bindparam("ids", expanding=True))
@@ -211,10 +221,13 @@ def exportar(
     formato: str,
     marcar_enviado: bool,
     id_usuario: int,
+    data_de: date | None = None,
+    data_ate: date | None = None,
 ) -> tuple[str, bytes, str]:
     """Retorna (nome_arquivo, conteúdo, media_type). Exporta os VALIDADO
-    (todos, ou a interseção com `ids`); marca ENVIADO na mesma transação."""
-    rows = _selecionar(session, ids)
+    (todos — recortados pelo período, se houver —, ou a interseção com `ids`);
+    marca ENVIADO na mesma transação."""
+    rows = _selecionar(session, ids, data_de, data_ate)
     if not rows:
         raise ExportVazio
     lote = "beneficios-ccd-" + datetime.now(UTC).strftime("%Y%m%d-%H%M")

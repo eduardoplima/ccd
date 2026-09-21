@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
@@ -14,6 +15,7 @@ import {
 } from "@/hooks/use-beneficios";
 import { formatBRL } from "@/lib/format";
 import type { BeneficioItem } from "@/schemas/beneficios";
+import { podeEditar } from "@/lib/permissoes";
 
 import { BeneficioFormDialog } from "./_beneficio-dialog";
 import { BeneficiosTab } from "./_beneficios-tab";
@@ -29,8 +31,13 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 export default function BeneficiosPage() {
   const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("rascunhos"));
+  const [de, setDe] = useQueryState("de", parseAsString.withDefault(""));
+  const [ate, setAte] = useQueryState("ate", parseAsString.withDefault(""));
+  const periodo = { dataDe: de || undefined, dataAte: ate || undefined };
+  const temPeriodo = !!(de || ate);
+  const rotuloTodos = temPeriodo ? " (todos do período)" : " (todos)";
   const { data: user } = useCurrentUser();
-  const { data: resumo } = useBeneficiosResumo();
+  const { data: resumo } = useBeneficiosResumo(periodo);
   const exportar = useExportarBeneficios();
   const detectar = useDispararDeteccaoBeneficios();
 
@@ -38,7 +45,7 @@ export default function BeneficiosPage() {
   const [editando, setEditando] = useState<BeneficioItem | null>(null);
   const [selecao, setSelecao] = useState<Set<number>>(new Set());
 
-  const isAdmin = user?.papel === "admin";
+  const canEdit = podeEditar(user, "ccd.beneficios");
 
   async function dispararDeteccao() {
     try {
@@ -55,7 +62,7 @@ export default function BeneficiosPage() {
 
   async function exportarLote(formato: "xlsx" | "json") {
     try {
-      await exportar.mutateAsync({ formato, ids: [...selecao] });
+      await exportar.mutateAsync({ formato, ids: [...selecao], periodo });
       setSelecao(new Set());
       toast.success("Lote exportado e marcado como enviado.");
     } catch (err) {
@@ -70,13 +77,54 @@ export default function BeneficiosPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="section-heading text-2xl">Benefícios (SisBenefícios)</h1>
         <div className="flex gap-2">
-          {isAdmin ? (
+          {canEdit ? (
             <Button variant="outline" onClick={() => void dispararDeteccao()}>
               Detectar candidatos
             </Button>
           ) : null}
           <Button onClick={() => setCriarOpen(true)}>Novo benefício</Button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="periodo-de" className="text-muted-foreground text-xs">
+            Ocorrência de
+          </label>
+          <Input
+            id="periodo-de"
+            type="date"
+            value={de}
+            max={ate || undefined}
+            onChange={(e) => void setDe(e.target.value || null)}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="periodo-ate" className="text-muted-foreground text-xs">
+            até
+          </label>
+          <Input
+            id="periodo-ate"
+            type="date"
+            value={ate}
+            min={de || undefined}
+            onChange={(e) => void setAte(e.target.value || null)}
+          />
+        </div>
+        {temPeriodo ? (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void setDe(null);
+              void setAte(null);
+            }}
+          >
+            Limpar
+          </Button>
+        ) : null}
+        <span className="text-muted-foreground pb-2 text-xs">
+          Data do fato gerador; propostas usam a data de inclusão.
+        </span>
       </div>
 
       {resumo ? (
@@ -111,6 +159,7 @@ export default function BeneficiosPage() {
             detectada e os cadastros manuais.
           </p>
           <BeneficiosTab
+            {...periodo}
             fonte="propostas"
             selecao={selecao}
             onSelecao={setSelecao}
@@ -118,7 +167,7 @@ export default function BeneficiosPage() {
           />
         </TabsContent>
         <TabsContent value="rascunhos" className="pt-4">
-          <BeneficiosTab status="RASCUNHO" fonte="carteira" onEditar={setEditando} />
+          <BeneficiosTab {...periodo} status="RASCUNHO" fonte="carteira" onEditar={setEditando} />
         </TabsContent>
         <TabsContent value="validados" className="pt-4">
           <div className="mb-3 flex items-center gap-2">
@@ -127,7 +176,7 @@ export default function BeneficiosPage() {
               disabled={exportar.isPending}
               onClick={() => void exportarLote("xlsx")}
             >
-              Exportar XLSX{selecao.size > 0 ? ` (${selecao.size})` : " (todos)"}
+              Exportar XLSX{selecao.size > 0 ? ` (${selecao.size})` : rotuloTodos}
             </Button>
             <Button
               size="sm"
@@ -135,13 +184,14 @@ export default function BeneficiosPage() {
               disabled={exportar.isPending}
               onClick={() => void exportarLote("json")}
             >
-              Exportar JSON{selecao.size > 0 ? ` (${selecao.size})` : " (todos)"}
+              Exportar JSON{selecao.size > 0 ? ` (${selecao.size})` : rotuloTodos}
             </Button>
             <span className="text-muted-foreground text-sm">
               O export marca os registros como enviados à SECEX.
             </span>
           </div>
           <BeneficiosTab
+            {...periodo}
             status="VALIDADO"
             fonte="carteira"
             selecao={selecao}
@@ -150,10 +200,10 @@ export default function BeneficiosPage() {
           />
         </TabsContent>
         <TabsContent value="enviados" className="pt-4">
-          <BeneficiosTab status="ENVIADO" fonte="carteira" onEditar={setEditando} />
+          <BeneficiosTab {...periodo} status="ENVIADO" fonte="carteira" onEditar={setEditando} />
         </TabsContent>
         <TabsContent value="descartados" className="pt-4">
-          <BeneficiosTab status="DESCARTADO" fonte="carteira" onEditar={setEditando} />
+          <BeneficiosTab {...periodo} status="DESCARTADO" fonte="carteira" onEditar={setEditando} />
         </TabsContent>
       </Tabs>
 

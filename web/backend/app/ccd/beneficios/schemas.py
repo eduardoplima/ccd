@@ -95,6 +95,9 @@ class ExportInput(BaseModel):
     ids: list[int] | None = None
     formato: Literal["xlsx", "json"] = "xlsx"
     marcar_enviado: bool = Field(default=True, alias="marcarEnviado")
+    # recorte do export "todos" (ignorado quando há `ids`)
+    data_de: date | None = Field(default=None, alias="dataDe")
+    data_ate: date | None = Field(default=None, alias="dataAte")
 
     model_config = {"populate_by_name": True}
 

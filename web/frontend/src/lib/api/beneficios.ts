@@ -30,7 +30,12 @@ export type BeneficiosSortKey =
   | "origem"
   | "dataInclusao";
 
-export interface BeneficiosFilters {
+export interface BeneficiosPeriodo {
+  dataDe?: string;
+  dataAte?: string;
+}
+
+export interface BeneficiosFilters extends BeneficiosPeriodo {
   q?: string;
   status?: StatusBeneficio;
   situacaoEfetivacao?: number;
@@ -48,8 +53,10 @@ export async function listBeneficios(f: BeneficiosFilters): Promise<BeneficioLis
   return beneficioListResponseSchema.parse(data);
 }
 
-export async function getBeneficiosResumo(): Promise<BeneficioResumo> {
-  const { data } = await apiClient.get(`${BASE}/resumo`);
+export async function getBeneficiosResumo(
+  periodo: BeneficiosPeriodo = {},
+): Promise<BeneficioResumo> {
+  const { data } = await apiClient.get(`${BASE}/resumo`, { params: buildParams({ ...periodo }) });
   return beneficioResumoSchema.parse(data);
 }
 
@@ -94,10 +101,17 @@ export async function exportarBeneficios(
   formato: "xlsx" | "json",
   ids?: number[],
   marcarEnviado = true,
+  periodo: BeneficiosPeriodo = {},
 ): Promise<void> {
   const resp = await apiClient.post(
     `${BASE}/export`,
-    { ids: ids && ids.length > 0 ? ids : null, formato, marcarEnviado },
+    {
+      ids: ids && ids.length > 0 ? ids : null,
+      formato,
+      marcarEnviado,
+      dataDe: periodo.dataDe || null,
+      dataAte: periodo.dataAte || null,
+    },
     { responseType: "blob" },
   );
   const blob = resp.data as Blob;

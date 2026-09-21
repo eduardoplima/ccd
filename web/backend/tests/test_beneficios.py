@@ -6,11 +6,28 @@ fica fora daqui — verificação em dev na rede do TCE.
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 from app.ccd.beneficios.export import _COLUNAS_EXPORT, _linha_export
 from app.ccd.beneficios.schemas import BeneficioInput
-from app.ccd.beneficios.service import CAMPOS, TRANSICOES
+from app.ccd.beneficios.service import CAMPOS, TRANSICOES, filtro_periodo
+
+
+def test_filtro_periodo() -> None:
+    where: list[str] = []
+    params: dict = {}
+    filtro_periodo(where, params, None, None)
+    assert where == [] and params == {}
+
+    filtro_periodo(where, params, date(2026, 1, 1), date(2026, 6, 30))
+    assert len(where) == 2
+    assert all("COALESCE(b.DataOcorrencia, CAST(b.DataInclusao AS DATE))" in w for w in where)
+    assert params == {"data_de": date(2026, 1, 1), "data_ate": date(2026, 6, 30)}
+
+    sem_alias: list[str] = []
+    filtro_periodo(sem_alias, {}, date(2026, 1, 1), None, alias="")
+    assert sem_alias == ["COALESCE(DataOcorrencia, CAST(DataInclusao AS DATE)) >= :data_de"]
 
 
 def test_transicoes_cobrem_todos_os_status() -> None:
