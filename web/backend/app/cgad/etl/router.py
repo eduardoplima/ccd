@@ -17,8 +17,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.deps import get_arq_pool, get_db_session, require_role
+from app.deps import get_arq_pool, get_db_session
 from app.cgad.etl import schemas
+from app.permissoes import require_modulo
 from cgad.etl.staging import (
     ObrigacaoStagingORM,
     RecomendacaoStagingORM,
@@ -79,7 +80,7 @@ def _to_extracao_out(row: ExtracaoORM) -> schemas.ExtracaoOut:
     "/run",
     status_code=status.HTTP_202_ACCEPTED,
     response_model=schemas.ExtractionJobAccepted,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.etl", editar=True))],
 )
 async def trigger_extraction(
     body: schemas.ExtractionTriggerRequest,
@@ -129,7 +130,7 @@ async def trigger_extraction(
 @router.get(
     "/extracoes",
     response_model=schemas.ExtracaoListPage,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.etl", editar=True))],
 )
 def list_extracoes(
     page: int = Query(1, ge=1),
@@ -175,7 +176,7 @@ def list_extracoes(
 @router.get(
     "/extracoes/{extracao_id}",
     response_model=schemas.ExtracaoOut,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.etl", editar=True))],
 )
 def get_extracao(
     extracao_id: int,
@@ -190,7 +191,7 @@ def get_extracao(
 @router.post(
     "/extracoes/{extracao_id}/abort",
     response_model=schemas.ExtracaoOut,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.etl", editar=True))],
 )
 async def abort_extracao(
     extracao_id: int,
@@ -229,7 +230,7 @@ async def abort_extracao(
 @router.delete(
     "/extracoes/{extracao_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.etl", editar=True))],
 )
 def delete_extracao(
     extracao_id: int,
@@ -254,7 +255,7 @@ def delete_extracao(
 @router.get(
     "/extracoes/{extracao_id}/eventos",
     response_model=schemas.ExtracaoEventoListPage,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.etl", editar=True))],
 )
 def list_eventos(
     extracao_id: int,
@@ -304,7 +305,7 @@ def list_eventos(
 @router.get(
     "/extracoes/{extracao_id}/decisoes",
     response_model=schemas.DecisaoExtraidaListPage,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.etl", editar=True))],
 )
 def list_decisoes(
     extracao_id: int,
@@ -438,7 +439,7 @@ def _status_from_staging(raw) -> Literal["pending", "approved", "rejected", "dis
 @router.get(
     "/jobs/{job_id}",
     response_model=schemas.ExtractionJobStatus,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.etl", editar=True))],
 )
 async def get_job_status(
     job_id: str,

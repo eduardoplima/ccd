@@ -21,6 +21,13 @@ class TokenPair(BaseModel):
     expires_in: int
 
 
+class PermissaoItem(BaseModel):
+    modulo: str = Field(validation_alias="Modulo")
+    editar: bool = Field(default=False, validation_alias="PodeEditar")
+
+    model_config = {"from_attributes": True, "populate_by_name": True}
+
+
 class UserOut(BaseModel):
     id_usuario: int = Field(validation_alias="IdUsuario", serialization_alias="idUsuario")
     login: str = Field(validation_alias="Login")
@@ -34,5 +41,6 @@ class UserOut(BaseModel):
     data_criacao: datetime = Field(
         validation_alias="DataCriacao", serialization_alias="dataCriacao"
     )
+    permissoes: list[PermissaoItem] = []
 
     model_config = {"from_attributes": True, "populate_by_name": True}

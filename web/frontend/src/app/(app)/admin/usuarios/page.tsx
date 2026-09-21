@@ -35,7 +35,13 @@ import {
   useUsuarios,
 } from "@/hooks/use-usuarios";
 import { formatDate } from "@/lib/format";
-import { usuarioCreateInputSchema, type Usuario, type UsuarioCreateInput } from "@/schemas/usuario";
+import { MODULOS } from "@/lib/permissoes";
+import {
+  usuarioCreateInputSchema,
+  type Papel,
+  type Usuario,
+  type UsuarioCreateInput,
+} from "@/schemas/usuario";
 
 const SIZE = 50;
 
@@ -50,7 +56,7 @@ export default function AdminUsuariosPage() {
 
   const { data, isFetching } = useUsuarios({
     q: q || undefined,
-    papel: papel === "user" || papel === "admin" ? papel : undefined,
+    papel: papel === "user" || papel === "admin" || papel === "restrito" ? papel : undefined,
     page,
     size: SIZE,
   });
@@ -94,6 +100,7 @@ export default function AdminUsuariosPage() {
             <option value="">Todos</option>
             <option value="user">user</option>
             <option value="admin">admin</option>
+            <option value="restrito">restrito</option>
           </SelectNative>
         </div>
       </div>
@@ -278,6 +285,7 @@ function CriarDialog({
             <SelectNative id="c-papel" {...register("papel")}>
               <option value="user">user</option>
               <option value="admin">admin</option>
+              <option value="restrito">restrito</option>
             </SelectNative>
           </div>
           <DialogFooter>
@@ -307,8 +315,10 @@ function EditarDialog({
   const reset = useResetSenha();
 
   const [nome, setNome] = useState("");
-  const [papel, setPapel] = useState<"user" | "admin">("user");
+  const [papel, setPapel] = useState<Papel>("user");
   const [ativo, setAtivo] = useState(true);
+  // módulo → pode editar; ter a chave = pode ver (só pesa para o papel "restrito")
+  const [perms, setPerms] = useState<Record<string, boolean>>({});
 
   const editingId = usuario?.idUsuario ?? null;
   const open = usuario !== null;
@@ -318,6 +328,7 @@ function EditarDialog({
       setNome(usuario.nomeCompleto);
       setPapel(usuario.papel);
       setAtivo(usuario.ativo);
+      setPerms(Object.fromEntries(usuario.permissoes.map((p) => [p.modulo, p.editar])));
     }
   }, [usuario]);
 
@@ -346,12 +357,56 @@ function EditarDialog({
             <SelectNative
               id="e-papel"
               value={papel}
-              onChange={(e) => setPapel(e.target.value as "user" | "admin")}
+              onChange={(e) => setPapel(e.target.value as Papel)}
             >
-              <option value="user">user</option>
-              <option value="admin">admin</option>
+              <option value="user">user: vê tudo, edita o marcado</option>
+              <option value="admin">admin: vê e edita tudo</option>
+              <option value="restrito">restrito: só vê o marcado</option>
             </SelectNative>
           </div>
+          {papel !== "admin" && (
+            <table className="text-sm">
+              <thead>
+                <tr className="text-left text-muted-foreground">
+                  <th className="font-medium">Módulo</th>
+                  <th className="w-16 text-center font-medium">Ver</th>
+                  <th className="w-16 text-center font-medium">Editar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MODULOS.map((m) => (
+                  <tr key={m.key}>
+                    <td>
+                      <span className="text-muted-foreground uppercase">{m.grupo}</span> {m.label}
+                    </td>
+                    <td className="text-center">
+                      <input
+                        type="checkbox"
+                        aria-label={`Ver ${m.label}`}
+                        disabled={papel === "user"}
+                        checked={papel === "user" || m.key in perms}
+                        onChange={(e) =>
+                          setPerms((p) =>
+                            e.target.checked
+                              ? { ...p, [m.key]: false }
+                              : Object.fromEntries(Object.entries(p).filter(([k]) => k !== m.key)),
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="text-center">
+                      <input
+                        type="checkbox"
+                        aria-label={`Editar ${m.label}`}
+                        checked={perms[m.key] === true}
+                        onChange={(e) => setPerms((p) => ({ ...p, [m.key]: e.target.checked }))}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
           <div className="flex items-center gap-2">
             <input
               id="e-ativo"
@@ -387,7 +442,14 @@ function EditarDialog({
               try {
                 await update.mutateAsync({
                   id: editingId,
-                  input: { nomeCompleto: nome, papel, ativo },
+                  input: {
+                    nomeCompleto: nome,
+                    papel,
+                    ativo,
+                    permissoes: Object.entries(perms)
+                      .filter(([, editar]) => papel === "restrito" || editar)
+                      .map(([modulo, editar]) => ({ modulo, editar })),
+                  },
                 });
                 toast.success("Usuário atualizado.");
                 onOpenChange(false);

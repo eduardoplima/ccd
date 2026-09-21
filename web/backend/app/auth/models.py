@@ -53,11 +53,26 @@ class Usuario(Base):
         back_populates="usuario", cascade="all, delete-orphan"
     )
 
+    # Matriz módulo × (ver / editar) — regra em `app.permissoes.pode`.
+    permissoes: Mapped[list[UsuarioPermissao]] = relationship(
+        lazy="selectin", cascade="all, delete-orphan"
+    )
+
     @property
     def NomeCompleto(self) -> str:  # noqa: N802  (nome usado pelos DTOs)
         """`Usuarios` não guarda nome completo; expõe o login por
         compatibilidade com `UserOut.nome_completo`."""
         return self.NomeUsuario
+
+
+class UsuarioPermissao(Base):
+    __tablename__ = "UsuarioPermissoes"
+
+    IdUsuario: Mapped[int] = mapped_column(
+        Integer, ForeignKey("Usuarios.IdUsuario", ondelete="CASCADE"), primary_key=True
+    )
+    Modulo: Mapped[str] = mapped_column(String(40), primary_key=True)
+    PodeEditar: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class TokenRenovacao(Base):

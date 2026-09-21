@@ -10,8 +10,11 @@ from app.auth.models import Usuario
 from app.config import get_settings
 from app.deps import get_current_user
 from app.wiki.schemas import WikiPage, WikiPageMeta, WikiPageUpdate, WikiSearchHit
+from app.permissoes import require_modulo
 
-router = APIRouter(prefix="/api/v1/wiki", tags=["wiki"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("wiki"))], prefix="/api/v1/wiki", tags=["wiki"]
+)
 
 # Páginas versionadas no repo (entram na imagem via COPY backend/).
 WIKI_ROOT = Path(__file__).resolve().parents[2] / "wiki"

@@ -44,6 +44,7 @@ import {
   TriggerForm,
   triggerFormSchema,
 } from "@/schemas/etl";
+import { podeEditar } from "@/lib/permissoes";
 
 import { CoverageTimeline } from "./_coverage-timeline";
 
@@ -169,7 +170,7 @@ export default function EtlPage() {
   const [activeId, setActiveId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!meLoading && me && me.papel !== "admin") {
+    if (!meLoading && me && !podeEditar(me, "cgad.etl")) {
       router.replace("/cgad/reviews");
     }
   }, [me, meLoading, router]);
@@ -213,7 +214,7 @@ export default function EtlPage() {
     );
   }
 
-  if (!me || me.papel !== "admin") return null;
+  if (!podeEditar(me, "cgad.etl")) return null;
 
   const total = data?.total ?? 0;
   const items = data?.items ?? [];

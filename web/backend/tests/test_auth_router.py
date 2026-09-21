@@ -62,6 +62,7 @@ def test_login_then_me_round_trip(client: TestClient) -> None:
         "ativo": True,
         "deveTrocarSenha": False,
         "dataCriacao": body["dataCriacao"],
+        "permissoes": [],
     }
 
 

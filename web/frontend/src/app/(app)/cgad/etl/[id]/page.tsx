@@ -25,6 +25,7 @@ import {
   ExtracaoOut,
   RunStatus,
 } from "@/schemas/etl";
+import { podeEditar } from "@/lib/permissoes";
 
 const PAGE_SIZE = 20;
 
@@ -99,7 +100,7 @@ export default function ExtracaoDetailPage() {
 
   const { data: me, isLoading: meLoading } = useCurrentUser();
   useEffect(() => {
-    if (!meLoading && me && me.papel !== "admin") {
+    if (!meLoading && me && !podeEditar(me, "cgad.etl")) {
       router.replace("/cgad/reviews");
     }
   }, [me, meLoading, router]);
@@ -108,7 +109,7 @@ export default function ExtracaoDetailPage() {
     if (!idValid) router.replace("/cgad/etl");
   }, [idValid, router]);
 
-  if (!idValid || !me || me.papel !== "admin") return null;
+  if (!idValid || !podeEditar(me, "cgad.etl")) return null;
 
   return <Detail id={id} />;
 }

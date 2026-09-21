@@ -3,7 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.auth.schemas import PermissaoItem
+from app.permissoes import MODULOS
 
 
 _LOGIN_PATTERN = r"^[a-z0-9][a-z0-9._-]{1,63}$"
@@ -25,6 +28,7 @@ class UsuarioOut(BaseModel):
     data_atualizacao: datetime = Field(
         validation_alias="DataAtualizacao", serialization_alias="dataAtualizacao"
     )
+    permissoes: list[PermissaoItem] = []
 
     model_config = {"from_attributes": True, "populate_by_name": True}
 
@@ -40,7 +44,7 @@ class UsuarioCreateRequest(BaseModel):
     login: str = Field(min_length=3, max_length=64, pattern=_LOGIN_PATTERN)
     email: EmailStr | None = None
     nome_completo: str = Field(min_length=1, max_length=255, validation_alias="nomeCompleto")
-    papel: Literal["user", "admin"] = "user"
+    papel: Literal["user", "admin", "restrito"] = "user"
 
     model_config = {"populate_by_name": True}
 
@@ -56,8 +60,18 @@ class UsuarioUpdateRequest(BaseModel):
     nome_completo: str | None = Field(
         default=None, min_length=1, max_length=255, validation_alias="nomeCompleto"
     )
-    papel: Literal["user", "admin"] | None = None
+    papel: Literal["user", "admin", "restrito"] | None = None
     ativo: bool | None = None
+    # Quando presente, substitui a matriz inteira do usuário.
+    permissoes: list[PermissaoItem] | None = None
+
+    @field_validator("permissoes")
+    @classmethod
+    def _modulos_validos(cls, v: list[PermissaoItem] | None) -> list[PermissaoItem] | None:
+        for p in v or []:
+            if p.modulo not in MODULOS:
+                raise ValueError(f"módulo desconhecido: {p.modulo}")
+        return v
 
     model_config = {"populate_by_name": True}
 

@@ -22,7 +22,10 @@ from app.ccd.schemas import (
 from app.deps import get_current_user, get_db_session, get_processo_session
 from app.jobs import service as jobs_service
 from app.jobs.schemas import JobOut
+from app.permissoes import require_modulo
 
+# Sem gate no router: /health é público e /jobs/* atende o polling de todos os
+# módulos do CCD. A fila (Início) exige `ccd.inicio` rota a rota.
 router = APIRouter(prefix="/api/v1/ccd", tags=["ccd"])
 
 
@@ -51,7 +54,7 @@ def listar_processos(
     order: str = Query("asc"),
     ocultar_permanencia: bool = Query(False),
     session: Session = Depends(get_processo_session),
-    _: Usuario = Depends(get_current_user),
+    _: Usuario = Depends(require_modulo("ccd.inicio")),
 ) -> ProcessoCCDListResponse:
     return service.listar_processos(
         session,
@@ -71,7 +74,7 @@ def listar_processos(
 def listar_prescricao(
     ocultar_permanencia: bool = Query(True),
     session: Session = Depends(get_processo_session),
-    _: Usuario = Depends(get_current_user),
+    _: Usuario = Depends(require_modulo("ccd.inicio")),
 ) -> PrescricaoCCDListResponse:
     return service.listar_prescricao(session, ocultar_permanencia=ocultar_permanencia)
 
@@ -79,7 +82,7 @@ def listar_prescricao(
 @router.get("/processos/filtros", response_model=FiltrosCCDResponse)
 def listar_filtros(
     session: Session = Depends(get_processo_session),
-    _: Usuario = Depends(get_current_user),
+    _: Usuario = Depends(require_modulo("ccd.inicio")),
 ) -> FiltrosCCDResponse:
     return service.listar_filtros(session)
 

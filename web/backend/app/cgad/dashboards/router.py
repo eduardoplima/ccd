@@ -10,10 +10,15 @@ from sqlalchemy.orm import Session
 
 from app.cgad.dashboards import schemas, service
 from app.deps import get_current_user, get_db_session
+from app.permissoes import require_modulo
 from cgad.models import UserORM
 
 
-router = APIRouter(prefix="/api/v1/cgad/dashboards", tags=["dashboards"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("cgad.dashboards"))],
+    prefix="/api/v1/cgad/dashboards",
+    tags=["dashboards"],
+)
 
 
 @router.get("/summary", response_model=schemas.DashboardSummary)

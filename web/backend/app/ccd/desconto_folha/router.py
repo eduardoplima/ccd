@@ -1,8 +1,8 @@
 """Desconto em folha: `/api/v1/ccd/desconto-folha`.
 
 Cadastro (processo + débito) → resposta do órgão no apensado (extração pela
-LLM no worker) → match com o FRAP. Escrita é de admin; leitura, de qualquer
-usuário autenticado.
+LLM no worker) → match com o FRAP. Leitura e escrita seguem a matriz de
+permissões do módulo `ccd.desconto-folha` (`app.permissoes`).
 """
 
 from __future__ import annotations
@@ -19,12 +19,16 @@ from app.deps import (
     get_current_user,
     get_db_session,
     get_processo_session,
-    require_role,
 )
 from app.jobs import service as jobs_service
 from app.jobs.schemas import JobOut
+from app.permissoes import require_modulo
 
-router = APIRouter(prefix="/api/v1/ccd/desconto-folha", tags=["ccd:desconto-folha"])
+router = APIRouter(
+    prefix="/api/v1/ccd/desconto-folha",
+    tags=["ccd:desconto-folha"],
+    dependencies=[Depends(require_modulo("ccd.desconto-folha"))],
+)
 
 
 @router.get("", response_model=schemas.CadastroListResponse)
@@ -98,7 +102,7 @@ def criar(
     payload: schemas.CadastroInput,
     session: Session = Depends(get_db_session),
     sessao_processo: Session = Depends(get_processo_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.CadastroDetalhe:
     return service.criar(session, sessao_processo, payload, id_usuario=user.IdUsuario)
 
@@ -119,7 +123,7 @@ def atualizar(
     payload: schemas.CadastroPatch,
     session: Session = Depends(get_db_session),
     sessao_processo: Session = Depends(get_processo_session),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.CadastroDetalhe:
     return service.atualizar(session, sessao_processo, id_cadastro, payload)
 
@@ -129,7 +133,7 @@ def atualizar_processo(
     id_cadastro: int,
     session: Session = Depends(get_db_session),
     sessao_processo: Session = Depends(get_processo_session),
-    _: FRAPUsuario = Depends(get_current_user),
+    _: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.CadastroDetalhe:
     """Reconsulta notificação, AR e apensado no banco `processo`."""
     return service.atualizar_dados_processo(session, sessao_processo, id_cadastro)
@@ -139,7 +143,7 @@ def atualizar_processo(
 def remover(
     id_cadastro: int,
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> None:
     service.remover(session, id_cadastro)
 
@@ -149,7 +153,7 @@ async def extrair(
     id_cadastro: int,
     pool=Depends(get_arq_pool),
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> JobOut:
     service.detalhe(session, id_cadastro)  # 404 antes de enfileirar
     job = await jobs_service.enqueue_job(
@@ -167,7 +171,7 @@ async def extrair(
 async def localizar_notificacoes(
     pool=Depends(get_arq_pool),
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> JobOut:
     """Varre os cadastros ativos e localiza notificação e recebimento no banco `processo` (worker)."""
     job = await jobs_service.enqueue_job(
@@ -185,7 +189,7 @@ def criar_valor(
     id_cadastro: int,
     payload: schemas.ValorInput,
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.CadastroDetalhe:
     return service.criar_valor(session, id_cadastro, payload)
 
@@ -196,7 +200,7 @@ def atualizar_valor(
     id_valor: int,
     payload: schemas.ValorInput,
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.CadastroDetalhe:
     return service.atualizar_valor(session, id_cadastro, id_valor, payload)
 
@@ -206,7 +210,7 @@ def remover_valor(
     id_cadastro: int,
     id_valor: int,
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.CadastroDetalhe:
     return service.remover_valor(session, id_cadastro, id_valor)
 
@@ -217,7 +221,7 @@ def vincular(
     id_valor: int,
     payload: schemas.MatchInput,
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(get_current_user),
+    user: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.CadastroDetalhe:
     return service.vincular(session, id_cadastro, id_valor, payload, id_usuario=user.IdUsuario)
 
@@ -227,7 +231,7 @@ def desvincular(
     id_cadastro: int,
     id_valor: int,
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.CadastroDetalhe:
     return service.desvincular(session, id_cadastro, id_valor)
 
@@ -236,7 +240,7 @@ def desvincular(
 def match_automatico(
     id_cadastro: int,
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(get_current_user),
+    _: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.MatchAutomaticoResultado:
     return service.match_automatico(session, id_cadastro)
 
@@ -258,6 +262,6 @@ def adotar_creditos_frap(
     id_cadastro: int,
     payload: schemas.AdotarCreditosInput,
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(require_modulo("ccd.desconto-folha", editar=True)),
 ) -> schemas.CadastroDetalhe:
     return service.adotar_creditos_frap(session, id_cadastro, payload, id_usuario=user.IdUsuario)

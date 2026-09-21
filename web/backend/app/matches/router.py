@@ -11,8 +11,13 @@ from app.matches.schemas import (
     MatchOBListResponse,
     MatchPessoaListResponse,
 )
+from app.permissoes import require_modulo
 
-router = APIRouter(prefix="/api/v1/frap/matches", tags=["frap:matches"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("frap.extratos"))],
+    prefix="/api/v1/frap/matches",
+    tags=["frap:matches"],
+)
 
 _CONTA_REGEX = r"^\d{6}-\d$"
 

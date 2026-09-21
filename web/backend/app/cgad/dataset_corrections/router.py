@@ -15,14 +15,14 @@ from fastapi.responses import JSONResponse
 from app.cgad.dataset_corrections import schemas, service
 from app.cgad.dataset_corrections.paths import ERRORS_CSV, LABELED_JSON, REPO_ROOT
 from app.cgad.dataset_corrections.service import EntityGroup, ErrorRow, State
-from app.deps import require_role
+from app.permissoes import require_modulo
 from cgad.models import UserORM
 
 
 router = APIRouter(
     prefix="/api/v1/cgad/admin/dataset-corrections",
     tags=["dataset-corrections"],
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.dataset", editar=True))],
 )
 
 
@@ -178,7 +178,7 @@ def get_document(
 def decide_group(
     group_id: str,
     body: schemas.GroupDecisionRequest,
-    user: UserORM = Depends(require_role("admin")),
+    user: UserORM = Depends(require_modulo("cgad.dataset", editar=True)),
 ) -> schemas.GroupDecisionResponse:
     state = service.get_state()
     range_override: tuple[int, int] | None = None
@@ -260,7 +260,7 @@ def list_unmapped(
 def decide_unmapped(
     row_id: int,
     body: schemas.UnmappedDecisionRequest,
-    user: UserORM = Depends(require_role("admin")),
+    user: UserORM = Depends(require_modulo("cgad.dataset", editar=True)),
 ) -> schemas.UnmappedDecisionResponse:
     state = service.get_state()
     try:

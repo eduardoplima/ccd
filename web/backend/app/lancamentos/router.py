@@ -10,8 +10,13 @@ from app.auth.models import FRAPUsuario
 from app.deps import get_current_user, get_db_session
 from app.lancamentos import service
 from app.lancamentos.schemas import LancamentoDetail, LancamentoListResponse
+from app.permissoes import require_modulo
 
-router = APIRouter(prefix="/api/v1/frap/lancamentos", tags=["frap:lancamentos"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("frap.extratos"))],
+    prefix="/api/v1/frap/lancamentos",
+    tags=["frap:lancamentos"],
+)
 
 
 @router.get("", response_model=LancamentoListResponse)

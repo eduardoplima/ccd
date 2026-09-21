@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.cgad.dataset import schemas, service
-from app.deps import get_current_user, get_db_session, require_role
+from app.deps import get_current_user, get_db_session
+from app.permissoes import require_modulo
 from cgad.models import UserORM
 
 
@@ -95,7 +96,7 @@ def progresso(
 @router.get(
     "/divergencias",
     response_model=schemas.Divergencias,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.dataset", editar=True))],
 )
 def divergencias(session: Session = Depends(get_db_session)) -> schemas.Divergencias:
     return service.divergencias(session)
@@ -104,7 +105,7 @@ def divergencias(session: Session = Depends(get_db_session)) -> schemas.Divergen
 @router.get(
     "/divergencias/{id}",
     response_model=schemas.DivergenciaDetail,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.dataset", editar=True))],
 )
 def divergencia_detail(
     id: int,
@@ -116,7 +117,7 @@ def divergencia_detail(
 @router.get(
     "/export",
     response_model=list[schemas.DocumentoExport],
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_modulo("cgad.dataset", editar=True))],
 )
 def export(
     anotador: str = Query(..., min_length=1),

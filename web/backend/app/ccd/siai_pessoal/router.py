@@ -8,8 +8,13 @@ from sqlalchemy.orm import Session
 from app.auth.models import FRAPUsuario
 from app.ccd.siai_pessoal import schemas, service
 from app.deps import get_current_user, get_db_session
+from app.permissoes import require_modulo
 
-router = APIRouter(prefix="/api/v1/ccd/siai-pessoal", tags=["ccd:siai-pessoal"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("ccd.desconto-folha"))],
+    prefix="/api/v1/ccd/siai-pessoal",
+    tags=["ccd:siai-pessoal"],
+)
 
 
 @router.get("/contracheque", response_model=schemas.ContrachequeMes)

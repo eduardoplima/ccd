@@ -39,6 +39,7 @@ import {
 import { messageForError } from "@/lib/error-messages";
 import { formatCpf, formatCurrencyBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { podeEditar } from "@/lib/permissoes";
 import {
   JOB_LABEL,
   STATUS_EXTRACAO,
@@ -68,7 +69,7 @@ const TOTAIS = [
 
 export default function DescontoFolhaPage() {
   const { data: me } = useCurrentUser();
-  const isAdmin = me?.papel === "admin";
+  const canEdit = podeEditar(me, "ccd.desconto-folha");
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -140,7 +141,7 @@ export default function DescontoFolhaPage() {
             crédito correspondente no FRAP.
           </p>
         </div>
-        {isAdmin && (
+        {canEdit && (
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"

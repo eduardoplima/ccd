@@ -1,14 +1,20 @@
 import { z } from "zod";
 
+import { permissaoItemSchema } from "@/schemas/auth";
+
+const papelSchema = z.enum(["user", "admin", "restrito"]);
+export type Papel = z.infer<typeof papelSchema>;
+
 export const usuarioSchema = z.object({
   idUsuario: z.number(),
   login: z.string(),
   email: z.string().email(),
   nomeCompleto: z.string(),
-  papel: z.enum(["user", "admin"]),
+  papel: papelSchema,
   ativo: z.boolean(),
   dataCriacao: z.string(),
   dataAtualizacao: z.string(),
+  permissoes: z.array(permissaoItemSchema).default([]),
 });
 export type Usuario = z.infer<typeof usuarioSchema>;
 
@@ -28,7 +34,7 @@ export const usuarioCreateInputSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9._-]{1,63}$/, "use letras minúsculas, dígitos, ., _ ou -"),
   email: z.string().email("e-mail inválido"),
   nomeCompleto: z.string().min(1, "informe o nome").max(255),
-  papel: z.enum(["user", "admin"]),
+  papel: papelSchema,
 });
 export type UsuarioCreateInput = z.infer<typeof usuarioCreateInputSchema>;
 
@@ -40,8 +46,9 @@ export type UsuarioCreateResponse = z.infer<typeof usuarioCreateResponseSchema>;
 
 export const usuarioUpdateInputSchema = z.object({
   nomeCompleto: z.string().min(1).max(255).optional(),
-  papel: z.enum(["user", "admin"]).optional(),
+  papel: papelSchema.optional(),
   ativo: z.boolean().optional(),
+  permissoes: z.array(permissaoItemSchema).optional(),
 });
 export type UsuarioUpdateInput = z.infer<typeof usuarioUpdateInputSchema>;
 

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.orm import Session
 
 from app.auth.models import FRAPUsuario
-from app.deps import get_arq_pool, get_current_user, get_db_session, require_role
+from app.deps import get_arq_pool, get_current_user, get_db_session
 from app.jobs import service
 from app.jobs.schemas import (
     ConciliarRequest,
@@ -17,6 +17,7 @@ from app.jobs.schemas import (
     JobOut,
     UploadExtratoResponse,
 )
+from app.permissoes import require_modulo
 
 router = APIRouter(prefix="/api/v1/frap/jobs", tags=["frap:jobs"])
 extratos_router = APIRouter(prefix="/api/v1/frap/extratos", tags=["frap:extratos"])
@@ -31,7 +32,7 @@ _CONTA_RE = re.compile(r"^\d{6}-\d$")
 async def disparar_parse(
     pool=Depends(get_arq_pool),
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(require_modulo("frap.jobs", editar=True)),
 ) -> JobOut:
     job = await service.enqueue_job(
         pool, session, user=user, tipo="parse-extratos", funcao="task_parse_e_publicar"
@@ -44,7 +45,7 @@ async def disparar_conciliar(
     payload: ConciliarRequest,
     pool=Depends(get_arq_pool),
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(require_modulo("frap.jobs", editar=True)),
 ) -> JobOut:
     job = await service.enqueue_job(
         pool,
@@ -66,7 +67,7 @@ async def disparar_conciliar_todos(
     ano: int = Query(..., ge=2000, le=2100),
     pool=Depends(get_arq_pool),
     session: Session = Depends(get_db_session),
-    user: FRAPUsuario = Depends(require_role("admin")),
+    user: FRAPUsuario = Depends(require_modulo("frap.jobs", editar=True)),
 ) -> ConciliarTodosResponse:
     jobs: list[JobOut] = []
     for mes in range(1, 13):
@@ -89,7 +90,7 @@ def listar(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=200),
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(get_current_user),
+    _: FRAPUsuario = Depends(require_modulo("frap.jobs")),
 ) -> JobListResponse:
     rows, total = service.listar_jobs(session, status=status_, tipo=tipo, page=page, size=size)
     return JobListResponse(
@@ -117,7 +118,7 @@ async def cancelar(
     id_job: int,
     pool=Depends(get_arq_pool),
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("frap.jobs", editar=True)),
 ) -> JobOut:
     try:
         job = await service.cancelar_job(pool, session, id_job)
@@ -135,7 +136,7 @@ async def cancelar(
 def deletar_finalizados(
     tipo: str | None = Query(default=None),
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("frap.jobs", editar=True)),
 ) -> DeletarFinalizadosResponse:
     n = service.deletar_finalizados(session, tipo=tipo)
     return DeletarFinalizadosResponse(deletados=n)
@@ -145,7 +146,7 @@ def deletar_finalizados(
 def deletar(
     id_job: int,
     session: Session = Depends(get_db_session),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("frap.jobs", editar=True)),
 ) -> None:
     try:
         row = service.deletar_job(session, id_job)
@@ -166,7 +167,7 @@ async def upload_extrato(
     conta: str = Query(..., pattern=_CONTA_RE.pattern),
     periodo: str = Query(..., pattern=_PERIODO_RE.pattern),
     arquivo: UploadFile = File(...),
-    _: FRAPUsuario = Depends(require_role("admin")),
+    _: FRAPUsuario = Depends(require_modulo("frap.extratos", editar=True)),
 ) -> UploadExtratoResponse:
     if not arquivo.filename or not arquivo.filename.lower().endswith(".txt"):
         raise HTTPException(

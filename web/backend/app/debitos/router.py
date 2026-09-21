@@ -7,8 +7,13 @@ from app.auth.models import FRAPUsuario
 from app.debitos import service
 from app.debitos.schemas import DebitoLookupResponse
 from app.deps import get_current_user, get_db_session
+from app.permissoes import require_modulo
 
-router = APIRouter(prefix="/api/v1/frap/debitos", tags=["frap:debitos"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("frap.extratos"))],
+    prefix="/api/v1/frap/debitos",
+    tags=["frap:debitos"],
+)
 
 
 @router.get("", response_model=DebitoLookupResponse)

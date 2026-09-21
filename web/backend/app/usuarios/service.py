@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.auth.models import FRAPRefreshToken, FRAPUsuario
+from app.auth.models import FRAPRefreshToken, FRAPUsuario, UsuarioPermissao
 from app.auth.security import (
     BCRYPT_MAX_BYTES,
     PasswordTooLongError,
@@ -128,7 +128,9 @@ def atualizar_usuario(
     nome_completo: str | None = None,
     papel: str | None = None,
     ativo: bool | None = None,
+    permissoes: dict[str, bool] | None = None,
 ) -> FRAPUsuario:
+    """`permissoes` (módulo → pode editar), quando dado, substitui a matriz inteira."""
     user = obter_usuario(session, id_usuario)
     # `nome_completo` não é persistido (Usuarios não tem essa coluna); ignorado.
     _ = nome_completo
@@ -138,6 +140,14 @@ def atualizar_usuario(
         user.Ativo = ativo
         if not ativo:
             _revogar_refresh_tokens(session, user.IdUsuario)
+    if permissoes is not None:
+        atuais = {p.Modulo: p for p in user.permissoes}
+        for modulo, editar in permissoes.items():
+            if modulo in atuais:
+                atuais[modulo].PodeEditar = editar
+            else:
+                user.permissoes.append(UsuarioPermissao(Modulo=modulo, PodeEditar=editar))
+        user.permissoes[:] = [p for p in user.permissoes if p.Modulo in permissoes]
     user.DataAtualizacao = datetime.now(UTC).replace(tzinfo=None)
     session.commit()
     session.refresh(user)

@@ -6,39 +6,40 @@ import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/lib/auth-api";
+import { type Modulo, podeEditar, podeVer } from "@/lib/permissoes";
 import { cn } from "@/lib/utils";
 import type { UserOut } from "@/schemas/auth";
 
-type NavItem = { href: string; label: string; admin?: boolean };
+type NavItem = { href: string; label: string; modulo: Modulo; editar?: boolean };
 
 const MODULES = [
-  { key: "ccd", label: "CCD", href: "/ccd" },
-  { key: "cgad", label: "CGAD", href: "/cgad/reviews" },
-  { key: "frap", label: "FRAP", href: "/frap/extratos" },
-  { key: "wiki", label: "WIKI", href: "/wiki" },
+  { key: "ccd", label: "CCD" },
+  { key: "cgad", label: "CGAD" },
+  { key: "frap", label: "FRAP" },
+  { key: "wiki", label: "WIKI" },
 ] as const;
 
 const SUBNAV: Record<string, NavItem[]> = {
   ccd: [
-    { href: "/ccd", label: "Início" },
-    { href: "/ccd/desconto-folha", label: "Desconto em Folha" },
-    { href: "/ccd/beneficios", label: "Benefícios" },
-    { href: "/ccd/automacao", label: "Automação" },
-    { href: "/ccd/alertas", label: "Alertas" },
+    { href: "/ccd", label: "Início", modulo: "ccd.inicio" },
+    { href: "/ccd/desconto-folha", label: "Desconto em Folha", modulo: "ccd.desconto-folha" },
+    { href: "/ccd/beneficios", label: "Benefícios", modulo: "ccd.beneficios" },
+    { href: "/ccd/automacao", label: "Automação", modulo: "ccd.automacao" },
+    { href: "/ccd/alertas", label: "Alertas", modulo: "ccd.alertas" },
   ],
   cgad: [
-    { href: "/cgad/reviews", label: "Revisões" },
-    { href: "/cgad/etl", label: "Extrações", admin: true },
-    { href: "/cgad/dashboards", label: "Painéis" },
-    { href: "/cgad/dataset", label: "Conjunto de Dados" },
+    { href: "/cgad/reviews", label: "Revisões", modulo: "cgad.reviews" },
+    { href: "/cgad/etl", label: "Extrações", modulo: "cgad.etl", editar: true },
+    { href: "/cgad/dashboards", label: "Painéis", modulo: "cgad.dashboards" },
+    { href: "/cgad/dataset", label: "Conjunto de Dados", modulo: "cgad.dataset" },
   ],
   frap: [
-    { href: "/frap/extratos", label: "Extratos" },
-    { href: "/frap/jobs", label: "Extrações", admin: true },
+    { href: "/frap/extratos", label: "Extratos", modulo: "frap.extratos" },
+    { href: "/frap/jobs", label: "Extrações", modulo: "frap.jobs" },
   ],
   wiki: [
-    { href: "/wiki", label: "Início" },
-    { href: "/wiki/procedimentos", label: "POPs" },
+    { href: "/wiki", label: "Início", modulo: "wiki" },
+    { href: "/wiki/procedimentos", label: "POPs", modulo: "wiki" },
   ],
 };
 
@@ -54,7 +55,11 @@ export function TopBar({ user }: { user: UserOut }) {
   const router = useRouter();
   const isAdmin = user.papel === "admin";
   const current = activeModule(pathname);
-  const subnav = (SUBNAV[current] ?? []).filter((l) => !l.admin || isAdmin);
+  const visiveis = (key: string) =>
+    (SUBNAV[key] ?? []).filter((l) =>
+      l.editar ? podeEditar(user, l.modulo) : podeVer(user, l.modulo),
+    );
+  const subnav = visiveis(current);
   // link ativo = correspondência de prefixo mais longa (evita o root "/ccd"
   // ficar aceso junto com "/ccd/desconto-folha" etc.)
   const activeHref = [...subnav]
@@ -76,11 +81,13 @@ export function TopBar({ user }: { user: UserOut }) {
           </Link>
           <nav className="flex items-center gap-2 text-sm font-medium">
             {MODULES.map((m) => {
+              const href = visiveis(m.key)[0]?.href;
+              if (!href) return null;
               const active = current === m.key;
               return (
                 <Link
                   key={m.key}
-                  href={m.href}
+                  href={href}
                   className={cn(
                     "rounded-md px-3 py-1.5 transition-colors",
                     active

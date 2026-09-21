@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDocumentos, useProgresso } from "@/hooks/use-dataset";
 import { messageForError } from "@/lib/error-messages";
+import { podeEditar } from "@/lib/permissoes";
 
 import { DivergenciasTab } from "./_divergencias-tab";
 
@@ -106,7 +107,9 @@ export default function DatasetPage() {
           <TabsTrigger value="done">Concluídos</TabsTrigger>
           <TabsTrigger value="entidades">Probabilidade de ter entidades</TabsTrigger>
           <TabsTrigger value="vazios">Probabilidade de ser vazio</TabsTrigger>
-          {me?.papel === "admin" && <TabsTrigger value="divergencias">Divergências</TabsTrigger>}
+          {podeEditar(me, "cgad.dataset") && (
+            <TabsTrigger value="divergencias">Divergências</TabsTrigger>
+          )}
         </TabsList>
       </Tabs>
 

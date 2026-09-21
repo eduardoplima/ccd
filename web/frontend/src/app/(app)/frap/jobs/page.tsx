@@ -31,6 +31,7 @@ import {
 import { formatDate } from "@/lib/format";
 import { CONTAS } from "@/schemas/lancamento";
 import type { Job, JobStatus } from "@/schemas/job";
+import { podeEditar } from "@/lib/permissoes";
 
 const SIZE = 50;
 
@@ -61,7 +62,7 @@ export default function JobsPage() {
   const deletar = useDeletarJob();
   const limpar = useDeletarFinalizados();
 
-  const isAdmin = me?.papel === "admin";
+  const canEdit = podeEditar(me, "frap.jobs");
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / SIZE));
 
@@ -133,7 +134,7 @@ export default function JobsPage() {
         Redis). A tabela atualiza automaticamente a cada 5s.
       </p>
 
-      {!isAdmin ? (
+      {!canEdit ? (
         <p className="text-sm text-destructive">Disparar jobs e upload requerem papel admin.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -235,7 +236,7 @@ export default function JobsPage() {
               {marcados.size > 0 ? <> · {marcados.size} selecionado(s)</> : null}
             </CardDescription>
           </div>
-          {isAdmin ? (
+          {canEdit ? (
             <div className="flex flex-wrap items-center gap-2">
               {marcados.size > 0 ? (
                 <>
@@ -315,7 +316,7 @@ export default function JobsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {isAdmin ? (
+                  {canEdit ? (
                     <TableHead className="w-8">
                       <Checkbox
                         aria-label="Selecionar todos da página"
@@ -338,7 +339,7 @@ export default function JobsPage() {
                 {data?.items.length === 0 && !isFetching ? (
                   <TableRow>
                     <TableCell
-                      colSpan={isAdmin ? 8 : 7}
+                      colSpan={canEdit ? 8 : 7}
                       className="py-8 text-center text-muted-foreground"
                     >
                       Nenhum job ainda.
@@ -350,7 +351,7 @@ export default function JobsPage() {
                       key={j.idJob}
                       data-state={marcados.has(j.idJob) ? "selected" : undefined}
                     >
-                      {isAdmin ? (
+                      {canEdit ? (
                         <TableCell className="w-8">
                           <Checkbox
                             aria-label={`Selecionar job ${j.idJob}`}
@@ -372,7 +373,7 @@ export default function JobsPage() {
                           <Button size="sm" variant="outline" onClick={() => setSelecionado(j)}>
                             Logs
                           </Button>
-                          {isAdmin && EM_ANDAMENTO.has(j.status) ? (
+                          {canEdit && EM_ANDAMENTO.has(j.status) ? (
                             <Button
                               size="sm"
                               variant="outline"
@@ -390,7 +391,7 @@ export default function JobsPage() {
                               Cancelar
                             </Button>
                           ) : null}
-                          {isAdmin && !EM_ANDAMENTO.has(j.status) ? (
+                          {canEdit && !EM_ANDAMENTO.has(j.status) ? (
                             <Button
                               size="sm"
                               variant="outline"

@@ -12,12 +12,17 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.deps import get_current_user, get_db_session, require_role
+from app.deps import get_current_user, get_db_session
 from app.cgad.review import schemas, service
+from app.permissoes import require_modulo
 from cgad.models import UserORM
 
 
-router = APIRouter(prefix="/api/v1/cgad/reviews", tags=["reviews"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("cgad.reviews"))],
+    prefix="/api/v1/cgad/reviews",
+    tags=["reviews"],
+)
 
 
 @router.get("/awaiting-dispatch", response_model=schemas.AwaitingDispatchPage)
@@ -45,7 +50,7 @@ def list_orgaos(
 @router.get("/reservas", response_model=list[schemas.ReservaUsuarioOut])
 def list_reservas(
     session: Session = Depends(get_db_session),
-    _: UserORM = Depends(require_role("admin")),
+    _: UserORM = Depends(require_modulo("cgad.reviews", editar=True)),
 ) -> list[schemas.ReservaUsuarioOut]:
     return service.list_reservas(session)
 

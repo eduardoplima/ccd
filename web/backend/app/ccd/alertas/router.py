@@ -7,8 +7,13 @@ from app.auth.models import Usuario
 from app.ccd.alertas import service
 from app.ccd.alertas.schemas import AlertasResponse, TipoAlerta
 from app.deps import get_current_user, get_processo_session
+from app.permissoes import require_modulo
 
-router = APIRouter(prefix="/api/v1/ccd/alertas", tags=["ccd:alertas"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("ccd.alertas"))],
+    prefix="/api/v1/ccd/alertas",
+    tags=["ccd:alertas"],
+)
 
 
 @router.get("", response_model=AlertasResponse)

@@ -37,6 +37,7 @@ import {
 import { messageForError } from "@/lib/error-messages";
 import { formatCpf, formatCurrencyBRL } from "@/lib/format";
 import type { CreditoFrap, Lancamento, Valor } from "@/schemas/desconto-folha";
+import { podeEditar } from "@/lib/permissoes";
 
 import { STATUS_EXTRACAO, TIPO_NOTIFICACAO, TIPO_RECEBIMENTO, formatData } from "../_shared";
 
@@ -70,7 +71,7 @@ export default function DescontoFolhaDetalhePage() {
   const router = useRouter();
   const id = Number(params.id);
   const { data: me } = useCurrentUser();
-  const isAdmin = me?.papel === "admin";
+  const canEdit = podeEditar(me, "ccd.desconto-folha");
 
   const {
     data: c,
@@ -133,7 +134,7 @@ export default function DescontoFolhaDetalhePage() {
           <Button variant="outline" onClick={() => router.push("/ccd/desconto-folha")}>
             Voltar
           </Button>
-          {isAdmin && (
+          {canEdit && (
             <Button
               variant="outline"
               disabled={atualizarProcesso.isPending}
@@ -147,7 +148,7 @@ export default function DescontoFolhaDetalhePage() {
               Reconsultar processo
             </Button>
           )}
-          {isAdmin && (
+          {canEdit && (
             <Button
               disabled={extrair.isPending || jobAtivo}
               onClick={() =>
@@ -161,7 +162,7 @@ export default function DescontoFolhaDetalhePage() {
               {jobAtivo ? JOB_LABEL[job!.status] : "Extrair resposta"}
             </Button>
           )}
-          {isAdmin && (
+          {canEdit && (
             <Button
               variant="ghost"
               className="text-destructive"
@@ -297,17 +298,17 @@ export default function DescontoFolhaDetalhePage() {
           <ValoresTable
             id={c.id}
             valores={c.valores}
-            isAdmin={isAdmin}
+            canEdit={canEdit}
             cpf={c.cpfCnpj ?? null}
             processo={c.processo}
           />
-          {isAdmin && <NovoValorForm id={c.id} />}
+          {canEdit && <NovoValorForm id={c.id} />}
         </CardContent>
       </Card>
 
       <CreditosFrapCard
         id={c.id}
-        isAdmin={isAdmin}
+        canEdit={canEdit}
         desdePadrao={c.notificacao.data ? c.notificacao.data.slice(0, 10) : ""}
       />
     </main>
@@ -352,13 +353,13 @@ function linkContracheque(id: number, cpf: string, v: Valor, processo: string): 
 function ValoresTable({
   id,
   valores,
-  isAdmin,
+  canEdit,
   cpf,
   processo,
 }: {
   id: number;
   valores: Valor[];
-  isAdmin: boolean;
+  canEdit: boolean;
   cpf: string | null;
   processo: string;
 }) {
@@ -435,7 +436,7 @@ function ValoresTable({
                       >
                         Crédito FRAP
                       </Button>
-                      {isAdmin && (
+                      {canEdit && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -482,7 +483,7 @@ function ValoresTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  {isAdmin && (
+                  {canEdit && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -586,11 +587,11 @@ function NovoValorForm({ id }: { id: number }) {
 // resposta do órgão (o cadastro fica SEM_RESPOSTA quando ela vem no próprio principal).
 function CreditosFrapCard({
   id,
-  isAdmin,
+  canEdit,
   desdePadrao,
 }: {
   id: number;
-  isAdmin: boolean;
+  canEdit: boolean;
   desdePadrao: string;
 }) {
   const [texto, setTexto] = useState<string | null>(null); // null = default do órgão
@@ -709,7 +710,7 @@ function CreditosFrapCard({
                                     : `vinculado ao cadastro ${l.idCadastroVinculado}`}
                                 </Badge>
                               ) : (
-                                isAdmin && (
+                                canEdit && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -725,7 +726,7 @@ function CreditosFrapCard({
                         </ul>
                       </TableCell>
                       <TableCell>
-                        {isAdmin && livres.length > 1 && (
+                        {canEdit && livres.length > 1 && (
                           <Button
                             size="sm"
                             variant="outline"

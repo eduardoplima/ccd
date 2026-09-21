@@ -4,13 +4,14 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { podeEditar } from "@/lib/permissoes";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
 
   useEffect(() => {
-    if (!isLoading && user && user.papel !== "admin") {
+    if (!isLoading && user && !podeEditar(user, "cgad.dataset")) {
       router.replace("/cgad/reviews");
     }
   }, [isLoading, user, router]);
@@ -22,7 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
     );
   }
-  if (user.papel !== "admin") {
+  if (!podeEditar(user, "cgad.dataset")) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
         Acesso restrito a administradores.

@@ -15,8 +15,13 @@ from app.ccd.automacao.antecedentes.schemas import (
 from app.ccd.gen.jobs import enqueue_ccd_job
 from app.deps import get_arq_pool, get_current_user, get_db_session, get_processo_session
 from app.jobs.schemas import JobOut
+from app.permissoes import require_modulo
 
-router = APIRouter(prefix="/api/v1/ccd/automacao/antecedentes", tags=["ccd:automacao"])
+router = APIRouter(
+    dependencies=[Depends(require_modulo("ccd.automacao"))],
+    prefix="/api/v1/ccd/automacao/antecedentes",
+    tags=["ccd:automacao"],
+)
 
 _PROCESSO_RE = re.compile(r"^\d{1,6}/\d{4}$")
 

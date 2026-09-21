@@ -46,6 +46,7 @@ import {
   TIPO_LABEL,
   TipoEntidade,
 } from "@/schemas/review";
+import { podeEditar } from "@/lib/permissoes";
 
 const PAGE_SIZE = 20;
 
@@ -118,13 +119,13 @@ export default function ReviewsPage() {
   const [revisor, setRevisor] = useState("");
 
   const { data: me } = useCurrentUser();
-  const isAdmin = me?.papel === "admin";
+  const canEdit = podeEditar(me, "cgad.reviews");
   const isAwaiting = tab === "awaiting-dispatch";
   const isMinhaReserva = tab === "minha-reserva";
   const isReserva = tab === "reserva";
   const isRealizadas = tab === "realizadas";
 
-  const reservas = useReservas(isAdmin);
+  const reservas = useReservas(canEdit);
   const usuariosComReserva = reservas.data ?? [];
   const usuarioSelecionado =
     usuariosComReserva.find((r) => r.usuario === usuarioReserva)?.usuario ??
@@ -183,7 +184,7 @@ export default function ReviewsPage() {
       >
         <TabsList>
           <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
-          {isAdmin && <TabsTrigger value="reserva">Reserva</TabsTrigger>}
+          {canEdit && <TabsTrigger value="reserva">Reserva</TabsTrigger>}
           <TabsTrigger value="minha-reserva">Minha reserva</TabsTrigger>
           <TabsTrigger value="realizadas">Realizadas</TabsTrigger>
           <TabsTrigger value="awaiting-dispatch">Aguardando envio</TabsTrigger>

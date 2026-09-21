@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { TopBar } from "@/components/app/top-bar";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { hasSession } from "@/lib/auth";
+import { moduloDaRota, podeVer, primeiraRotaVisivel } from "@/lib/permissoes";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -33,6 +34,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [mustChangePassword, router]);
 
+  // Usuário restrito: rota de módulo que ele não vê → primeira rota visível.
+  const modulo = pathname ? moduloDaRota(pathname) : null;
+  const semAcesso = !!user && !mustChangePassword && !!modulo && !podeVer(user, modulo);
+  useEffect(() => {
+    if (semAcesso && user) {
+      router.replace(primeiraRotaVisivel(user));
+    }
+  }, [semAcesso, user, router]);
+
   if (isLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -41,7 +51,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (mustChangePassword) {
+  if (mustChangePassword || semAcesso) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-muted-foreground">Redirecionando...</p>
