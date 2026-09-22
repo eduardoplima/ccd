@@ -1,6 +1,7 @@
-"""Gera o script T-SQL de INSERT das multas da CCD em BdBeneficio.dbo.Beneficio_PropostaBeneficio.
+"""Gera o script T-SQL de INSERT das multas e ressarcimentos da CCD em BdBeneficio.dbo.Beneficio_PropostaBeneficio.
 
-Lê o staging dbo.CCDBeneficio (BdDIP) — tipo 1 (Sanção/Multa), origens DEBITO
+Lê o staging dbo.CCDBeneficio (BdDIP) — tipos 1 (Sanção/Multa) e 2 (Restituição/
+Débito imputado), origens DEBITO
 (potencial) e BOLETO (efetivo) — com DataOcorrencia nos anos pedidos, aplicando
 o mesmo filtro de validade da folha da cadeia de web/backend/app/ccd/beneficios/tasks.py
 (débito cancelado/suspenso fica fora). Saída: um INSERT por linha. NADA é
@@ -44,7 +45,7 @@ SELECT b.DescricaoPropostaBeneficio, b.ValorQuantidade, b.IdBeneficioSituacaoEfe
 FROM dbo.CCDBeneficio b
 JOIN cadeia nr ON nr.id_no = b.IdDebitoExecucao
 JOIN folhas f ON f.id_raiz = nr.id_raiz AND f.rn = 1
-WHERE b.Ativo = 1 AND b.IdTipoBeneficio = 1 AND b.Origem IN ('DEBITO', 'BOLETO')
+WHERE b.Ativo = 1 AND b.IdTipoBeneficio IN (1, 2) AND b.Origem IN ('DEBITO', 'BOLETO')
   AND YEAR(b.DataOcorrencia) IN ({anos})
   AND (b.Origem = 'BOLETO' OR (
         f.DataCancelamento IS NULL AND f.CodigoStatusDivida <> 20
@@ -104,9 +105,9 @@ def gerar(anos: list[int], id_setor: int) -> tuple[str, dict[str, int]]:
     n_pot = sum(1 for r in rows if r["IdBeneficioSituacaoEfetivacao"] == 2)
     resumo = {"potenciais": n_pot, "efetivos": len(rows) - n_pot}
     cabecalho = (
-        f"-- Multas da CCD ({', '.join(map(str, anos))}) para o SisBenefícios — gerado por\n"
+        f"-- Multas e ressarcimentos da CCD ({', '.join(map(str, anos))}) para o SisBenefícios — gerado por\n"
         f"-- scripts/automacao/beneficios_insert_multas.py em {date.today().isoformat()} a partir de\n"
-        "-- BdDIP.dbo.CCDBeneficio (DEBITO=potencial, BOLETO=efetivo; tipo 1 Sanção/subtipo 1 Multa;\n"
+        "-- BdDIP.dbo.CCDBeneficio (DEBITO=potencial, BOLETO=efetivo; tipo 1 Multa e tipo 2 Débito imputado;\n"
         f"-- só débitos válidos pela folha da cadeia). {n_pot} potenciais + {len(rows) - n_pot} efetivos.\n"
         "USE BdBeneficio;\n"
         "DECLARE @IdSessao int = NULL;  -- OBRIGATÓRIO: sessão de auditoria do SisBenefícios\n"
@@ -123,7 +124,7 @@ def main() -> None:
     script, resumo = gerar(args.anos, args.setor)
     out = REPO_ROOT / "saidas" / "automacao" / "beneficios"
     out.mkdir(parents=True, exist_ok=True)
-    destino = out / f"insert_multas_{'_'.join(map(str, args.anos))}.sql"
+    destino = out / f"insert_multas_ressarcimentos_{'_'.join(map(str, args.anos))}.sql"
     destino.write_text(script, encoding="utf-8")
     print(f"{destino}: {resumo}")
 
