@@ -87,6 +87,12 @@ class BeneficioResumo(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class MesSerie(BaseModel):
+    ano: int
+    mes: int
+    qtd: int
+
+
 class TransicaoInput(BaseModel):
     status: StatusBeneficio
 

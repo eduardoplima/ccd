@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { apiClient } from "@/lib/api-client";
 import { jobSchema, type Job } from "@/schemas/job";
 import {
@@ -5,11 +7,13 @@ import {
   beneficioListResponseSchema,
   beneficioResumoSchema,
   dominiosResponseSchema,
+  mesSerieSchema,
   type BeneficioItem,
   type BeneficioListResponse,
   type BeneficioPayload,
   type BeneficioResumo,
   type DominiosResponse,
+  type MesSerie,
   type OrigemBeneficio,
   type StatusBeneficio,
 } from "@/schemas/beneficios";
@@ -58,6 +62,11 @@ export async function getBeneficiosResumo(
 ): Promise<BeneficioResumo> {
   const { data } = await apiClient.get(`${BASE}/resumo`, { params: buildParams({ ...periodo }) });
   return beneficioResumoSchema.parse(data);
+}
+
+export async function getBeneficiosSerie(): Promise<MesSerie[]> {
+  const { data } = await apiClient.get(`${BASE}/serie`);
+  return z.array(mesSerieSchema).parse(data);
 }
 
 export async function getBeneficiosDominios(): Promise<DominiosResponse> {

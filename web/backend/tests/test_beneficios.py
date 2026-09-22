@@ -11,7 +11,18 @@ from decimal import Decimal
 
 from app.ccd.beneficios.export import _COLUNAS_EXPORT, _linha_export
 from app.ccd.beneficios.schemas import BeneficioInput
-from app.ccd.beneficios.service import CAMPOS, TRANSICOES, filtro_periodo
+from app.ccd.beneficios.service import CAMPOS, TRANSICOES, _preencher_meses, filtro_periodo
+
+
+def test_preencher_meses() -> None:
+    assert _preencher_meses([]) == []
+    serie = _preencher_meses([(2025, 11, 3), (2026, 2, 1)])
+    assert [(s.ano, s.mes, s.qtd) for s in serie] == [
+        (2025, 11, 3),
+        (2025, 12, 0),
+        (2026, 1, 0),
+        (2026, 2, 1),
+    ]
 
 
 def test_filtro_periodo() -> None:

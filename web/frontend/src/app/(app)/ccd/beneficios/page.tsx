@@ -19,6 +19,7 @@ import { podeEditar } from "@/lib/permissoes";
 
 import { BeneficioFormDialog } from "./_beneficio-dialog";
 import { BeneficiosTab } from "./_beneficios-tab";
+import { SerieTemporal } from "./_serie-temporal";
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -85,6 +86,15 @@ export default function BeneficiosPage() {
           <Button onClick={() => setCriarOpen(true)}>Novo benefício</Button>
         </div>
       </div>
+
+      <SerieTemporal
+        de={de}
+        ate={ate}
+        onChange={(d, a) => {
+          void setDe(d);
+          void setAte(a);
+        }}
+      />
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1">

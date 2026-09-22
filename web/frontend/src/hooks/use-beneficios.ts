@@ -10,6 +10,7 @@ import {
   exportarBeneficios,
   getBeneficiosDominios,
   getBeneficiosResumo,
+  getBeneficiosSerie,
   listBeneficios,
   transicionarBeneficio,
   type BeneficiosFilters,
@@ -33,6 +34,14 @@ export function useBeneficiosResumo(periodo: BeneficiosPeriodo = {}) {
     queryKey: [KEY, "resumo", periodo],
     queryFn: () => getBeneficiosResumo(periodo),
     staleTime: 30_000,
+  });
+}
+
+export function useBeneficiosSerie() {
+  return useQuery({
+    queryKey: [KEY, "serie"],
+    queryFn: getBeneficiosSerie,
+    staleTime: 5 * 60_000,
   });
 }
 

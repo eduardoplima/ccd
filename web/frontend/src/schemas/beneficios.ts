@@ -79,6 +79,10 @@ export const beneficioResumoSchema = z.object({
 });
 export type BeneficioResumo = z.infer<typeof beneficioResumoSchema>;
 
+// mirrors backend MesSerie
+export const mesSerieSchema = z.object({ ano: z.number(), mes: z.number(), qtd: z.number() });
+export type MesSerie = z.infer<typeof mesSerieSchema>;
+
 // mirrors backend DominioItem / DominiosResponse
 export const dominioItemSchema = z.object({ id: z.number(), descricao: z.string() });
 export type DominioItem = z.infer<typeof dominioItemSchema>;

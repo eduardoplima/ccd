@@ -20,6 +20,7 @@ from app.ccd.beneficios.schemas import (
     BeneficioItem,
     BeneficioListResponse,
     BeneficioResumo,
+    MesSerie,
 )
 
 # campo Pydantic (snake_case) -> coluna SQL. Fonte única para SELECT/INSERT/UPDATE.
@@ -215,6 +216,36 @@ def resumo(
         valor_potencial=row["ValorPotencial"] or Decimal(0),
         valor_efetivo=row["ValorEfetivo"] or Decimal(0),
     )
+
+
+def _preencher_meses(rows: list[tuple[int, int, int]]) -> list[MesSerie]:
+    """(ano, mes, qtd) ordenado -> série mensal contígua, meses sem linha com qtd=0."""
+    if not rows:
+        return []
+    qtd = {(a, m): q for a, m, q in rows}
+    (ano, mes), (fim_ano, fim_mes) = min(qtd), max(qtd)
+    serie: list[MesSerie] = []
+    while (ano, mes) <= (fim_ano, fim_mes):
+        serie.append(MesSerie(ano=ano, mes=mes, qtd=qtd.get((ano, mes), 0)))
+        ano, mes = (ano + 1, 1) if mes == 12 else (ano, mes + 1)
+    return serie
+
+
+def serie_mensal(session: Session) -> list[MesSerie]:
+    """Quantidade de benefícios ativos por mês da data de referência (histograma do período)."""
+    ref = "COALESCE(DataOcorrencia, CAST(DataInclusao AS DATE))"
+    rows = session.execute(
+        text(
+            f"""
+            SELECT YEAR({ref}) AS Ano, MONTH({ref}) AS Mes, COUNT(*) AS Qtd
+            FROM dbo.CCDBeneficio
+            WHERE Ativo = 1
+            GROUP BY YEAR({ref}), MONTH({ref})
+            ORDER BY 1, 2
+            """
+        )
+    ).all()
+    return _preencher_meses([(int(a), int(m), int(q)) for a, m, q in rows])
 
 
 def obter(session: Session, id_beneficio: int) -> BeneficioItem | None:

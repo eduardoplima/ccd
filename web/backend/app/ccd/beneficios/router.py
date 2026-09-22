@@ -18,6 +18,7 @@ from app.ccd.beneficios.schemas import (
     BeneficioUpdate,
     DominiosResponse,
     ExportInput,
+    MesSerie,
     TransicaoInput,
 )
 from app.deps import get_arq_pool, get_current_user, get_db_session
@@ -84,6 +85,14 @@ def resumo(
 ) -> BeneficioResumo:
     _validar_periodo(data_de, data_ate)
     return service.resumo(session, data_de=data_de, data_ate=data_ate)
+
+
+@router.get("/serie", response_model=list[MesSerie])
+def serie(
+    session: Session = Depends(get_db_session),
+    _: FRAPUsuario = Depends(get_current_user),
+) -> list[MesSerie]:
+    return service.serie_mensal(session)
 
 
 @router.get("/dominios", response_model=DominiosResponse)
