@@ -3,9 +3,8 @@
 Lê o staging dbo.CCDBeneficio (BdDIP) — tipo 1 (Sanção/Multa), origens DEBITO
 (potencial) e BOLETO (efetivo) — com DataOcorrencia nos anos pedidos, aplicando
 o mesmo filtro de validade da folha da cadeia de web/backend/app/ccd/beneficios/tasks.py
-(débito cancelado/suspenso fica fora). O efetivo é vinculado ao potencial do
-mesmo débito (raiz da cadeia) via IdBeneficioAnterior, resolvido no próprio
-script com MERGE ... OUTPUT. NADA é executado aqui: só gera o .sql.
+(débito cancelado/suspenso fica fora). Saída: um INSERT por linha. NADA é
+executado aqui: só gera o .sql.
 
 Uso: python -m scripts.automacao.beneficios_insert_multas [--anos 2025 2026] [--setor 762]
 """
@@ -39,10 +38,9 @@ folhas AS (
       FROM cadeia c JOIN processo.dbo.Exe_Debito e ON e.IdDebito = c.id_no
      WHERE NOT EXISTS (SELECT 1 FROM processo.dbo.Exe_Debito g WHERE g.IdDebitoAnterior = e.IdDebito)
 )
-SELECT b.IdCCDBeneficio, b.Origem, nr.id_raiz, b.DescricaoPropostaBeneficio, b.ValorQuantidade,
-       b.IdBeneficioSituacaoEfetivacao, b.IdBeneficioSituacao, b.IdAreaTematica,
-       b.IdCaracterizacaoBeneficio, b.IdTipoBeneficio, b.IdSubTipoBeneficio,
-       b.NumeroProcessoDecisao, b.AnoProcessoDecisao, b.DataOcorrencia
+SELECT b.DescricaoPropostaBeneficio, b.ValorQuantidade, b.IdBeneficioSituacaoEfetivacao,
+       b.IdBeneficioSituacao, b.IdAreaTematica, b.IdCaracterizacaoBeneficio, b.IdTipoBeneficio,
+       b.IdSubTipoBeneficio, b.NumeroProcessoDecisao, b.AnoProcessoDecisao
 FROM dbo.CCDBeneficio b
 JOIN cadeia nr ON nr.id_no = b.IdDebitoExecucao
 JOIN folhas f ON f.id_raiz = nr.id_raiz AND f.rn = 1
@@ -56,22 +54,11 @@ ORDER BY b.IdBeneficioSituacaoEfetivacao DESC, b.DataOcorrencia, b.IdCCDBenefici
 OPTION (MAXRECURSION 100)
 """
 
-_COLS_LOTE = (
-    "IdInterno, IdInternoAnterior, DescricaoPropostaBeneficio, ValorQuantidade, "
-    "IdBeneficioSituacaoEfetivacao, IdBeneficioSituacao, IdAreaTematica, IdCaracterizacaoBeneficio, "
-    "IdTipoBeneficio, IdSubTipoBeneficio, NumeroProcessoDecisao, AnoProcessoDecisao, DataOcorrencia"
-)
-_COLS_DESTINO = (
+_COLUNAS = (
     "DescricaoPropostaBeneficio, ValorQuantidade, ValorQuantidadeOriginal, "
     "IdBeneficioSituacaoEfetivacao, IdBeneficioSituacao, IdAreaTematica, IdCaracterizacaoBeneficio, "
     "IdTipoBeneficio, IdSubTipoBeneficio, NumeroProcessoDecisao, AnoProcessoDecisao, "
-    "IdStatusBeneficio, IdSetorUsuarioCadastro, DataInclusao, IdSessao, IdBeneficioAnterior"
-)
-_VALS_DESTINO = (
-    "s.DescricaoPropostaBeneficio, s.ValorQuantidade, s.ValorQuantidade, "
-    "s.IdBeneficioSituacaoEfetivacao, s.IdBeneficioSituacao, s.IdAreaTematica, s.IdCaracterizacaoBeneficio, "
-    "s.IdTipoBeneficio, s.IdSubTipoBeneficio, s.NumeroProcessoDecisao, s.AnoProcessoDecisao, "
-    "1, @IdSetor, GETDATE(), @IdSessao, s.IdBeneficioAnterior"
+    "IdStatusBeneficio, IdSetorUsuarioCadastro, DataInclusao, IdSessao"
 )
 
 
@@ -80,8 +67,6 @@ def _lit(v: object) -> str:
         return "NULL"
     if isinstance(v, str):
         return "N'" + v.replace("'", "''") + "'"
-    if isinstance(v, date):
-        return f"'{v.isoformat()}'"
     if isinstance(v, Decimal):
         return f"{v:.2f}"
     return str(v)
@@ -90,106 +75,44 @@ def _lit(v: object) -> str:
 def gerar(anos: list[int], id_setor: int) -> tuple[str, dict[str, int]]:
     sql = _SQL.format(anos=", ".join(str(int(a)) for a in anos))
     with get_connection("BdDIP").connect() as c:
-        rows = [dict(r) for r in c.execute(text(sql)).mappings()]
+        rows = c.execute(text(sql)).mappings().all()
 
-    potencial_por_raiz = {
-        r["id_raiz"]: r["IdCCDBeneficio"] for r in rows if r["Origem"] == "DEBITO"
-    }
-    valores = []
-    n_vinc = 0
-    for r in rows:
-        anterior = potencial_por_raiz.get(r["id_raiz"]) if r["Origem"] == "BOLETO" else None
-        n_vinc += anterior is not None
-        valores.append(
-            "("
-            + ", ".join(
-                _lit(v)
-                for v in (
-                    r["IdCCDBeneficio"],
-                    anterior,
-                    r["DescricaoPropostaBeneficio"],
-                    r["ValorQuantidade"],
-                    r["IdBeneficioSituacaoEfetivacao"],
-                    r["IdBeneficioSituacao"],
-                    r["IdAreaTematica"],
-                    r["IdCaracterizacaoBeneficio"],
-                    r["IdTipoBeneficio"],
-                    r["IdSubTipoBeneficio"],
-                    r["NumeroProcessoDecisao"],
-                    r["AnoProcessoDecisao"],
-                    r["DataOcorrencia"],
-                )
-            )
-            + ")"
+    inserts = [
+        f"INSERT INTO dbo.Beneficio_PropostaBeneficio ({_COLUNAS}) VALUES ("
+        + ", ".join(
+            [
+                _lit(r["DescricaoPropostaBeneficio"]),
+                _lit(r["ValorQuantidade"]),
+                _lit(r["ValorQuantidade"]),
+                _lit(r["IdBeneficioSituacaoEfetivacao"]),
+                _lit(r["IdBeneficioSituacao"]),
+                _lit(r["IdAreaTematica"]),
+                _lit(r["IdCaracterizacaoBeneficio"]),
+                _lit(r["IdTipoBeneficio"]),
+                _lit(r["IdSubTipoBeneficio"]),
+                _lit(r["NumeroProcessoDecisao"]),
+                _lit(r["AnoProcessoDecisao"]),
+                "1",  # IdStatusBeneficio: Cadastrado
+                str(id_setor),
+                "GETDATE()",
+                "@IdSessao",
+            ]
         )
-
-    n_pot = len(potencial_por_raiz)
-    n_efe = len(rows) - n_pot
-    resumo = {"potenciais": n_pot, "efetivos": n_efe, "efetivos_vinculados": n_vinc}
-
-    partes = [
-        f"""-- Multas da CCD ({", ".join(map(str, anos))}) para o SisBenefícios — gerado por
--- scripts/automacao/beneficios_insert_multas.py em {date.today().isoformat()} a partir do staging
--- BdDIP.dbo.CCDBeneficio (origens DEBITO=potencial e BOLETO=efetivo, tipo 1 Sanção/subtipo 1 Multa,
--- só débitos válidos pela folha da cadeia). {n_pot} potenciais + {n_efe} efetivos
--- ({resumo["efetivos_vinculados"]} efetivos vinculados ao potencial do mesmo débito).
---
--- Antes de rodar: preencher @IdSessao (sessão de auditoria do SisBenefícios) e conferir @IdSetor.
--- O script termina em ROLLBACK; troque por COMMIT para gravar.
-USE BdBeneficio;
-SET NOCOUNT ON; SET XACT_ABORT ON;
-DECLARE @IdSessao int = NULL;  -- OBRIGATÓRIO (coluna NOT NULL)
-DECLARE @IdSetor  int = {id_setor};  -- processo.dbo.Setor: COORDENADORIA DE CONTROLE DE DECISÕES
-IF @IdSessao IS NULL THROW 50000, 'Preencha @IdSessao.', 1;
-
-CREATE TABLE #lote (
-    IdInterno int PRIMARY KEY, IdInternoAnterior int NULL,
-    DescricaoPropostaBeneficio varchar(500) NOT NULL, ValorQuantidade decimal(14,2) NULL,
-    IdBeneficioSituacaoEfetivacao smallint, IdBeneficioSituacao smallint, IdAreaTematica smallint,
-    IdCaracterizacaoBeneficio tinyint, IdTipoBeneficio int, IdSubTipoBeneficio int,
-    NumeroProcessoDecisao varchar(6) NULL, AnoProcessoDecisao smallint NULL, DataOcorrencia date NULL
-);
-CREATE TABLE #map (IdInterno int PRIMARY KEY, IdPropostaBeneficio int NOT NULL);
-"""
+        + ");"
+        for r in rows
     ]
-    for i in range(0, len(valores), 1000):
-        partes.append(
-            f"INSERT INTO #lote ({_COLS_LOTE}) VALUES\n" + ",\n".join(valores[i : i + 1000]) + ";\n"
-        )
-    partes.append(
-        f"""
-BEGIN TRAN;
-
--- 1) potenciais (IdBeneficioSituacaoEfetivacao = 2): OUTPUT devolve o id gerado por IdInterno
-MERGE dbo.Beneficio_PropostaBeneficio AS t
-USING (SELECT l.*, CAST(NULL AS int) AS IdBeneficioAnterior
-         FROM #lote l WHERE l.IdBeneficioSituacaoEfetivacao = 2) AS s
-   ON 1 = 0
-WHEN NOT MATCHED THEN INSERT ({_COLS_DESTINO})
-     VALUES ({_VALS_DESTINO})
-OUTPUT s.IdInterno, inserted.IdPropostaBeneficio INTO #map (IdInterno, IdPropostaBeneficio);
-
--- 2) efetivos (= 1), vinculados ao potencial do mesmo débito quando ele está no lote
-MERGE dbo.Beneficio_PropostaBeneficio AS t
-USING (SELECT l.*, m.IdPropostaBeneficio AS IdBeneficioAnterior
-         FROM #lote l LEFT JOIN #map m ON m.IdInterno = l.IdInternoAnterior
-        WHERE l.IdBeneficioSituacaoEfetivacao = 1) AS s
-   ON 1 = 0
-WHEN NOT MATCHED THEN INSERT ({_COLS_DESTINO})
-     VALUES ({_VALS_DESTINO})
-OUTPUT s.IdInterno, inserted.IdPropostaBeneficio INTO #map (IdInterno, IdPropostaBeneficio);
-
-SELECT l.IdBeneficioSituacaoEfetivacao AS efetivacao, COUNT(*) AS inseridos,
-       SUM(l.ValorQuantidade) AS valor,
-       SUM(CASE WHEN l.IdInternoAnterior IS NOT NULL THEN 1 ELSE 0 END) AS vinculados
-  FROM #lote l JOIN #map m ON m.IdInterno = l.IdInterno
- GROUP BY l.IdBeneficioSituacaoEfetivacao;
-
-ROLLBACK TRAN;  -- troque por COMMIT TRAN para gravar
-DROP TABLE #map; DROP TABLE #lote;
-"""
+    n_pot = sum(1 for r in rows if r["IdBeneficioSituacaoEfetivacao"] == 2)
+    resumo = {"potenciais": n_pot, "efetivos": len(rows) - n_pot}
+    cabecalho = (
+        f"-- Multas da CCD ({', '.join(map(str, anos))}) para o SisBenefícios — gerado por\n"
+        f"-- scripts/automacao/beneficios_insert_multas.py em {date.today().isoformat()} a partir de\n"
+        "-- BdDIP.dbo.CCDBeneficio (DEBITO=potencial, BOLETO=efetivo; tipo 1 Sanção/subtipo 1 Multa;\n"
+        f"-- só débitos válidos pela folha da cadeia). {n_pot} potenciais + {len(rows) - n_pot} efetivos.\n"
+        "USE BdBeneficio;\n"
+        "DECLARE @IdSessao int = NULL;  -- OBRIGATÓRIO: sessão de auditoria do SisBenefícios\n"
+        f"-- IdSetorUsuarioCadastro = {id_setor} (processo.dbo.Setor: COORDENADORIA DE CONTROLE DE DECISÕES)\n\n"
     )
-    return "".join(partes), resumo
+    return cabecalho + "\n".join(inserts) + "\n", resumo
 
 
 def main() -> None:
