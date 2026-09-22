@@ -3,20 +3,15 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  atualizarBeneficio,
-  criarBeneficio,
-  deletarBeneficio,
   dispararDeteccaoBeneficios,
   exportarBeneficios,
   getBeneficiosDominios,
   getBeneficiosResumo,
   getBeneficiosSerie,
   listBeneficios,
-  transicionarBeneficio,
   type BeneficiosFilters,
-  type BeneficiosPeriodo,
+  type BeneficiosRecorte,
 } from "@/lib/api/beneficios";
-import type { BeneficioPayload, StatusBeneficio } from "@/schemas/beneficios";
 
 const KEY = "ccd-beneficios";
 
@@ -29,10 +24,10 @@ export function useBeneficios(filters: BeneficiosFilters) {
   });
 }
 
-export function useBeneficiosResumo(periodo: BeneficiosPeriodo = {}) {
+export function useBeneficiosResumo(recorte: BeneficiosRecorte = {}) {
   return useQuery({
-    queryKey: [KEY, "resumo", periodo],
-    queryFn: () => getBeneficiosResumo(periodo),
+    queryKey: [KEY, "resumo", recorte],
+    queryFn: () => getBeneficiosResumo(recorte),
     staleTime: 30_000,
   });
 }
@@ -53,55 +48,10 @@ export function useBeneficiosDominios() {
   });
 }
 
-export function useCriarBeneficio() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: BeneficioPayload) => criarBeneficio(payload),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function useAtualizarBeneficio() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: BeneficioPayload }) =>
-      atualizarBeneficio(id, payload),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function useDeletarBeneficio() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => deletarBeneficio(id),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
-export function useTransicionarBeneficio() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: StatusBeneficio }) =>
-      transicionarBeneficio(id, status),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-}
-
 export function useExportarBeneficios() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      formato,
-      ids,
-      marcarEnviado,
-      periodo,
-    }: {
-      formato: "xlsx" | "json";
-      ids?: number[];
-      marcarEnviado?: boolean;
-      periodo?: BeneficiosPeriodo;
-    }) => exportarBeneficios(formato, ids, marcarEnviado, periodo),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: [KEY] }),
+    mutationFn: ({ formato, recorte }: { formato: "csv" | "json"; recorte?: BeneficiosRecorte }) =>
+      exportarBeneficios(formato, recorte),
   });
 }
 

@@ -12,7 +12,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-StatusBeneficio = Literal["RASCUNHO", "VALIDADO", "ENVIADO", "DESCARTADO"]
 OrigemBeneficio = Literal[
     "MANUAL", "DEBITO", "BOLETO", "PGE", "FOLHA", "DIVIDA_ATIVA", "FRAP", "PROPOSTA"
 ]
@@ -45,23 +44,12 @@ class _BeneficioCampos(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class BeneficioInput(_BeneficioCampos):
-    descricao: str = Field(min_length=1, max_length=500)
-
-
-class BeneficioUpdate(_BeneficioCampos):
-    descricao: str | None = Field(default=None, min_length=1, max_length=500)
-
-
 class BeneficioItem(_BeneficioCampos):
     id_beneficio: int = Field(alias="idBeneficio")
     descricao: str
-    status: StatusBeneficio
     origem: OrigemBeneficio
     chave_origem: str | None = Field(default=None, alias="chaveOrigem")
     id_debito_execucao: int | None = Field(default=None, alias="idDebitoExecucao")
-    lote_envio: str | None = Field(default=None, alias="loteEnvio")
-    data_envio: datetime | None = Field(default=None, alias="dataEnvio")
     data_inclusao: datetime | None = Field(default=None, alias="dataInclusao")
     data_atualizacao: datetime | None = Field(default=None, alias="dataAtualizacao")
 
@@ -75,10 +63,6 @@ class BeneficioListResponse(BaseModel):
 
 class BeneficioResumo(BaseModel):
     total: int
-    qtd_rascunho: int = Field(serialization_alias="qtdRascunho")
-    qtd_validado: int = Field(serialization_alias="qtdValidado")
-    qtd_enviado: int = Field(serialization_alias="qtdEnviado")
-    qtd_descartado: int = Field(serialization_alias="qtdDescartado")
     qtd_potencial: int = Field(serialization_alias="qtdPotencial")
     qtd_efetivo: int = Field(serialization_alias="qtdEfetivo")
     valor_potencial: Decimal = Field(default=Decimal(0), serialization_alias="valorPotencial")
@@ -93,15 +77,11 @@ class MesSerie(BaseModel):
     qtd: int
 
 
-class TransicaoInput(BaseModel):
-    status: StatusBeneficio
-
-
 class ExportInput(BaseModel):
-    ids: list[int] | None = None
-    formato: Literal["xlsx", "json"] = "xlsx"
-    marcar_enviado: bool = Field(default=True, alias="marcarEnviado")
-    # recorte do export "todos" (ignorado quando há `ids`)
+    formato: Literal["csv", "json"] = "csv"
+    # mesmo recorte da lista
+    q: str | None = Field(default=None, max_length=200)
+    origem: OrigemBeneficio | None = None
     data_de: date | None = Field(default=None, alias="dataDe")
     data_ate: date | None = Field(default=None, alias="dataAte")
 

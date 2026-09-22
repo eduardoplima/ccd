@@ -1,9 +1,8 @@
-"""CRUD e ciclo de vida do staging CCDBeneficio (migração 0020).
+"""Leitura do staging CCDBeneficio (migração 0020).
 
-RASCUNHO -> VALIDADO -> ENVIADO, com DESCARTADO como saída lateral. DESCARTADO
-mantém Ativo=1 de propósito: a ChaveOrigem segue ocupada e o job de detecção
-não recria o candidato. Soft delete (Ativo=0) só para registro criado à mão
-por engano.
+Somente leitura: a tabela é populada pelo job de detecção (tasks.py) e a tela
+lista/exporta. As colunas Status/DataEnvio/LoteEnvio do antigo ciclo de
+validação continuam no banco (default 'RASCUNHO'), mas não são mais lidas.
 """
 
 from __future__ import annotations
@@ -15,7 +14,6 @@ from typing import Any
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
-from app.ccd.beneficios.dominios import obter_dominios
 from app.ccd.beneficios.schemas import (
     BeneficioItem,
     BeneficioListResponse,
@@ -23,7 +21,7 @@ from app.ccd.beneficios.schemas import (
     MesSerie,
 )
 
-# campo Pydantic (snake_case) -> coluna SQL. Fonte única para SELECT/INSERT/UPDATE.
+# campo Pydantic (snake_case) -> coluna SQL. Fonte única do SELECT.
 CAMPOS: dict[str, str] = {
     "descricao": "DescricaoPropostaBeneficio",
     "memoria_calculo": "MemoriaCalculoPropostaBeneficio",
@@ -46,10 +44,7 @@ CAMPOS: dict[str, str] = {
     "data_ocorrencia": "DataOcorrencia",
 }
 
-_META_COLS = (
-    "IdCCDBeneficio, Status, Origem, ChaveOrigem, IdDebitoExecucao, "
-    "LoteEnvio, DataEnvio, DataInclusao, DataAtualizacao"
-)
+_META_COLS = "IdCCDBeneficio, Origem, ChaveOrigem, IdDebitoExecucao, DataInclusao, DataAtualizacao"
 _SELECT_COLS = _META_COLS + ", " + ", ".join(CAMPOS.values())
 
 _SORT_COLS = {
@@ -61,25 +56,14 @@ _SORT_COLS = {
     "dataInclusao": "DataInclusao",
 }
 
-# Transições permitidas do ciclo de vida.
-TRANSICOES: dict[str, set[str]] = {
-    "RASCUNHO": {"VALIDADO", "DESCARTADO"},
-    "VALIDADO": {"ENVIADO", "RASCUNHO", "DESCARTADO"},
-    "ENVIADO": {"VALIDADO"},
-    "DESCARTADO": {"RASCUNHO"},
-}
-
 
 def _to_item(r: Any) -> BeneficioItem:
     dados = {campo: r[coluna] for campo, coluna in CAMPOS.items()}
     return BeneficioItem(
         id_beneficio=int(r["IdCCDBeneficio"]),
-        status=r["Status"],
         origem=r["Origem"],
         chave_origem=r["ChaveOrigem"],
         id_debito_execucao=r["IdDebitoExecucao"],
-        lote_envio=r["LoteEnvio"],
-        data_envio=r["DataEnvio"],
         data_inclusao=r["DataInclusao"],
         data_atualizacao=r["DataAtualizacao"],
         **dados,
@@ -105,15 +89,35 @@ def filtro_periodo(
         params["data_ate"] = data_ate
 
 
+def _where_lista(
+    q: str | None,
+    origem: str | None,
+    data_de: date | None,
+    data_ate: date | None,
+    alias: str = "b.",
+) -> tuple[str, dict[str, Any]]:
+    """WHERE comum a lista, resumo e export — o mesmo recorte em todos."""
+    where = [f"{alias}Ativo = 1"]
+    params: dict[str, Any] = {}
+    if q:
+        where.append(
+            f"(CONCAT({alias}NumeroProcessoDecisao, '/', {alias}AnoProcessoDecisao) LIKE :q "
+            f"OR {alias}NomePessoa LIKE :q OR {alias}CpfCnpj LIKE :q "
+            f"OR {alias}DescricaoPropostaBeneficio LIKE :q)"
+        )
+        params["q"] = f"%{q}%"
+    if origem:
+        where.append(f"{alias}Origem = :origem")
+        params["origem"] = origem
+    filtro_periodo(where, params, data_de, data_ate, alias=alias)
+    return "WHERE " + " AND ".join(where), params
+
+
 def listar(
     session: Session,
     *,
     q: str | None = None,
-    status: str | None = None,
-    situacao_efetivacao: int | None = None,
-    id_tipo: int | None = None,
     origem: str | None = None,
-    fonte: str | None = None,
     data_de: date | None = None,
     data_ate: date | None = None,
     page: int = 1,
@@ -121,34 +125,7 @@ def listar(
     sort_by: str | None = None,
     sort_dir: str = "asc",
 ) -> BeneficioListResponse:
-    where = ["b.Ativo = 1"]
-    params: dict[str, Any] = {}
-    if q:
-        where.append(
-            "(CONCAT(b.NumeroProcessoDecisao, '/', b.AnoProcessoDecisao) LIKE :q "
-            "OR b.NomePessoa LIKE :q OR b.CpfCnpj LIKE :q "
-            "OR b.DescricaoPropostaBeneficio LIKE :q)"
-        )
-        params["q"] = f"%{q}%"
-    if status:
-        where.append("b.Status = :status")
-        params["status"] = status
-    if situacao_efetivacao is not None:
-        where.append("b.IdBeneficioSituacaoEfetivacao = :sit")
-        params["sit"] = situacao_efetivacao
-    if id_tipo is not None:
-        where.append("b.IdTipoBeneficio = :tipo")
-        params["tipo"] = id_tipo
-    if origem:
-        where.append("b.Origem = :origem")
-        params["origem"] = origem
-    # fonte separa as propostas das UTCEs (poucas) da carteira detectada (milhares)
-    if fonte == "propostas":
-        where.append("b.Origem = 'PROPOSTA'")
-    elif fonte == "carteira":
-        where.append("b.Origem <> 'PROPOSTA'")
-    filtro_periodo(where, params, data_de, data_ate)
-    where_sql = "WHERE " + " AND ".join(where)
+    where_sql, params = _where_lista(q, origem, data_de, data_ate)
 
     total = int(
         session.execute(
@@ -175,29 +152,28 @@ def listar(
 
 
 def resumo(
-    session: Session, *, data_de: date | None = None, data_ate: date | None = None
+    session: Session,
+    *,
+    q: str | None = None,
+    origem: str | None = None,
+    data_de: date | None = None,
+    data_ate: date | None = None,
 ) -> BeneficioResumo:
-    where = ["Ativo = 1"]
-    params: dict[str, Any] = {}
-    filtro_periodo(where, params, data_de, data_ate, alias="")
+    where_sql, params = _where_lista(q, origem, data_de, data_ate, alias="")
     row = (
         session.execute(
             text(
                 f"""
             SELECT
                 COUNT(*) AS Total,
-                SUM(CASE WHEN Status = 'RASCUNHO' THEN 1 ELSE 0 END) AS Rascunho,
-                SUM(CASE WHEN Status = 'VALIDADO' THEN 1 ELSE 0 END) AS Validado,
-                SUM(CASE WHEN Status = 'ENVIADO' THEN 1 ELSE 0 END) AS Enviado,
-                SUM(CASE WHEN Status = 'DESCARTADO' THEN 1 ELSE 0 END) AS Descartado,
                 SUM(CASE WHEN IdBeneficioSituacaoEfetivacao = 2 THEN 1 ELSE 0 END) AS Potencial,
                 SUM(CASE WHEN IdBeneficioSituacaoEfetivacao = 1 THEN 1 ELSE 0 END) AS Efetivo,
-                SUM(CASE WHEN IdBeneficioSituacaoEfetivacao = 2 AND Status <> 'DESCARTADO'
+                SUM(CASE WHEN IdBeneficioSituacaoEfetivacao = 2
                     THEN COALESCE(ValorQuantidade, 0) ELSE 0 END) AS ValorPotencial,
-                SUM(CASE WHEN IdBeneficioSituacaoEfetivacao = 1 AND Status <> 'DESCARTADO'
+                SUM(CASE WHEN IdBeneficioSituacaoEfetivacao = 1
                     THEN COALESCE(ValorQuantidade, 0) ELSE 0 END) AS ValorEfetivo
             FROM dbo.CCDBeneficio
-            WHERE {" AND ".join(where)}
+            {where_sql}
             """
             ),
             params,
@@ -207,10 +183,6 @@ def resumo(
     )
     return BeneficioResumo(
         total=int(row["Total"] or 0),
-        qtd_rascunho=int(row["Rascunho"] or 0),
-        qtd_validado=int(row["Validado"] or 0),
-        qtd_enviado=int(row["Enviado"] or 0),
-        qtd_descartado=int(row["Descartado"] or 0),
         qtd_potencial=int(row["Potencial"] or 0),
         qtd_efetivo=int(row["Efetivo"] or 0),
         valor_potencial=row["ValorPotencial"] or Decimal(0),
@@ -261,156 +233,3 @@ def obter(session: Session, id_beneficio: int) -> BeneficioItem | None:
         .first()
     )
     return _to_item(row) if row else None
-
-
-def _preparar(dados: dict[str, Any]) -> dict[str, Any]:
-    dados = {k: v for k, v in dados.items() if k in CAMPOS}
-    if dados.get("valor_quantidade") is not None:
-        dados["valor_quantidade"] = Decimal(str(dados["valor_quantidade"]))
-    if dados.get("numero_processo_decisao"):
-        num = str(dados["numero_processo_decisao"]).strip()
-        dados["numero_processo_decisao"] = num.zfill(6) if num.isdigit() else num
-    return dados
-
-
-def criar(session: Session, *, dados: dict[str, Any], id_usuario: int) -> int:
-    """Cadastro manual (Origem='MANUAL', Status='RASCUNHO')."""
-    dados = _preparar(dados)
-    colunas = list(dados)
-    sql = text(
-        f"""
-        INSERT INTO dbo.CCDBeneficio
-            ({", ".join(CAMPOS[c] for c in colunas)}, IdUsuarioAtualizacao)
-        OUTPUT inserted.IdCCDBeneficio
-        VALUES ({", ".join(f":{c}" for c in colunas)}, :id_usuario)
-        """
-    )
-    novo_id = int(session.execute(sql, {**dados, "id_usuario": id_usuario}).scalar_one())
-    session.commit()
-    return novo_id
-
-
-def atualizar(
-    session: Session, id_beneficio: int, *, dados: dict[str, Any], id_usuario: int
-) -> str:
-    """Retorna 'ok', 'not_found' ou 'enviado' (registro ENVIADO é imutável)."""
-    atual = session.execute(
-        text("SELECT Status FROM dbo.CCDBeneficio WHERE IdCCDBeneficio = :id AND Ativo = 1"),
-        {"id": id_beneficio},
-    ).first()
-    if atual is None:
-        return "not_found"
-    if atual[0] == "ENVIADO":
-        return "enviado"
-    dados = _preparar(dados)
-    if not dados:
-        return "ok"
-    sets = ", ".join(f"{CAMPOS[c]} = :{c}" for c in dados)
-    session.execute(
-        text(
-            f"""
-            UPDATE dbo.CCDBeneficio
-            SET {sets},
-                DataAtualizacao = SYSUTCDATETIME(),
-                IdUsuarioAtualizacao = :id_usuario
-            WHERE IdCCDBeneficio = :id
-            """
-        ),
-        {**dados, "id_usuario": id_usuario, "id": id_beneficio},
-    )
-    session.commit()
-    return "ok"
-
-
-def _validar_para_validado(session: Session, id_beneficio: int) -> str | None:
-    """Campos mínimos + coerência tipo/subtipo antes de VALIDADO. None = ok."""
-    row = (
-        session.execute(
-            text(
-                "SELECT DescricaoPropostaBeneficio, IdTipoBeneficio, IdSubTipoBeneficio, "
-                "IdCaracterizacaoBeneficio, IdAreaTematica, IdBeneficioSituacaoEfetivacao "
-                "FROM dbo.CCDBeneficio WHERE IdCCDBeneficio = :id"
-            ),
-            {"id": id_beneficio},
-        )
-        .mappings()
-        .one()
-    )
-    faltando = [
-        campo
-        for campo, coluna in (
-            ("idTipo", "IdTipoBeneficio"),
-            ("idCaracterizacao", "IdCaracterizacaoBeneficio"),
-            ("idAreaTematica", "IdAreaTematica"),
-            ("idSituacaoEfetivacao", "IdBeneficioSituacaoEfetivacao"),
-        )
-        if row[coluna] is None
-    ]
-    if faltando:
-        return f"missing fields for validation: {', '.join(faltando)}"
-    if row["IdSubTipoBeneficio"] is not None:
-        dominios = obter_dominios(session)
-        permitidos = dominios.tipo_subtipos.get(int(row["IdTipoBeneficio"]), [])
-        if int(row["IdSubTipoBeneficio"]) not in permitidos:
-            return "subtipo does not belong to tipo (Beneficio_Tipo_Subtipo)"
-    return None
-
-
-def transicionar(session: Session, id_beneficio: int, *, novo_status: str, id_usuario: int) -> str:
-    """Retorna 'ok', 'not_found', 'invalid_transition' ou mensagem de validação."""
-    atual = session.execute(
-        text("SELECT Status FROM dbo.CCDBeneficio WHERE IdCCDBeneficio = :id AND Ativo = 1"),
-        {"id": id_beneficio},
-    ).first()
-    if atual is None:
-        return "not_found"
-    if novo_status not in TRANSICOES.get(atual[0], set()):
-        return "invalid_transition"
-    if novo_status == "VALIDADO" and atual[0] == "RASCUNHO":
-        erro = _validar_para_validado(session, id_beneficio)
-        if erro:
-            return erro
-    # Desfazer envio limpa o lote; demais transições não mexem em DataEnvio.
-    limpar_envio = ", DataEnvio = NULL, LoteEnvio = NULL" if atual[0] == "ENVIADO" else ""
-    session.execute(
-        text(
-            f"""
-            UPDATE dbo.CCDBeneficio
-            SET Status = :status{limpar_envio},
-                DataAtualizacao = SYSUTCDATETIME(),
-                IdUsuarioAtualizacao = :id_usuario
-            WHERE IdCCDBeneficio = :id
-            """
-        ),
-        {"status": novo_status, "id_usuario": id_usuario, "id": id_beneficio},
-    )
-    session.commit()
-    return "ok"
-
-
-def deletar(session: Session, id_beneficio: int, *, id_usuario: int) -> str:
-    """Soft delete — só para registro MANUAL criado por engano. Candidato de
-    detecção usa DESCARTADO (mantém a ChaveOrigem ocupada). Retorna 'ok',
-    'not_found' ou 'nao_manual'."""
-    row = session.execute(
-        text("SELECT Origem FROM dbo.CCDBeneficio WHERE IdCCDBeneficio = :id AND Ativo = 1"),
-        {"id": id_beneficio},
-    ).first()
-    if row is None:
-        return "not_found"
-    if row[0] != "MANUAL":
-        return "nao_manual"
-    session.execute(
-        text(
-            """
-            UPDATE dbo.CCDBeneficio
-            SET Ativo = 0,
-                DataAtualizacao = SYSUTCDATETIME(),
-                IdUsuarioAtualizacao = :id_usuario
-            WHERE IdCCDBeneficio = :id
-            """
-        ),
-        {"id": id_beneficio, "id_usuario": id_usuario},
-    )
-    session.commit()
-    return "ok"

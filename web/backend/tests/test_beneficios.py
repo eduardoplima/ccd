@@ -9,9 +9,8 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from app.ccd.beneficios.export import _COLUNAS_EXPORT, _linha_export
-from app.ccd.beneficios.schemas import BeneficioInput
-from app.ccd.beneficios.service import CAMPOS, TRANSICOES, _preencher_meses, filtro_periodo
+from app.ccd.beneficios.export import _COLUNAS_EXPORT, _csv, _linha_export
+from app.ccd.beneficios.service import CAMPOS, _preencher_meses, _where_lista, filtro_periodo
 
 
 def test_preencher_meses() -> None:
@@ -41,15 +40,22 @@ def test_filtro_periodo() -> None:
     assert sem_alias == ["COALESCE(DataOcorrencia, CAST(DataInclusao AS DATE)) >= :data_de"]
 
 
-def test_transicoes_cobrem_todos_os_status() -> None:
-    status = {"RASCUNHO", "VALIDADO", "ENVIADO", "DESCARTADO"}
-    assert set(TRANSICOES) == status
-    for destinos in TRANSICOES.values():
-        assert destinos <= status
-    # ENVIADO é quase-terminal: só desfaz para VALIDADO.
-    assert TRANSICOES["ENVIADO"] == {"VALIDADO"}
-    # DESCARTADO recupera para RASCUNHO (nunca pula direto a ENVIADO).
-    assert TRANSICOES["DESCARTADO"] == {"RASCUNHO"}
+def test_where_lista_mesmo_recorte() -> None:
+    where, params = _where_lista(None, None, None, None)
+    assert where == "WHERE b.Ativo = 1" and params == {}
+    where, params = _where_lista("Silva", "PGE", date(2026, 1, 1), None, alias="")
+    assert "NomePessoa LIKE :q" in where and "Origem = :origem" in where
+    assert params == {"q": "%Silva%", "origem": "PGE", "data_de": date(2026, 1, 1)}
+
+
+def test_csv_bom_delimitador_e_cabecalho() -> None:
+    linha = _linha_export({origem: None for origem, _ in _COLUNAS_EXPORT}, id_setor=42)
+    linha["ValorQuantidade"] = Decimal("10.50")
+    bruto = _csv([linha])
+    assert bruto[:3] == b"\xef\xbb\xbf"
+    cab, dados = bruto.decode("utf-8-sig").splitlines()
+    assert cab.split(";") == list(linha)
+    assert "10.50" in dados.split(";")
 
 
 def test_linha_export_usa_nomes_do_bdbeneficio() -> None:
@@ -92,23 +98,9 @@ def test_linha_export_proposta_vincula_beneficio_anterior() -> None:
 
 
 def test_campos_crud_todos_no_export_ou_meta() -> None:
-    # Todo campo editável que espelha o BdBeneficio precisa sair no export.
+    # Todo campo que espelha o BdBeneficio precisa sair no export.
     exportados = {origem for origem, _ in _COLUNAS_EXPORT}
     espelho = set(CAMPOS.values()) - {"CpfCnpj", "NomePessoa", "DataOcorrencia"}
     espelho = {c if c != "IdCCDBeneficioPotencial" else "IdCCDBeneficioPotencial" for c in espelho}
     assert espelho <= exportados
 
-
-def test_beneficio_input_aceita_camel_case() -> None:
-    payload = BeneficioInput.model_validate(
-        {
-            "descricao": "TAG homologado cumprido",
-            "idTipo": 5,
-            "idSituacaoEfetivacao": 1,
-            "valorQuantidade": "1234.56",
-            "numeroProcessoDecisao": "4917",
-            "anoProcessoDecisao": 2024,
-        }
-    )
-    assert payload.id_tipo == 5
-    assert payload.valor_quantidade == Decimal("1234.56")

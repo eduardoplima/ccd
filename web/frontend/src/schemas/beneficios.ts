@@ -2,9 +2,6 @@ import { z } from "zod";
 
 // mirrors backend app/ccd/beneficios/schemas.py
 
-export const STATUS_BENEFICIO = ["RASCUNHO", "VALIDADO", "ENVIADO", "DESCARTADO"] as const;
-export type StatusBeneficio = (typeof STATUS_BENEFICIO)[number];
-
 export const ORIGENS_BENEFICIO = [
   "MANUAL",
   "DEBITO",
@@ -27,12 +24,9 @@ const decimalNullable = z
 export const beneficioItemSchema = z.object({
   idBeneficio: z.number(),
   descricao: z.string(),
-  status: z.enum(STATUS_BENEFICIO),
   origem: z.enum(ORIGENS_BENEFICIO),
   chaveOrigem: z.string().nullable().optional(),
   idDebitoExecucao: z.number().nullable().optional(),
-  loteEnvio: z.string().nullable().optional(),
-  dataEnvio: z.string().nullable().optional(),
   dataInclusao: z.string().nullable().optional(),
   dataAtualizacao: z.string().nullable().optional(),
   memoriaCalculo: z.string().nullable().optional(),
@@ -68,10 +62,6 @@ export type BeneficioListResponse = z.infer<typeof beneficioListResponseSchema>;
 // mirrors backend BeneficioResumo
 export const beneficioResumoSchema = z.object({
   total: z.number(),
-  qtdRascunho: z.number(),
-  qtdValidado: z.number(),
-  qtdEnviado: z.number(),
-  qtdDescartado: z.number(),
   qtdPotencial: z.number(),
   qtdEfetivo: z.number(),
   valorPotencial: decimalNullable,
@@ -98,26 +88,3 @@ export const dominiosResponseSchema = z.object({
   unidadesMedida: z.array(dominioItemSchema),
 });
 export type DominiosResponse = z.infer<typeof dominiosResponseSchema>;
-
-// Payload de escrita (validação fica no backend) — mirrors BeneficioInput/Update
-export interface BeneficioPayload {
-  descricao?: string;
-  memoriaCalculo?: string | null;
-  valorQuantidade?: string | null;
-  justificativa?: string | null;
-  idSituacaoEfetivacao?: number | null;
-  idAreaTematica?: number | null;
-  idCaracterizacao?: number | null;
-  idUnidadeMedida?: number | null;
-  idSituacao?: number | null;
-  idTipo?: number | null;
-  idSubtipo?: number | null;
-  numeroProcessoDecisao?: string | null;
-  anoProcessoDecisao?: number | null;
-  idProcessoDecisao?: number | null;
-  descricaoMotivo?: string | null;
-  idBeneficioPotencial?: number | null;
-  cpfCnpj?: string | null;
-  nomePessoa?: string | null;
-  dataOcorrencia?: string | null;
-}
