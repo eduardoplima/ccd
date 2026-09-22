@@ -1,9 +1,14 @@
 """Detecção de candidatos a benefício (SisBenefícios) nos bancos processo/BdDIP.
 
-Insert-only: cada sub-rotina insere candidatos novos (Status='RASCUNHO') com
-`WHERE NOT EXISTS (ChaveOrigem ativa)` e NUNCA atualiza linha existente — um
-candidato editado/validado/descartado na tela não é tocado pelo job. O índice
-único filtrado UX_CCDBeneficio_ChaveOrigem garante contra corrida.
+Cada sub-rotina insere candidatos novos com `WHERE NOT EXISTS (ChaveOrigem
+ativa)`; o índice único filtrado UX_CCDBeneficio_ChaveOrigem garante contra
+corrida. A única escrita em linha existente é a RETIRADA (Ativo=0) de débitos
+potenciais cuja folha da cadeia deixou de ser válida (cancelada/suspensa) —
+se voltar a ser válida, o NOT EXISTS reinsere.
+
+Repasse da PGE (dívida ativa) NÃO é benefício da CCD: a recuperação em dívida
+ativa é atribuição do MPC (decisão de 22/09/2026; migração 0028 desativou o
+estoque). 'PGE' segue no CHECK da tabela e no Literal só por compatibilidade.
 
 IDs de domínio do BdBeneficio pré-preenchidos:
   Tipo 1=Sanção (subtipo 1=Multa) · Tipo 2=Restituição (subtipo 4=Débito imputado)
@@ -36,7 +41,7 @@ _NAO_EXISTE = (
 # CodigoTipoDebito: 1=Ressarcimento, 3=Remanejamento -> tipo 2/subtipo 4;
 # 2/4/5=Multa -> tipo 1/subtipo 1.
 # ---------------------------------------------------------------------------
-_SQL_DEBITO = f"""
+_CTE_CADEIA = """
 WITH cadeia AS (
     SELECT r.IdDebito AS id_raiz, r.IdDebito AS id_no, 0 AS nivel
       FROM processo.dbo.Exe_Debito r
@@ -47,7 +52,7 @@ WITH cadeia AS (
       JOIN processo.dbo.Exe_Debito f ON f.IdDebitoAnterior = c.id_no
 ),
 folhas AS (
-    SELECT c.id_raiz, e.IdDebito, e.CodigoStatusDivida, e.dataBaixa,
+    SELECT c.id_raiz, e.IdDebito, e.CodigoStatusDivida, e.DataCancelamento, e.dataBaixa,
            ROW_NUMBER() OVER (PARTITION BY c.id_raiz
                               ORDER BY c.nivel DESC, e.datainclusao DESC, e.IdDebito DESC) AS rn
       FROM cadeia c
@@ -61,6 +66,28 @@ transito AS (
       JOIN processo.dbo.Exe_Debito e ON e.IdDebito = c.id_no
      GROUP BY c.id_raiz
 )
+"""
+
+# Débito vigente = folha sem cancelamento (data ou status de cancelamento no
+# domínio Exe_StatusDivida) e não suspensa (status 20).
+_FOLHA_VALIDA = """f.DataCancelamento IS NULL
+  AND f.CodigoStatusDivida <> 20
+  AND NOT EXISTS (SELECT 1 FROM processo.dbo.Exe_StatusDivida sd
+                   WHERE sd.CodigoStatusDivida = f.CodigoStatusDivida
+                     AND sd.StatusCancelamento = 1)"""
+
+_SQL_DEBITO_RETIRAR = f"""
+{_CTE_CADEIA}
+UPDATE b SET Ativo = 0, DataAtualizacao = SYSDATETIME()
+FROM dbo.CCDBeneficio b
+JOIN folhas f ON f.id_raiz = b.IdDebitoExecucao AND f.rn = 1
+WHERE b.Ativo = 1 AND b.Origem = 'DEBITO'
+  AND NOT ({_FOLHA_VALIDA})
+OPTION (MAXRECURSION 100)
+"""
+
+_SQL_DEBITO = f"""
+{_CTE_CADEIA}
 INSERT INTO dbo.CCDBeneficio
     (Origem, ChaveOrigem, IdDebitoExecucao, DescricaoPropostaBeneficio,
      ValorQuantidade, IdBeneficioSituacaoEfetivacao, IdBeneficioSituacao,
@@ -97,7 +124,7 @@ OUTER APPLY (SELECT TOP 1 gp2.Nome, gp2.Documento
 WHERE r.IdDebitoAnterior IS NULL
   AND t.data_transito IS NOT NULL
   AND f.dataBaixa IS NULL
-  AND r.DataCancelamento IS NULL
+  AND {_FOLHA_VALIDA}
   AND {_NAO_EXISTE.format(chave="CONCAT('DEBITO:', r.IdDebito)")}
 OPTION (MAXRECURSION 100)
 """
@@ -143,33 +170,6 @@ WHERE rb.DataPagamento IS NOT NULL
 """
 
 # ---------------------------------------------------------------------------
-# PGE — benefício EFETIVO: repasse de valor arrecadado pela dívida ativa.
-# ---------------------------------------------------------------------------
-_SQL_PGE = f"""
-INSERT INTO dbo.CCDBeneficio
-    (Origem, ChaveOrigem, IdDebitoExecucao, DescricaoPropostaBeneficio,
-     ValorQuantidade, IdBeneficioSituacaoEfetivacao, IdBeneficioSituacao,
-     IdCaracterizacaoBeneficio, IdAreaTematica, IdTipoBeneficio, IdSubTipoBeneficio,
-     NumeroProcessoDecisao, AnoProcessoDecisao, DataOcorrencia)
-SELECT 'PGE',
-       CONCAT('PGE:', pg.IdPagamentoPGE),
-       pp.IdDebitoExecucao,
-       LEFT(CONCAT('Repasse PGE (dívida ativa, CDA ', LTRIM(RTRIM(ISNULL(pp.NumeroCDA, '?'))),
-           ') — execução ', LTRIM(RTRIM(ISNULL(pp.NumeroProcessoExecucao, '?'))), '/',
-           LTRIM(RTRIM(ISNULL(pp.AnoProcessoExecucao, '?')))), 500),
-       COALESCE(pg.ValorPrincipal, 0) + COALESCE(pg.Multa, 0) + COALESCE(pg.Juros, 0),
-       1, 3, 2, 13,
-       1, 1,  -- repasses PGE são de multa (conferido em conciliacao_competencia_caixa.py)
-       LTRIM(RTRIM(pp.NumeroProcessoExecucao)), TRY_CAST(pp.AnoProcessoExecucao AS SMALLINT),
-       pg.DataPagamento
-FROM processo.dbo.PGE_Pagamento pg
-JOIN processo.dbo.PGE_Processo pp ON pp.IdProcessoPGE = pg.IdProcessoPGE
-WHERE pg.DataPagamento IS NOT NULL
-  AND pg.DataPagamento >= :inicio
-  AND {_NAO_EXISTE.format(chave="CONCAT('PGE:', pg.IdPagamentoPGE)")}
-"""
-
-# ---------------------------------------------------------------------------
 # PROPOSTA — propostas de benefício já cadastradas pelas UTCEs no BdBeneficio,
 # APROVADAS no workflow do SisBenefícios (IdStatusBeneficio=7). A CCD gerencia
 # o fluxo proposta -> potencial -> efetivo; a cópia entra pré-classificada com
@@ -204,22 +204,25 @@ WHERE p.IdStatusBeneficio = 7  -- Aprovado
   AND {_NAO_EXISTE.format(chave="CONCAT('PROPOSTA:', p.IdPropostaBeneficio)")}
 """
 
-# Origens ativas na v1. FOLHA (parcela SIAI, grão por competência a referendar
-# pela SECEX) e DIVIDA_ATIVA (inscrição de CDA não é benefício autônomo pelo
-# Manual — é etapa de cobrança; o efetivo é o repasse PGE) ficaram fora por
-# decisão de 01/09/2026; o CHECK da tabela e o Literal dos schemas mantêm os
-# valores para uma eventual reativação.
-_ORIGENS: dict[str, tuple[str, dict[str, Any]]] = {
-    "PROPOSTA": (_SQL_PROPOSTA, {}),
-    "DEBITO": (_SQL_DEBITO, {}),
-    "BOLETO": (_SQL_BOLETO, {"inicio": "2021-01-01"}),
-    "PGE": (_SQL_PGE, {"inicio": "2021-01-01"}),
+# Origens ativas. FOLHA (parcela SIAI, grão por competência a referendar pela
+# SECEX) e DIVIDA_ATIVA (inscrição de CDA é etapa de cobrança, não benefício)
+# ficaram fora por decisão de 01/09/2026; PGE saiu em 22/09/2026 (atribuição
+# do MPC). O CHECK da tabela e o Literal dos schemas mantêm os valores.
+# Cada origem é uma lista de statements executados em ordem: o último é o
+# INSERT de candidatos, os anteriores são retiradas.
+_ORIGENS: dict[str, list[tuple[str, dict[str, Any]]]] = {
+    "PROPOSTA": [(_SQL_PROPOSTA, {})],
+    "DEBITO": [(_SQL_DEBITO_RETIRAR, {}), (_SQL_DEBITO, {})],
+    "BOLETO": [(_SQL_BOLETO, {"inicio": "2021-01-01"})],
 }
 
 
-def detectar_origem(session: Session, origem: str) -> int:
-    sql, params = _ORIGENS[origem]
-    return int(session.execute(text(sql), params).rowcount or 0)
+def detectar_origem(session: Session, origem: str) -> tuple[int, int]:
+    """Devolve (candidatos novos, linhas retiradas)."""
+    contagens = [
+        int(session.execute(text(sql), params).rowcount or 0) for sql, params in _ORIGENS[origem]
+    ]
+    return contagens[-1], sum(contagens[:-1])
 
 
 async def task_detectar_beneficios(
@@ -227,7 +230,7 @@ async def task_detectar_beneficios(
     id_frap_job: int | None = None,
     origens: list[str] | None = None,
 ) -> str:
-    """Varre as fontes e insere candidatos novos em CCDBeneficio (insert-only).
+    """Varre as fontes, retira candidatos inválidos e insere os novos em CCDBeneficio.
 
     `origens` restringe a rodada (depuração/backfill); default = todas.
     """
@@ -239,9 +242,9 @@ async def task_detectar_beneficios(
         linhas: list[str] = []
         with factory() as s:
             for origem in alvo:
-                n = detectar_origem(s, origem)
+                novos, retirados = detectar_origem(s, origem)
                 s.commit()
-                linhas.append(f"{origem}: {n} candidatos novos")
+                linhas.append(f"{origem}: {novos} candidatos novos, {retirados} retirados")
         resultado = "\n".join(linhas)
         if id_frap_job is not None:
             _set_done(factory, id_frap_job, resultado)

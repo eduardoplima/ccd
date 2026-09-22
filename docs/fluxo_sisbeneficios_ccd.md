@@ -15,7 +15,6 @@ A CCD registra benefícios em **estágio potencial** e **efetivo** decorrentes d
 | Multa recolhida (boleto) ou repasse conciliado no FRAP | Efetivo | 4.1 Sanção (multa) | Responsável pelo controle de arrecadação | Na conciliação mensal |
 | Débito ressarcido (integral ou parcela de parcelamento quitada) | Efetivo | 4.2.1 Débito imputado | Responsável pelo controle de arrecadação | Na conciliação mensal |
 | Desconto em folha implementado / parcela descontada confirmada (SIAI) | Efetivo | 4.1 / 4.2.1 | Responsável pelo monitoramento de desconto em folha | Na verificação mensal SIAI |
-| Certidão de inscrição em dívida ativa expedida (art. 339, V, RI) | Efetivo | conforme a obrigação inscrita | Responsável pelo controle de dívida ativa (PGE) | Na confirmação da inscrição |
 | Cumprimento de obrigação de fazer/não fazer monitorada pela CCD | Efetivo | 4.3 / 4.4 / 4.5, conforme o caso | Servidor responsável pelo monitoramento | Na certificação do cumprimento |
 | TAG homologado cumprido (art. 339, IV, RI) | Efetivo | conforme a obrigação pactuada | Servidor designado | Na certificação do cumprimento |
 
@@ -36,3 +35,5 @@ A CCD registra benefícios em **estágio potencial** e **efetivo** decorrentes d
 ## Periodicidade
 
 Ciclo **mensal**, acoplado às rotinas já existentes da CCD (conciliação de arrecadação FRAP, verificação SIAI de desconto em folha e monitoramento de decisões), com consolidação e validação do coordenador/diretor até o dia 10 do mês subsequente.
+
+> **Dívida ativa (22/09/2026):** a inscrição em dívida ativa e o repasse da PGE não são registrados pela CCD — a recuperação em dívida ativa é atribuição do MPC. O job de detecção não gera a origem PGE e o estoque detectado foi desativado (migração 0028).

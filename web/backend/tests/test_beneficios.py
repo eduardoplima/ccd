@@ -104,3 +104,18 @@ def test_campos_crud_todos_no_export_ou_meta() -> None:
     espelho = {c if c != "IdCCDBeneficioPotencial" else "IdCCDBeneficioPotencial" for c in espelho}
     assert espelho <= exportados
 
+
+def test_deteccao_sem_pge_e_so_debito_valido() -> None:
+    from app.ccd.beneficios import tasks
+
+    # repasse PGE é atribuição do MPC, não benefício da CCD
+    assert "PGE" not in tasks._ORIGENS
+    # validade lida na FOLHA da cadeia (cancelada/suspensa fora), nunca na raiz
+    assert tasks._FOLHA_VALIDA in tasks._SQL_DEBITO
+    assert "r.DataCancelamento" not in tasks._SQL_DEBITO
+    assert "StatusCancelamento = 1" in tasks._FOLHA_VALIDA
+    assert "CodigoStatusDivida <> 20" in tasks._FOLHA_VALIDA
+    # retirada roda antes do INSERT e só toca potenciais de DEBITO
+    retirar, inserir = (sql for sql, _ in tasks._ORIGENS["DEBITO"])
+    assert retirar is tasks._SQL_DEBITO_RETIRAR and inserir is tasks._SQL_DEBITO
+    assert "Origem = 'DEBITO'" in retirar and f"NOT ({tasks._FOLHA_VALIDA})" in retirar
