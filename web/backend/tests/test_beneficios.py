@@ -143,3 +143,10 @@ def test_boleto_grao_debito_recalculado() -> None:
     # retorno bancário reimportado (mesmo IdBoleto+NumeroAutenticacao): fica só o 1º
     assert f"NOT {tasks._RETORNO_ANTERIOR}" in tasks._CTE_RECOLHIDO
     assert "rb2.IdRetornoBoleto < rb.IdRetornoBoleto" in tasks._RETORNO_ANTERIOR
+    # parâmetro temporal = acórdão, nas duas origens (não trânsito nem pagamento)
+    assert (
+        "CAST(r.dataDecisao AS DATE)" in inserir
+        and "CAST(r.dataDecisao AS DATE)" in tasks._SQL_DEBITO
+    )
+    assert "CAST(t.data_transito AS DATE)" not in tasks._SQL_DEBITO
+    assert "primeiro_pagamento" in tasks._MEMORIA_RECOLHIDO  # pagamentos só na memória

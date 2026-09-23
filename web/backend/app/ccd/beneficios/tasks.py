@@ -41,6 +41,10 @@ _NAO_EXISTE = (
 # Grão = cadeia (Exe_Debito.IdDebitoAnterior encadeia versões): identidade é a
 # RAIZ (valor imputado na decisão), situação vigente é a FOLHA — reparcelamento
 # não duplica. CTE espelha scripts/analise/carteira_ipsas.py.
+# DataOcorrencia = data do ACÓRDÃO (Exe_Debito.dataDecisao da raiz) em DEBITO e
+# BOLETO (decisão de 23/09/2026): cada multa é ligada a um acórdão, e é ele o
+# parâmetro temporal do filtro por ano — potencial e efetivo da mesma multa
+# caem no mesmo ano, e o lote não muda conforme os pagamentos avançam.
 # CodigoTipoDebito: 1=Ressarcimento, 3=Remanejamento -> tipo 2/subtipo 4;
 # 2/4/5=Multa -> tipo 1/subtipo 1.
 # ---------------------------------------------------------------------------
@@ -119,7 +123,7 @@ SELECT 'DEBITO',
        p.numero_processo, TRY_CAST(p.ano_processo AS SMALLINT),
        LEFT(REPLACE(REPLACE(REPLACE(REPLACE(gp.Documento, '.', ''), '-', ''), '/', ''), ' ', ''), 14),
        gp.Nome,
-       CAST(t.data_transito AS DATE)
+       CAST(r.dataDecisao AS DATE)  -- acórdão: parâmetro temporal do benefício
 FROM processo.dbo.Exe_Debito r
 JOIN transito t ON t.id_raiz = r.IdDebito
 JOIN folhas f ON f.id_raiz = r.IdDebito AND f.rn = 1
@@ -216,7 +220,7 @@ SELECT 'BOLETO',
        p.numero_processo, TRY_CAST(p.ano_processo AS SMALLINT),
        LEFT(REPLACE(REPLACE(REPLACE(REPLACE(gp.Documento, '.', ''), '-', ''), '/', ''), ' ', ''), 14),
        gp.Nome,
-       rc.primeiro_pagamento,
+       CAST(r.dataDecisao AS DATE),  -- acórdão, o mesmo do potencial (pagamentos ficam na memória)
        (SELECT MAX(d.IdCCDBeneficio) FROM dbo.CCDBeneficio d
          WHERE d.Origem = 'DEBITO' AND d.IdDebitoExecucao = rc.id_raiz)
 FROM recolhido rc

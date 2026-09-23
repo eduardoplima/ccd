@@ -9,8 +9,9 @@ O grão já vem consolidado do staging (decisão de 23/09/2026, migração 0029)
 por DÉBITO (raiz da cadeia). O efetivo soma as parcelas pagas (MemoriaCalculo traz o
 nº de parcelas e o período), situação Efetivado Total se a folha tem dataBaixa, senão
 Parcial; retorno bancário em dobro conta uma vez; débito com efetivo não sai também
-como potencial (absorvido pela detecção). DataOcorrencia = trânsito (potencial) ou
-1º pagamento (efetivo).
+como potencial (absorvido pela detecção). DataOcorrencia = data do ACÓRDÃO da raiz
+(Exe_Debito.dataDecisao) nas duas origens — cada multa é ligada a um acórdão e é ele o
+parâmetro temporal de --anos (migração 0030).
 
 Saída: um INSERT por linha. NADA é executado aqui: só gera o .sql.
 
@@ -113,7 +114,7 @@ def gerar(anos: list[int], id_setor: int) -> tuple[str, dict[str, int]]:
     n_pot = sum(1 for r in rows if r["IdBeneficioSituacaoEfetivacao"] == 2)
     resumo = {"potenciais": n_pot, "efetivos": len(rows) - n_pot}
     cabecalho = (
-        f"-- Multas e ressarcimentos da CCD ({', '.join(map(str, anos))}) para o SisBenefícios — gerado por\n"
+        f"-- Multas e ressarcimentos da CCD com acórdão em {', '.join(map(str, anos))} para o SisBenefícios — gerado por\n"
         f"-- scripts/automacao/beneficios_insert_multas.py em {date.today().isoformat()} a partir de\n"
         "-- BdDIP.dbo.CCDBeneficio (DEBITO=potencial, BOLETO=efetivo; tipo 1 Multa e tipo 2 Débito imputado;\n"
         "-- só débitos válidos pela folha da cadeia). Grão = débito: o efetivo soma as parcelas pagas\n"
