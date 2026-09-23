@@ -2,9 +2,10 @@
 
 Cada sub-rotina insere candidatos novos com `WHERE NOT EXISTS (ChaveOrigem
 ativa)`; o índice único filtrado UX_CCDBeneficio_ChaveOrigem garante contra
-corrida. A única escrita em linha existente é a RETIRADA (Ativo=0) de débitos
-potenciais cuja folha da cadeia deixou de ser válida (cancelada/suspensa) —
-se voltar a ser válida, o NOT EXISTS reinsere.
+corrida. As únicas escritas em linha existente são RETIRADAS (Ativo=0): débito
+potencial cuja folha da cadeia deixou de ser válida (cancelada/suspensa — se
+voltar a ser válida, o NOT EXISTS reinsere) e boleto cujo retorno bancário foi
+importado em dobro (mesmo IdBoleto + NumeroAutenticacao; fica o 1º retorno).
 
 Repasse da PGE (dívida ativa) NÃO é benefício da CCD: a recuperação em dívida
 ativa é atribuição do MPC (decisão de 22/09/2026; migração 0028 desativou o
@@ -131,8 +132,23 @@ OPTION (MAXRECURSION 100)
 
 # ---------------------------------------------------------------------------
 # BOLETO — benefício EFETIVO: multa recolhida por guia bancária.
-# Cadeia de joins de web/tools/frap/frap/processo/repos.py.
+# Cadeia de joins de web/tools/frap/frap/processo/repos.py. O BB reenvia arquivo
+# já importado e Exe_Retorno_Boleto ganha 2ª linha do mesmo pagamento (62 casos
+# 2018–2026): só o 1º IdRetornoBoleto de cada IdBoleto+NumeroAutenticacao entra.
 # ---------------------------------------------------------------------------
+_RETORNO_ANTERIOR = """EXISTS (SELECT 1 FROM processo.dbo.Exe_Retorno_Boleto rb2
+                   WHERE rb2.IdBoleto = rb.IdBoleto
+                     AND rb2.NumeroAutenticacao = rb.NumeroAutenticacao
+                     AND rb2.IdRetornoBoleto < rb.IdRetornoBoleto)"""
+
+_SQL_BOLETO_RETIRAR = f"""
+UPDATE b SET Ativo = 0, DataAtualizacao = SYSDATETIME()
+FROM dbo.CCDBeneficio b
+JOIN processo.dbo.Exe_Retorno_Boleto rb ON CONCAT('BOLETO:', rb.IdRetornoBoleto) = b.ChaveOrigem
+WHERE b.Ativo = 1 AND b.Origem = 'BOLETO'
+  AND {_RETORNO_ANTERIOR}
+"""
+
 _SQL_BOLETO = f"""
 INSERT INTO dbo.CCDBeneficio
     (Origem, ChaveOrigem, IdDebitoExecucao, DescricaoPropostaBeneficio,
@@ -166,6 +182,7 @@ OUTER APPLY (SELECT TOP 1 gp2.Nome, gp2.Documento
               ORDER BY gp2.IdPessoa) gp
 WHERE rb.DataPagamento IS NOT NULL
   AND rb.DataPagamento >= :inicio
+  AND NOT {_RETORNO_ANTERIOR}
   AND {_NAO_EXISTE.format(chave="CONCAT('BOLETO:', rb.IdRetornoBoleto)")}
 """
 
@@ -213,7 +230,7 @@ WHERE p.IdStatusBeneficio = 7  -- Aprovado
 _ORIGENS: dict[str, list[tuple[str, dict[str, Any]]]] = {
     "PROPOSTA": [(_SQL_PROPOSTA, {})],
     "DEBITO": [(_SQL_DEBITO_RETIRAR, {}), (_SQL_DEBITO, {})],
-    "BOLETO": [(_SQL_BOLETO, {"inicio": "2021-01-01"})],
+    "BOLETO": [(_SQL_BOLETO_RETIRAR, {}), (_SQL_BOLETO, {"inicio": "2021-01-01"})],
 }
 
 

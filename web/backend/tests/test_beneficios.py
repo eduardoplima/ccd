@@ -119,3 +119,15 @@ def test_deteccao_sem_pge_e_so_debito_valido() -> None:
     retirar, inserir = (sql for sql, _ in tasks._ORIGENS["DEBITO"])
     assert retirar is tasks._SQL_DEBITO_RETIRAR and inserir is tasks._SQL_DEBITO
     assert "Origem = 'DEBITO'" in retirar and f"NOT ({tasks._FOLHA_VALIDA})" in retirar
+
+
+def test_boleto_retorno_em_dobro_fora() -> None:
+    from app.ccd.beneficios import tasks
+
+    # retorno bancário reimportado (mesmo IdBoleto+NumeroAutenticacao): fica só o 1º
+    retirar, inserir = (sql for sql, _ in tasks._ORIGENS["BOLETO"])
+    assert retirar is tasks._SQL_BOLETO_RETIRAR and inserir is tasks._SQL_BOLETO
+    assert "Origem = 'BOLETO'" in retirar and f"AND {tasks._RETORNO_ANTERIOR}" in retirar
+    assert f"NOT {tasks._RETORNO_ANTERIOR}" in inserir
+    assert "rb2.NumeroAutenticacao = rb.NumeroAutenticacao" in tasks._RETORNO_ANTERIOR
+    assert "rb2.IdRetornoBoleto < rb.IdRetornoBoleto" in tasks._RETORNO_ANTERIOR
