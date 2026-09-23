@@ -2,10 +2,12 @@
 
 Cada sub-rotina insere candidatos novos com `WHERE NOT EXISTS (ChaveOrigem
 ativa)`; o índice único filtrado UX_CCDBeneficio_ChaveOrigem garante contra
-corrida. As únicas escritas em linha existente são RETIRADAS (Ativo=0): débito
-potencial cuja folha da cadeia deixou de ser válida (cancelada/suspensa — se
-voltar a ser válida, o NOT EXISTS reinsere) e boleto cujo retorno bancário foi
-importado em dobro (mesmo IdBoleto + NumeroAutenticacao; fica o 1º retorno).
+corrida. Escritas em linha existente: RETIRADA (Ativo=0) do potencial cuja
+folha da cadeia deixou de ser válida (cancelada/suspensa — se voltar a ser
+válida, o NOT EXISTS reinsere) ou cuja raiz já tem efetivo (absorvido: o
+efetivo é o mesmo benefício em estágio posterior); e RECÁLCULO do efetivo
+(valor/situação/parcelas) a cada rodada — pagamentos novos da mesma multa não
+geram efetivo novo.
 
 Repasse da PGE (dívida ativa) NÃO é benefício da CCD: a recuperação em dívida
 ativa é atribuição do MPC (decisão de 22/09/2026; migração 0028 desativou o
@@ -77,13 +79,18 @@ _FOLHA_VALIDA = """f.DataCancelamento IS NULL
                    WHERE sd.CodigoStatusDivida = f.CodigoStatusDivida
                      AND sd.StatusCancelamento = 1)"""
 
+# Efetivo ativo da mesma raiz: o potencial foi absorvido (o efetivo É o mesmo
+# benefício em estágio posterior — não se recadastra).
+_TEM_EFETIVO = """EXISTS (SELECT 1 FROM dbo.CCDBeneficio e
+                   WHERE e.Ativo = 1 AND e.Origem = 'BOLETO' AND e.IdDebitoExecucao = {raiz})"""
+
 _SQL_DEBITO_RETIRAR = f"""
 {_CTE_CADEIA}
 UPDATE b SET Ativo = 0, DataAtualizacao = SYSDATETIME()
 FROM dbo.CCDBeneficio b
 JOIN folhas f ON f.id_raiz = b.IdDebitoExecucao AND f.rn = 1
 WHERE b.Ativo = 1 AND b.Origem = 'DEBITO'
-  AND NOT ({_FOLHA_VALIDA})
+  AND (NOT ({_FOLHA_VALIDA}) OR {_TEM_EFETIVO.format(raiz="b.IdDebitoExecucao")})
 OPTION (MAXRECURSION 100)
 """
 
@@ -126,64 +133,102 @@ WHERE r.IdDebitoAnterior IS NULL
   AND t.data_transito IS NOT NULL
   AND f.dataBaixa IS NULL
   AND {_FOLHA_VALIDA}
+  AND NOT {_TEM_EFETIVO.format(raiz="r.IdDebito")}
   AND {_NAO_EXISTE.format(chave="CONCAT('DEBITO:', r.IdDebito)")}
 OPTION (MAXRECURSION 100)
 """
 
 # ---------------------------------------------------------------------------
-# BOLETO — benefício EFETIVO: multa recolhida por guia bancária.
-# Cadeia de joins de web/tools/frap/frap/processo/repos.py. O BB reenvia arquivo
-# já importado e Exe_Retorno_Boleto ganha 2ª linha do mesmo pagamento (62 casos
-# 2018–2026): só o 1º IdRetornoBoleto de cada IdBoleto+NumeroAutenticacao entra.
+# BOLETO — benefício EFETIVO: multa/débito recolhido por guia bancária.
+# Grão = DÉBITO (raiz da cadeia), o mesmo do potencial: as parcelas pagas se
+# somam numa linha só (ChaveOrigem 'BOLETO:DEBITO:<raiz>'), recalculada a cada
+# rodada (valor, nº de parcelas em MemoriaCalculo, situação Parcial/Total pela
+# folha). O efetivo aponta para o potencial da mesma raiz (IdCCDBeneficioPotencial)
+# e o absorve (retirada em DEBITO). Um boleto cobre exatamente um débito
+# (Exe_DebitoBoleto 1:1, conferido 23/09/2026). O BB reenvia arquivo já importado
+# e Exe_Retorno_Boleto ganha 2ª linha do mesmo pagamento (62 casos 2018–2026):
+# só o 1º IdRetornoBoleto de cada IdBoleto+NumeroAutenticacao conta.
 # ---------------------------------------------------------------------------
 _RETORNO_ANTERIOR = """EXISTS (SELECT 1 FROM processo.dbo.Exe_Retorno_Boleto rb2
                    WHERE rb2.IdBoleto = rb.IdBoleto
                      AND rb2.NumeroAutenticacao = rb.NumeroAutenticacao
                      AND rb2.IdRetornoBoleto < rb.IdRetornoBoleto)"""
 
-_SQL_BOLETO_RETIRAR = f"""
-UPDATE b SET Ativo = 0, DataAtualizacao = SYSDATETIME()
+_CTE_RECOLHIDO = f"""
+{_CTE_CADEIA},
+pagamentos AS (
+    SELECT nr.id_raiz, rb.ValorPago, rb.DataPagamento
+      FROM processo.dbo.Exe_Retorno_Boleto rb
+      JOIN processo.dbo.Exe_DebitoBoleto db ON db.IdBoleto = rb.IdBoleto
+      JOIN cadeia nr ON nr.id_no = db.IdDebito
+     WHERE rb.DataPagamento IS NOT NULL
+       AND rb.DataPagamento >= :inicio
+       AND NOT {_RETORNO_ANTERIOR}
+),
+recolhido AS (
+    SELECT p.id_raiz, SUM(p.ValorPago) AS valor, COUNT(*) AS parcelas,
+           CAST(MIN(p.DataPagamento) AS DATE) AS primeiro_pagamento,
+           CAST(MAX(p.DataPagamento) AS DATE) AS ultimo_pagamento,
+           CASE WHEN f.dataBaixa IS NOT NULL THEN 3 ELSE 2 END AS situacao  -- Total / Parcial
+      FROM pagamentos p
+      JOIN folhas f ON f.id_raiz = p.id_raiz AND f.rn = 1
+     GROUP BY p.id_raiz, f.dataBaixa
+)
+"""
+
+_MEMORIA_RECOLHIDO = """LEFT(CONCAT(rc.parcelas, ' parcela(s) paga(s) por boleto de ',
+           FORMAT(rc.primeiro_pagamento, 'dd/MM/yyyy'), ' a ', FORMAT(rc.ultimo_pagamento, 'dd/MM/yyyy')), 200)"""
+
+# Recalcula a cada rodada; só toca a linha se valor ou situação mudaram.
+_SQL_BOLETO_RECALCULAR = f"""
+{_CTE_RECOLHIDO}
+UPDATE b SET ValorQuantidade = rc.valor, IdBeneficioSituacao = rc.situacao,
+             MemoriaCalculoPropostaBeneficio = {_MEMORIA_RECOLHIDO},
+             DataAtualizacao = SYSDATETIME()
 FROM dbo.CCDBeneficio b
-JOIN processo.dbo.Exe_Retorno_Boleto rb ON CONCAT('BOLETO:', rb.IdRetornoBoleto) = b.ChaveOrigem
+JOIN recolhido rc ON rc.id_raiz = b.IdDebitoExecucao
 WHERE b.Ativo = 1 AND b.Origem = 'BOLETO'
-  AND {_RETORNO_ANTERIOR}
+  AND (b.ValorQuantidade <> rc.valor OR b.IdBeneficioSituacao <> rc.situacao)
+OPTION (MAXRECURSION 100)
 """
 
 _SQL_BOLETO = f"""
+{_CTE_RECOLHIDO}
 INSERT INTO dbo.CCDBeneficio
     (Origem, ChaveOrigem, IdDebitoExecucao, DescricaoPropostaBeneficio,
-     ValorQuantidade, IdBeneficioSituacaoEfetivacao, IdBeneficioSituacao,
-     IdCaracterizacaoBeneficio, IdAreaTematica, IdTipoBeneficio, IdSubTipoBeneficio,
-     NumeroProcessoDecisao, AnoProcessoDecisao, CpfCnpj, NomePessoa, DataOcorrencia)
+     MemoriaCalculoPropostaBeneficio, ValorQuantidade, IdBeneficioSituacaoEfetivacao,
+     IdBeneficioSituacao, IdCaracterizacaoBeneficio, IdAreaTematica, IdTipoBeneficio,
+     IdSubTipoBeneficio, NumeroProcessoDecisao, AnoProcessoDecisao, CpfCnpj, NomePessoa,
+     DataOcorrencia, IdCCDBeneficioPotencial)
 SELECT 'BOLETO',
-       CONCAT('BOLETO:', rb.IdRetornoBoleto),
-       ed.IdDebito,
+       CONCAT('BOLETO:DEBITO:', rc.id_raiz),
+       rc.id_raiz,
        LEFT(CONCAT('Recolhimento por boleto — processo ',
            ISNULL(CONCAT(p.numero_processo, '/', p.ano_processo), 's/ processo'),
            CASE WHEN gp.Nome IS NOT NULL THEN CONCAT(', ', gp.Nome) ELSE '' END), 500),
-       rb.ValorPago,
+       {_MEMORIA_RECOLHIDO},
+       rc.valor,
        1,  -- Efetivo
-       3,  -- Efetivado Total (do evento de recolhimento)
+       rc.situacao,
        2, 13,
-       CASE WHEN ed.CodigoTipoDebito IN (2, 4, 5) THEN 1 ELSE 2 END,
-       CASE WHEN ed.CodigoTipoDebito IN (2, 4, 5) THEN 1 ELSE 4 END,
+       CASE WHEN r.CodigoTipoDebito IN (2, 4, 5) THEN 1 ELSE 2 END,
+       CASE WHEN r.CodigoTipoDebito IN (2, 4, 5) THEN 1 ELSE 4 END,
        p.numero_processo, TRY_CAST(p.ano_processo AS SMALLINT),
        LEFT(REPLACE(REPLACE(REPLACE(REPLACE(gp.Documento, '.', ''), '-', ''), '/', ''), ' ', ''), 14),
        gp.Nome,
-       CAST(rb.DataPagamento AS DATE)
-FROM processo.dbo.Exe_Retorno_Boleto rb
-JOIN processo.dbo.Exe_DebitoBoleto db ON db.IdBoleto = rb.IdBoleto
-JOIN processo.dbo.Exe_Debito ed ON ed.IdDebito = db.IdDebito
-LEFT JOIN processo.dbo.Processos p ON p.IdProcesso = ed.IdProcessoOrigem
+       rc.primeiro_pagamento,
+       (SELECT MAX(d.IdCCDBeneficio) FROM dbo.CCDBeneficio d
+         WHERE d.Origem = 'DEBITO' AND d.IdDebitoExecucao = rc.id_raiz)
+FROM recolhido rc
+JOIN processo.dbo.Exe_Debito r ON r.IdDebito = rc.id_raiz
+LEFT JOIN processo.dbo.Processos p ON p.IdProcesso = r.IdProcessoOrigem
 OUTER APPLY (SELECT TOP 1 gp2.Nome, gp2.Documento
                FROM processo.dbo.Exe_DebitoPessoa edp
                JOIN processo.dbo.GenPessoa gp2 ON gp2.IdPessoa = edp.IDPessoa
-              WHERE edp.IDDebito = ed.IdDebito
+              WHERE edp.IDDebito = r.IdDebito
               ORDER BY gp2.IdPessoa) gp
-WHERE rb.DataPagamento IS NOT NULL
-  AND rb.DataPagamento >= :inicio
-  AND NOT {_RETORNO_ANTERIOR}
-  AND {_NAO_EXISTE.format(chave="CONCAT('BOLETO:', rb.IdRetornoBoleto)")}
+WHERE {_NAO_EXISTE.format(chave="CONCAT('BOLETO:DEBITO:', rc.id_raiz)")}
+OPTION (MAXRECURSION 100)
 """
 
 # ---------------------------------------------------------------------------
@@ -226,16 +271,21 @@ WHERE p.IdStatusBeneficio = 7  -- Aprovado
 # ficaram fora por decisão de 01/09/2026; PGE saiu em 22/09/2026 (atribuição
 # do MPC). O CHECK da tabela e o Literal dos schemas mantêm os valores.
 # Cada origem é uma lista de statements executados em ordem: o último é o
-# INSERT de candidatos, os anteriores são retiradas.
+# INSERT de candidatos, os anteriores são retiradas/recálculos. BOLETO roda
+# antes de DEBITO para que a absorção do potencial aconteça na mesma rodada.
+_INICIO_BOLETO = "2021-01-01"
 _ORIGENS: dict[str, list[tuple[str, dict[str, Any]]]] = {
     "PROPOSTA": [(_SQL_PROPOSTA, {})],
+    "BOLETO": [
+        (_SQL_BOLETO_RECALCULAR, {"inicio": _INICIO_BOLETO}),
+        (_SQL_BOLETO, {"inicio": _INICIO_BOLETO}),
+    ],
     "DEBITO": [(_SQL_DEBITO_RETIRAR, {}), (_SQL_DEBITO, {})],
-    "BOLETO": [(_SQL_BOLETO_RETIRAR, {}), (_SQL_BOLETO, {"inicio": "2021-01-01"})],
 }
 
 
 def detectar_origem(session: Session, origem: str) -> tuple[int, int]:
-    """Devolve (candidatos novos, linhas retiradas)."""
+    """Devolve (candidatos novos, linhas retiradas ou recalculadas)."""
     contagens = [
         int(session.execute(text(sql), params).rowcount or 0) for sql, params in _ORIGENS[origem]
     ]
@@ -261,7 +311,9 @@ async def task_detectar_beneficios(
             for origem in alvo:
                 novos, retirados = detectar_origem(s, origem)
                 s.commit()
-                linhas.append(f"{origem}: {novos} candidatos novos, {retirados} retirados")
+                linhas.append(
+                    f"{origem}: {novos} candidatos novos, {retirados} retirados/recalculados"
+                )
         resultado = "\n".join(linhas)
         if id_frap_job is not None:
             _set_done(factory, id_frap_job, resultado)

@@ -119,15 +119,27 @@ def test_deteccao_sem_pge_e_so_debito_valido() -> None:
     retirar, inserir = (sql for sql, _ in tasks._ORIGENS["DEBITO"])
     assert retirar is tasks._SQL_DEBITO_RETIRAR and inserir is tasks._SQL_DEBITO
     assert "Origem = 'DEBITO'" in retirar and f"NOT ({tasks._FOLHA_VALIDA})" in retirar
+    # potencial absorvido pelo efetivo da mesma raiz: retirado e não reinserido
+    assert tasks._TEM_EFETIVO.format(raiz="b.IdDebitoExecucao") in retirar
+    assert f"NOT {tasks._TEM_EFETIVO.format(raiz='r.IdDebito')}" in inserir
 
 
-def test_boleto_retorno_em_dobro_fora() -> None:
+def test_boleto_grao_debito_recalculado() -> None:
     from app.ccd.beneficios import tasks
 
+    # BOLETO antes de DEBITO: a absorção do potencial acontece na mesma rodada
+    assert list(tasks._ORIGENS) == ["PROPOSTA", "BOLETO", "DEBITO"]
+    recalcular, inserir = (sql for sql, _ in tasks._ORIGENS["BOLETO"])
+    assert recalcular is tasks._SQL_BOLETO_RECALCULAR and inserir is tasks._SQL_BOLETO
+    # 1 linha por raiz da cadeia, somando as parcelas; efetivo aponta p/ o potencial
+    assert "CONCAT('BOLETO:DEBITO:', rc.id_raiz)" in inserir
+    assert (
+        "SUM(p.ValorPago)" in tasks._CTE_RECOLHIDO and "GROUP BY p.id_raiz" in tasks._CTE_RECOLHIDO
+    )
+    assert "IdCCDBeneficioPotencial" in inserir and "d.Origem = 'DEBITO'" in inserir
+    # situação pela folha (Total se baixado, senão Parcial); recálculo só quando mudou
+    assert "f.dataBaixa IS NOT NULL THEN 3 ELSE 2" in tasks._CTE_RECOLHIDO
+    assert "b.ValorQuantidade <> rc.valor OR b.IdBeneficioSituacao <> rc.situacao" in recalcular
     # retorno bancário reimportado (mesmo IdBoleto+NumeroAutenticacao): fica só o 1º
-    retirar, inserir = (sql for sql, _ in tasks._ORIGENS["BOLETO"])
-    assert retirar is tasks._SQL_BOLETO_RETIRAR and inserir is tasks._SQL_BOLETO
-    assert "Origem = 'BOLETO'" in retirar and f"AND {tasks._RETORNO_ANTERIOR}" in retirar
-    assert f"NOT {tasks._RETORNO_ANTERIOR}" in inserir
-    assert "rb2.NumeroAutenticacao = rb.NumeroAutenticacao" in tasks._RETORNO_ANTERIOR
+    assert f"NOT {tasks._RETORNO_ANTERIOR}" in tasks._CTE_RECOLHIDO
     assert "rb2.IdRetornoBoleto < rb.IdRetornoBoleto" in tasks._RETORNO_ANTERIOR
