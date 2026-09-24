@@ -23,7 +23,7 @@ raiz 924 em status 3 cuja folha 17476 já é status 2 (Pago Integralmente).
 original, a raiz. `Exe_HistoricoDebito.dataInclusao` bate ao milissegundo com o `datainclusao`
 do filho que a operação gerou — é assim que se reconstrói o que o operador fez. Folha com
 `ValorPago` NULL e status 1 é o estado **normal** (10.674 casos); status 3 nessa posição é
-defeito (13 casos, analisados em `ANALISE_CHAMADO_DEBITOS_STATUS3.md`).
+defeito (13 casos, analisados em `docs/notas/ANALISE_CHAMADO_DEBITOS_STATUS3.md`).
 
 **Corrigido em 14/08/2026 apenas em `scripts/analise/carteira_ipsas.py`**, com CTE recursiva que
 agrega por cadeia: valor imputado da raiz, situação da folha, `SUM(ValorPago)` de todos os nós.

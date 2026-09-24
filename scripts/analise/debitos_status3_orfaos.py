@@ -1,6 +1,6 @@
 """Débitos órfãos em status 3 ("Pago parcialmente") sem ValorPago.
 
-Conferência do chamado da SETIC (ver `ANALISE_CHAMADO_DEBITOS_STATUS3.md`). Lista
+Conferência do chamado da SETIC (ver `docs/notas/ANALISE_CHAMADO_DEBITOS_STATUS3.md`). Lista
 os débitos que são **folha** da cadeia `IdDebitoAnterior`, estão em
 `CodigoStatusDivida = 3` e não têm `ValorPago` nem boleto — combinação impossível
 pela regra de negócio: a folha de uma cadeia com saldo devia estar em status 1

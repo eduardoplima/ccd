@@ -10,7 +10,7 @@ O parágrafo 2 refaz a conciliação: resposta da SEAD ao TCE (ofício autuado c
 competência do desconto, o par de processos que a mesma ordem bancária cobre e o item do
 extrato do FRAP (nº da OB, data de emissão e data do crédito, de BdDIP.dbo.FRAPLancamento).
 
-Levantamento em NEREU_PAGOS.md, revisto em 05/08/2026 contra a cadeia de débitos
+Levantamento em docs/notas/NEREU_PAGOS.md, revisto em 05/08/2026 contra a cadeia de débitos
 (`IdDebitoAnterior` aponta para trás: a FOLHA é o débito vigente — ver
 [[exe-debito-cadeia-folha-vigente]]). Dois quadros distintos:
 

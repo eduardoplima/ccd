@@ -8,7 +8,7 @@ metadata:
   modified: 2026-08-14T16:49:25.154Z
 ---
 
-Produzido em 14/08/2026: `RELATORIO_AUDITORIA_FINANCEIRA_CCD.md` (raiz do repo), gerado em .docx/.pdf
+Produzido em 14/08/2026: `docs/notas/RELATORIO_AUDITORIA_FINANCEIRA_CCD.md`, gerado em .docx/.pdf
 por `python -m scripts.automacao.gerar_relatorio_docx <md>` — usa `templates/modelo_informacao.docx`
 como base (cabeçalho DIP/CCD) e acrescenta rodapé "Página X de Y", que o modelo não tem.
 

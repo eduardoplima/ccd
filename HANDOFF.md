@@ -1,5 +1,9 @@
 # HANDOFF — CGAD extração de recomendações/obrigações
 
+> **24/09/2026**: os scripts de `handoff/` (`run_etl_2024_2026.py`, `run_extracoes.py`,
+> `lancar_extracoes_remoto.py`, `insert_rec_8389.py`) foram removidos do repo no refactor de
+> organização; recuperar com `git log -- handoff/` / `git show <commit>:handoff/<arquivo>`.
+
 Contexto: destravar processos que não tinham recomendação/obrigação e rodar a
 extração (NER + stage-2) para 2024–2026 com o modelo novo. Gerado em 2026-07-14,
 para terminar amanhã.

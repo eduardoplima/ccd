@@ -12,9 +12,9 @@ Objetivo em curso desde 03/08/2026: especialização em IPSAS para a certificaç
 dados da CCD como laboratório. Perspectiva escolhida: **o TCE/Estado como entidade que reporta**
 (auditoria de convergência dos jurisdicionados foi explicitamente descartada).
 
-Artefatos: `IPSAS_APLICACAO_CCD.md` (mapa norma → dado → exercício),
+Artefatos: `docs/notas/IPSAS_APLICACAO_CCD.md` (mapa norma → dado → exercício),
 `scripts/analise/carteira_ipsas.py` (carteira + matriz de perda esperada) e
-`PESQUISA_IPSAS_PUBLICACAO.md` (revisão de literatura + proposta de artigo).
+`docs/notas/PESQUISA_IPSAS_PUBLICACAO.md` (revisão de literatura + proposta de artigo).
 
 Ângulo de publicação: a literatura trata TC como fiscal da contabilidade **alheia** (linha Lino &
 Azevedo), nunca como entidade que reporta os créditos das próprias sanções. IPSAS 47 vigora desde

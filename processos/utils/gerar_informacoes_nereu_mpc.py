@@ -6,7 +6,7 @@ contra o responsável. O item 23 determina que a DIP (alínea a) certifique a in
 desconto em folha e (alínea b) encaminhe os autos ao Ministério Público de Contas, sem retorno
 ao gabinete, para as providências junto à PGE. Esta é a informação que cumpre esse item.
 
-O lote foi apurado sobre os 77 processos de PROCESSOS_MS_0807247_CCD.md: lendo o PDF de cada
+O lote foi apurado sobre os 77 processos de docs/notas/PROCESSOS_MS_0807247_CCD.md: lendo o PDF de cada
 peça de gabinete cadastrada a partir de 2025 e procurando a assinatura do Conselheiro
 substituto, passam 19 processos — exatamente os 19 que aquele levantamento classificara como
 "sem padrão". Os outros 58 só têm o despacho de sobrestamento de 11/12/2025, que não é dele.

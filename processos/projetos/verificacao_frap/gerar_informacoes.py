@@ -1,7 +1,7 @@
 """Informações de verificação de transferência FRAP — 26 processos do rastreio.
 
 Uma informação por processo da seção "Desconto em Folha — Verificar transferência
-FRAP" do AGRUPAMENTO_PROCESSOS.md (8 já no marcador 5953 + 18 a marcar; rastreio:
+FRAP" do docs/notas/AGRUPAMENTO_PROCESSOS.md (8 já no marcador 5953 + 18 a marcar; rastreio:
 scripts/analise/rastreio_verificar_frap.py). Cada documento traz:
   - "Trata-se de..." com processo, assunto, responsáveis e valor atualizado da multa;
   - conciliação: Quadro de descontos em folha (SIAI Pessoal, rubrica TCE/FRAP) e

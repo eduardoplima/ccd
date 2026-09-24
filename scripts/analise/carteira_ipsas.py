@@ -98,7 +98,7 @@ ROTULO_BUCKET = ["0-1 ano", "1-2 anos", "2-3 anos", "3-5 anos", "5-10 anos", "10
 # Filtrar `IdDebitoAnterior IS NULL` e ler status/pago da raiz — como esta consulta
 # fazia até 14/08/2026 — devolve o débito ORIGINAL, não o vigente: 1.602 das 17.115
 # raízes têm filho, e nelas o status e o ValorPago da raiz estão congelados no
-# primeiro pagamento. Ver `ANALISE_CHAMADO_DEBITOS_STATUS3.md`, Anexo B.
+# primeiro pagamento. Ver `docs/notas/ANALISE_CHAMADO_DEBITOS_STATUS3.md`, Anexo B.
 SQL = """
 WITH pge AS (
     SELECT DISTINCT pp.IdDebitoExecucao AS IdDebito

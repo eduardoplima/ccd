@@ -12,7 +12,7 @@ precisar de imagem, nota de rodapé ou lista numerada aninhada, o caminho é ado
 Pandoc com `--reference-doc`, não crescer isto aqui.
 
 Uso:
-    python -m scripts.automacao.gerar_relatorio_docx RELATORIO_AUDITORIA_FINANCEIRA_CCD.md
+    python -m scripts.automacao.gerar_relatorio_docx docs/notas/RELATORIO_AUDITORIA_FINANCEIRA_CCD.md
     python -m scripts.automacao.gerar_relatorio_docx arquivo.md --sem-pdf
 """
 from __future__ import annotations
