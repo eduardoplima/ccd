@@ -3,7 +3,7 @@
 Dez processos de execução que (a) estão na CCD, (b) NÃO tratam de verba transitória
 de servidor da SESAP e (c) já têm despacho da relatoria determinando o desconto em
 folha (art. 118, I, da LCE nº 464/2012). Levantamento em
-saidas/analise/nereu_ccd_despacho_desconto_folha.xlsx.
+output/analise/nereu_ccd_despacho_desconto_folha.xlsx.
 
 Valor = soma do valor atualizado (fn_Exe_RetornaValorAtualizado) dos débitos vigentes
 do processo — cancelados ficam de fora. O órgão notificado é a SEAD, como nos despachos

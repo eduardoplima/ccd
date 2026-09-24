@@ -11,7 +11,7 @@ A coluna `vt1`/`sesap` da planilha analise_debitos_nereu_atualizada.xlsx
 também entra só como cross-check.
 
 Somente leitura — não altera nada no banco nem na Área Restrita.
-Saídas: saidas/analise/verificacao_verbas_saude_nereu.{xlsx,md}
+Saídas: output/analise/verificacao_verbas_saude_nereu.{xlsx,md}
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ccd.config import REPO_ROOT, informacoes_dir, load_env
+from ccd.config import OUTPUT_DIR, REPO_ROOT, informacoes_dir, load_env
 from ccd.db import run_query_df
 from ccd.pdf import extract_text_from_pdf
 
@@ -31,11 +31,11 @@ from scripts.automacao.gerar_info_nereu_ms import PROCESSOS as ROUND_1  # noqa: 
 
 ROUND_2 = [
     ln.strip()
-    for ln in (REPO_ROOT / "saidas/nereu_ms/round_2/assinar_pendentes.txt").read_text().splitlines()
+    for ln in (OUTPUT_DIR / "nereu_ms/round_2/assinar_pendentes.txt").read_text().splitlines()
     if ln.strip()
 ]
 PLANILHA = REPO_ROOT / "scripts/analise/docs/analise_debitos_nereu_atualizada.xlsx"
-OUT_DIR = REPO_ROOT / "saidas/analise"
+OUT_DIR = OUTPUT_DIR / "analise"
 OUT_XLSX = OUT_DIR / "verificacao_verbas_saude_nereu.xlsx"
 OUT_MD = OUT_DIR / "verificacao_verbas_saude_nereu.md"
 

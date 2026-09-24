@@ -7,7 +7,7 @@ Para cada processo com setor_atual='CCD' (sem apensados):
 3. lê o despacho remetente (última informação de setor != CCD) no share de PDFs;
 4. extrai a tarefa pedida via LLM (DeepSeek/SERPRO) e agrupa tarefas semelhantes.
 
-Saídas: saidas/analise/instrucao_ccd.csv (por processo) e saidas/analise/instrucao_ccd.md (relatório).
+Saídas: output/analise/instrucao_ccd.csv (por processo) e output/analise/instrucao_ccd.md (relatório).
 Reexecutar retoma do CSV parcial (não reprocessa PDFs/LLM já feitos).
 """
 from __future__ import annotations
@@ -18,14 +18,14 @@ from pathlib import Path
 import pandas as pd
 from pydantic import BaseModel, Field
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR
 from ccd.db import run_query_df
 from ccd.pdf import extract_text_from_pdf
 from ccd.processo import get_info_file_path
 
 BASE_DIR = Path(__file__).resolve().parent
-CSV_OUT = REPO_ROOT / "saidas" / "analise" / "instrucao_ccd.csv"
-MD_OUT = REPO_ROOT / "saidas" / "analise" / "instrucao_ccd.md"
+CSV_OUT = OUTPUT_DIR / "analise" / "instrucao_ccd.csv"
+MD_OUT = OUTPUT_DIR / "analise" / "instrucao_ccd.md"
 
 ID_SETOR_CCD = 762
 MAX_CHARS = 12_000

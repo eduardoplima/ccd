@@ -12,12 +12,12 @@ from __future__ import annotations
 
 import pandas as pd
 
-from ccd.config import REPO_ROOT, cpf, load_env
+from ccd.config import OUTPUT_DIR, cpf, load_env
 from ccd.db import get_connection, run_query_df
 
 load_env()
 
-OUT = REPO_ROOT / "saidas" / "analise" / "desconto_folha_cruzamento_frap.xlsx"
+OUT = OUTPUT_DIR / "analise" / "desconto_folha_cruzamento_frap.xlsx"
 
 # ponytail: o plano de parcelas nao esta no banco (so nos oficios/despachos dos autos),
 # entao fica aqui como literal, com a fonte documental na propria aba.

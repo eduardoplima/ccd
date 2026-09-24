@@ -16,7 +16,7 @@ from cgad.models import DatasetAnotacaoORM, DatasetDocumentoORM
 from cgad.utils import DB_DECISOES, get_session
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_OUT = REPO_ROOT / "saidas" / "analise" / "dataset_anotadores"
+DEFAULT_OUT = REPO_ROOT / "output" / "analise" / "dataset_anotadores"
 
 
 def exportar(out_dir: Path) -> dict[str, tuple[int, int]]:

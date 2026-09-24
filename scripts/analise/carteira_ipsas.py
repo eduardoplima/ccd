@@ -28,7 +28,7 @@ from datetime import date
 
 import pandas as pd
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR
 from ccd.db import run_query_df
 
 # ---------------------------------------------------------------------------
@@ -322,7 +322,7 @@ def main() -> None:
     df, m, resumo = executar(args.data_corte)
     _asserts(df, m)
 
-    destino = REPO_ROOT / "saidas" / "analise" / "ipsas"
+    destino = OUTPUT_DIR / "analise" / "ipsas"
     destino.mkdir(parents=True, exist_ok=True)
     saida = destino / f"carteira_ipsas_{args.data_corte:%Y%m%d}.xlsx"
     with pd.ExcelWriter(saida) as xls:

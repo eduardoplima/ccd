@@ -1,6 +1,6 @@
 # Agrupamento dos processos na CCD por tarefa de instrução
 
-*Gerado em 17/08/2026 por `scripts/analise/instrucao_ccd.py` (dados: banco processo + PDFs do share; LLM gpt-4.1). Detalhe por processo: `saidas/analise/instrucao_ccd.csv`.*
+*Gerado em 17/08/2026 por `scripts/analise/instrucao_ccd.py` (dados: banco processo + PDFs do share; LLM gpt-4.1). Detalhe por processo: `output/analise/instrucao_ccd.csv`.*
 
 ## Método
 
@@ -303,7 +303,7 @@ Três frentes concentram o passivo: cumprimento de decisão/obrigação (108), e
 
 ### Desconto em Folha — Verificar transferência FRAP (26 processos)
 
-Fila de verificação dos valores descontados em folha e depositados no FRAP (marcador 5953 "DESCONTO EM FOLHA - Verificar transferência FRAP"): 8 processos já marcados + 18 identificados pelo rastreio `scripts/analise/rastreio_verificar_frap.py` (detalhe: `saidas/analise/rastreio_verificar_frap.xlsx`). Quem não tem "— marcadores:" na linha deve receber o 5953. Inclui 2 processos fora do universo de 17/08.
+Fila de verificação dos valores descontados em folha e depositados no FRAP (marcador 5953 "DESCONTO EM FOLHA - Verificar transferência FRAP"): 8 processos já marcados + 18 identificados pelo rastreio `scripts/analise/rastreio_verificar_frap.py` (detalhe: `output/analise/rastreio_verificar_frap.xlsx`). Quem não tem "— marcadores:" na linha deve receber o 5953. Inclui 2 processos fora do universo de 17/08.
 
 - **006149/2006** [verificar informações apresentadas] A CCD deve verificar as informações apresentadas no evento nº 174 do processo de prestação de contas referente ao 1º bimestre de 2006.
 - **700985/2012** [registrar cumprimento de diligência] Registrar no sistema o cumprimento da solicitação conforme certidão apresentada no Evento 43, conforme determinado pelo despacho. — marcadores: DESCONTO EM FOLHA - Verificar transferência FRAP

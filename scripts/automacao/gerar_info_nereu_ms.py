@@ -5,7 +5,7 @@ Consulta o banco `processo` pelos processos do setor CCD dentre a lista fixa
 abaixo e, para cada um, renderiza
 `templates/modelo_nereu_ms/modelo_nereu.docx` com as variáveis `processo`,
 `relator`, `tratamento`, `resumo_debitos`, `debitos` (linhas da tabela),
-`posicao` e `sobrestamento`, salvando `.docx` e `.pdf` em `saidas/automacao/nereu_ms/`.
+`posicao` e `sobrestamento`, salvando `.docx` e `.pdf` em `output/automacao/nereu_ms/`.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from pathlib import Path
 import pandas as pd
 from docxtpl import DocxTemplate
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 from ccd.pdf import merge_pdfs
@@ -62,7 +62,7 @@ BASE_DIR = Path(__file__).resolve().parent
 MODELO_DIR = BASE_DIR / "templates" / "modelo_nereu_ms"
 TEMPLATE_PATH = MODELO_DIR / "modelo_nereu.docx"
 ACORDAO_PDF = MODELO_DIR / "ACÓRDÃO_29.06.2026_Concessão da segurança.pdf"
-OUT_DIR = REPO_ROOT / "saidas" / "automacao" / "nereu_ms"
+OUT_DIR = OUTPUT_DIR / "automacao" / "nereu_ms"
 
 
 def fetch_processos() -> pd.DataFrame:

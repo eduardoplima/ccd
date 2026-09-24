@@ -31,7 +31,7 @@ import sys
 
 import pandas as pd
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR
 from ccd.db import run_query_df
 
 # Tolerância de centavo: `ValorTotal` e `ValorPago` são `money`, o mesmo critério do
@@ -184,7 +184,7 @@ def main() -> None:
                   "PagoRegistrado", "IdDebito", "proc_origem_num", "proc_origem_ano",
                   "classificacao"]].to_string(index=False))
 
-    destino = REPO_ROOT / "saidas" / "analise"
+    destino = OUTPUT_DIR / "analise"
     destino.mkdir(parents=True, exist_ok=True)
     saida = destino / "retornos_boleto_nao_importados.xlsx"
     with pd.ExcelWriter(saida) as xls:

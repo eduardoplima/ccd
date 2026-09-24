@@ -28,7 +28,7 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 
 ### `ccd/` — the package (importable from anywhere after `pip install -e .`)
 
-- `ccd.config` — `PACKAGE_DIR`, `REPO_ROOT`, `SQL_DIR`, `DEFAULT_INFORMACOES_DIR`, `load_env()`, `read_sql(name)`, `informacoes_dir()`, `cpf(chave)`. All paths are resolved from `Path(__file__)`, killing the CWD trap. Single source of truth for env-var-overridable infra paths/names.
+- `ccd.config` — `PACKAGE_DIR`, `REPO_ROOT`, `SQL_DIR`, `OUTPUT_DIR`, `DEFAULT_INFORMACOES_DIR`, `load_env()`, `read_sql(name)`, `informacoes_dir()`, `cpf(chave)`. All paths are resolved from `Path(__file__)`, killing the CWD trap. Single source of truth for env-var-overridable infra paths/names.
 - `ccd.llm` — **único** ponto de construção de cliente LLM da árvore raiz: `get_llm(model=None)` e `structured(schema, llm=None)`. Por LGPD, todo texto de processo só pode ser inferido no DeepSeek do Azure AI Foundry do SERPRO — o factory levanta `RuntimeError` se `AZURE_OPENAI_ENDPOINT` apontar para outro host, e não há fallback silencioso. Nunca instanciar `ChatOpenAI`/`AzureChatOpenAI` fora dele. (A árvore `web/` tem o irmão `frap.llm`, com as mesmas regras.) `structured()` fixa `method="function_calling"` — o `json_schema` nativo não é garantido no DeepSeek.
 - `ccd.notebook` — `setup(db='processo', llm=True) -> NotebookContext` with `engine` and (optionally) `llm`. Replaces the per-notebook prelude. Requires the `notebooks` extra (`pip install -e ".[notebooks]"`) for the LLM path.
 - `ccd.db` — `get_connection(db='processo') -> Engine`, plus `run_query(sql, **params)` and `run_query_df(sql, **params)`. Always use **named parameters** (`:foo`) and pass values as kwargs — never `.format()` SQL with user input.
@@ -44,7 +44,7 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 - `scripts/utils_ccd.py` — compatibility shim. Re-exports `get_connection`, `extract_text_from_pdf`, `merge_pdfs`, `get_info_file_path`, `get_pdf_files_processo`, `get_informacoes_processo`, `download_processo`, `generate_pdf` (= `docx_to_pdf_libreoffice`), `generate_pdf_office` (= `docx_to_pdf_word`), `DIR_INFORMACOES`. The 22 notebooks that do `from utils_ccd import ...` keep working unchanged.
 - `scripts/automacao/antecedentes.py` — generates the antecedentes despacho. Uses `ccd.config.read_sql` + `ccd.db.run_query_df` with named params.
 - `scripts/analise/` — exploratory notebooks (stats, LLM corpus analyses, ad-hoc downloads).
-- `scripts/automacao/` — `.docx` deliverables built from `templates/*.docx` via `docxtpl.DocxTemplate`. Templates stay alongside their notebooks; generated artifacts go to the top-level `saidas/<area>/` (see below).
+- `scripts/automacao/` — `.docx` deliverables built from `templates/*.docx` via `docxtpl.DocxTemplate`. Templates stay alongside their notebooks; generated artifacts go to the top-level `output/<area>/` (see below).
 - `scripts/consultas/` — legacy `.sql` files loaded by notebooks via `open("../consultas/x.sql").read().format(...)`. Not migrated — modify here when changing notebook queries.
 - `scripts/db/`, `scripts/docs/` — input spreadsheets/pickles.
 - `scripts/erros/`, `scripts/json_antecedentes/` — auxiliary.
@@ -53,7 +53,7 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 
 - New SQL must use named parameters (`:foo`) with `ccd.db.run_query_df(sql, **params)`. Don't extend the legacy `.format()` pattern in `scripts/consultas/`; if you touch one of those queries, migrate it to `ccd/sql/` and parameters at the same time.
 - All user-facing strings (template variable names, LLM prompts, generated text) are in **Portuguese (pt-BR)**.
-- `templates/~$*.docx` are Word lockfiles — never commit them. Generated artifacts accumulate in the top-level `saidas/<area>/` (`saidas/analise/`, `saidas/automacao/`, gitignored); scripts resolve it via `ccd.config.REPO_ROOT / "saidas"`, notebooks via `../../saidas/<area>/`.
+- `templates/~$*.docx` are Word lockfiles — never commit them. Generated artifacts accumulate in the top-level `output/<area>/` (`output/analise/`, `output/automacao/`, gitignored); scripts resolve it via `ccd.config.OUTPUT_DIR`, notebooks via `../../output/<area>/`.
 - The PDF share path lives in `ccd/config.py` as `DEFAULT_INFORMACOES_DIR`; o deployment do LLM, em `ccd/llm.py` como `DEFAULT_LLM_MODEL`. Override per-host via `CCD_INFORMACOES_DIR` / `AZURE_OPENAI_DEPLOYMENT` env vars rather than editing the source.
 - **LLM só via `ccd.llm` (ou `frap.llm` no `web/`)**: extração de PDF continua local, mas todo texto que vai para um modelo sai pela Azure do SERPRO. Isso é **imposto pelo lint**: `ruff` (regra `TID251`, `banned-api` nos três `pyproject.toml`) rejeita importar `ChatOpenAI`/`AzureChatOpenAI`/`*Embeddings`/`openai.OpenAI` em qualquer arquivo que não seja um dos dois factories — inclusive em notebooks. Se precisar de um provedor novo, mude o factory, não o call site.
 - Commits: use **mensagens curtas** (uma linha, estilo dos commits recentes) e **sem `Co-Authored-By: Claude`** no rodapé.

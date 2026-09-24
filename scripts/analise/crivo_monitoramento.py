@@ -304,7 +304,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="crivo_monitoramento", description=__doc__)
     parser.add_argument(
         "--out-dir",
-        default="saidas/analise/crivo_monitoramento",
+        default="output/analise/crivo_monitoramento",
         help="Diretório onde JSONs por processo e o crivo.xlsx serão gravados.",
     )
     parser.add_argument(

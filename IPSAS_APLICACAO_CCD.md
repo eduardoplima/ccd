@@ -129,5 +129,5 @@ python -m scripts.analise.carteira_ipsas --self-check          # valida a lógic
 python -m scripts.analise.carteira_ipsas --data-corte 2026-08-03
 ```
 
-Saída em `saidas/analise/ipsas/carteira_ipsas_<AAAAMMDD>.xlsx`, abas `carteira`, `matriz_ecl`,
+Saída em `output/analise/ipsas/carteira_ipsas_<AAAAMMDD>.xlsx`, abas `carteira`, `matriz_ecl`,
 `resumo`.

@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 PACKAGE_DIR: Path = Path(__file__).resolve().parent
 REPO_ROOT: Path = PACKAGE_DIR.parent
 SQL_DIR: Path = PACKAGE_DIR / "sql"
+OUTPUT_DIR: Path = REPO_ROOT / "output"  # artefatos gerados (gitignored)
 
 # Default share location for Ata_Informacao PDFs. Override per-host with the
 # CCD_INFORMACOES_DIR env var (e.g. /mnt/informacoes_pdf on the Linux box).

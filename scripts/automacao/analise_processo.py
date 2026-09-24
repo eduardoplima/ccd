@@ -20,7 +20,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR
 from ccd.llm import structured
 from ccd.notebook import setup
 from ccd.pdf import extract_text_from_pdf
@@ -156,7 +156,7 @@ def main() -> None:
         "parágrafos": paragrafos,  # sem numerar: o modelo numera
     })
     saida = Path(args.saida) if args.saida else (
-        REPO_ROOT / "saidas" / "automacao" / "analise_processo" / f"{numero}_{ano}.docx")
+        OUTPUT_DIR / "automacao" / "analise_processo" / f"{numero}_{ano}.docx")
     saida.parent.mkdir(parents=True, exist_ok=True)
     doc.save(str(saida))
     print(f"Gerado: {saida} (fonte §1: {fonte[0] or 'nenhuma'})\n\n" + "\n\n".join(paragrafos))

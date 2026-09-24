@@ -27,7 +27,7 @@ import sys
 
 import pandas as pd
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR
 from ccd.db import run_query_df
 
 # Tipos de débito que geram receita do próprio Tribunal (vão ao FRAP).
@@ -176,7 +176,7 @@ def main() -> None:
     df = consolidar(*carregar(args.de, args.ate), args.de, args.ate)
     _asserts(df)
 
-    destino = REPO_ROOT / "saidas" / "analise" / "ipsas"
+    destino = OUTPUT_DIR / "analise" / "ipsas"
     destino.mkdir(parents=True, exist_ok=True)
     saida = destino / f"conciliacao_competencia_caixa_{args.de}_{args.ate}.xlsx"
     df.to_excel(saida, sheet_name="competencia_x_caixa", index=False)

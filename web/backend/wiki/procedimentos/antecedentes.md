@@ -54,7 +54,7 @@ Regra transversal: **cada ação irreversível (cadastro, assinatura, tramitaç�
 
 - Informações de antecedentes (PDF) cadastradas e assinadas nos processos.
 - Tramitação registrada com a providência do gabinete.
-- Pasta datada com os documentos gerados (`saidas/automacao/antecedentes/`).
+- Pasta datada com os documentos gerados (`output/automacao/antecedentes/`).
 
 ## 9. Pontos de controle e exceções
 

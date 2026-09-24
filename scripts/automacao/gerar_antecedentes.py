@@ -27,7 +27,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 from sqlalchemy import bindparam, text
 
-from ccd.config import REPO_ROOT, informacoes_dir, read_sql
+from ccd.config import OUTPUT_DIR, informacoes_dir, read_sql
 from ccd.db import get_connection
 from ccd.docs import docx_to_pdf, render_template
 from ccd.pdf import extract_text_from_pdf
@@ -35,7 +35,7 @@ from ccd.pdf import extract_text_from_pdf
 ID_SETOR_CCD = 762
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATE = BASE_DIR / "templates" / "antecedentes.docx"
-SAIDA_DEFAULT = REPO_ROOT / "saidas" / "automacao" / "antecedentes" / f"gaana_{datetime.now():%Y%m%d}"
+SAIDA_DEFAULT = OUTPUT_DIR / "automacao" / "antecedentes" / f"gaana_{datetime.now():%Y%m%d}"
 
 _PROMPT_PESSOAS = """
     Você é um agente que identifica listas de pessoas em requisições de antecedentes.

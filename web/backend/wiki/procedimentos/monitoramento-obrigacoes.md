@@ -110,9 +110,9 @@ _Pendência desta minuta: o número do item da seção "Monitoramento" na NBASP 
 
 ## 8. Registros
 
-- `saidas/analise/monitoramento_obrigacoes/monitoramento.xlsx` — um registro por item curado, com triagem e resultado da varredura.
-- `saidas/analise/monitoramento_obrigacoes/fichas/ficha_<processo>.md` — ficha por processo.
-- `saidas/analise/monitoramento_obrigacoes/varredura/<processo>.json` — saída bruta da varredura, com as peças lidas e as citações.
+- `output/analise/monitoramento_obrigacoes/monitoramento.xlsx` — um registro por item curado, com triagem e resultado da varredura.
+- `output/analise/monitoramento_obrigacoes/fichas/ficha_<processo>.md` — ficha por processo.
+- `output/analise/monitoramento_obrigacoes/varredura/<processo>.json` — saída bruta da varredura, com as peças lidas e as citações.
 - Registro no CGR e no CGAD, na Área Restrita / e-Contas.
 
 ## 9. Pontos de controle e exceções

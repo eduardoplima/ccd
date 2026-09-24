@@ -741,7 +741,7 @@ def demo() -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="monitoramento_obrigacoes", description=__doc__)
-    parser.add_argument("--out-dir", default="saidas/analise/monitoramento_obrigacoes")
+    parser.add_argument("--out-dir", default="output/analise/monitoramento_obrigacoes")
     parser.add_argument("--processos", nargs="+", help="Subset de processos (ex.: 000068/2024).")
     parser.add_argument("--limite", type=int, help="Máximo de processos a varrer nesta rodada.")
     parser.add_argument("--sem-llm", action="store_true", help="Só triagem, planilha e fichas.")

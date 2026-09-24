@@ -1,7 +1,7 @@
 """Verbas transitórias nos processos de Nereu que estão na CCD.
 
 O grupo "Encaminhamento à DAP" já foi analisado e consta no topo de
-saidas/verbas_transitorias_dap.md. Este script cobre os DEMAIS processos de
+output/verbas_transitorias_dap.md. Este script cobre os DEMAIS processos de
 Nereu na CCD (outros grupos de tarefa) e ANEXA a análise ao mesmo relatório.
 
 Para cada processo de Nereu (que aparece na planilha de débitos do MS —
@@ -10,7 +10,7 @@ build_enriched_df) fora do grupo DAP:
 2. localiza a primeira informação DAP_BEN do processo de origem;
 3. lê o PDF e classifica via LLM se trata de incorporação de verbas transitórias.
 
-Saída: anexa a saidas/verbas_transitorias_dap.md + cache saidas/verbas_transitorias_dap.csv.
+Saída: anexa a output/verbas_transitorias_dap.md + cache output/verbas_transitorias_dap.csv.
 """
 from __future__ import annotations
 
@@ -24,16 +24,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import pandas as pd  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 
-from ccd.config import REPO_ROOT  # noqa: E402
+from ccd.config import OUTPUT_DIR  # noqa: E402
 from ccd.db import run_query_df  # noqa: E402
 from ccd.llm import DEFAULT_LLM_MODEL as LLM_MODEL  # noqa: E402
 from ccd.pdf import extract_text_from_pdf  # noqa: E402
 from ccd.processo import get_info_file_path  # noqa: E402
 from scripts.analise.gerar_debitos_nereu_02072026 import build_enriched_df  # noqa: E402
 
-CSV_IN = REPO_ROOT / "saidas" / "instrucao_ccd.csv"
-MD_OUT = REPO_ROOT / "saidas" / "verbas_transitorias_dap.md"
-CACHE = REPO_ROOT / "saidas" / "verbas_transitorias_dap.csv"
+CSV_IN = OUTPUT_DIR / "instrucao_ccd.csv"
+MD_OUT = OUTPUT_DIR / "verbas_transitorias_dap.md"
+CACHE = OUTPUT_DIR / "verbas_transitorias_dap.csv"
 
 GRUPO_JA_FEITO = "Encaminhamento à DAP"
 MAX_CHARS = 12_000

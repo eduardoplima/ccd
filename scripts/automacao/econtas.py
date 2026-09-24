@@ -5,7 +5,7 @@ Uso:
     python -m scripts.automacao.econtas consultar 12345/2024 [12346/2024 ...]
     python -m scripts.automacao.econtas tramitar 12345/2024 [--destino DIP] [--dry-run]
     python -m scripts.automacao.econtas informacao 12345/2024 --pdf caminho.pdf [--dry-run]
-    python -m scripts.automacao.econtas informacao-lote --pasta saidas/automacao/x [--dry-run]
+    python -m scripts.automacao.econtas informacao-lote --pasta output/automacao/x [--dry-run]
 
 `certificar` é a bateria somente-leitura: login SSO, dados do operador, setores
 e (com --processo) consulta + payloads que tramitar/informacao enviariam.

@@ -26,7 +26,7 @@ from decimal import Decimal
 
 from sqlalchemy import text
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR
 from ccd.db import get_connection
 
 ID_SETOR_CCD = 762  # processo.dbo.Setor: COORDENADORIA DE CONTROLE DE DECISÕES
@@ -133,7 +133,7 @@ def main() -> None:
     ap.add_argument("--setor", type=int, default=ID_SETOR_CCD)
     args = ap.parse_args()
     script, resumo = gerar(args.anos, args.setor)
-    out = REPO_ROOT / "saidas" / "automacao" / "beneficios"
+    out = OUTPUT_DIR / "automacao" / "beneficios"
     out.mkdir(parents=True, exist_ok=True)
     destino = out / f"insert_multas_ressarcimentos_{'_'.join(map(str, args.anos))}.sql"
     destino.write_text(script, encoding="utf-8")

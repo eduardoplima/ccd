@@ -198,7 +198,7 @@ Gerador: `processos/gerar_informacoes_nereu_desconto_folha.py`
 (modelo `scripts/automacao/templates/desconto_folha.docx`; órgão notificado = SEAD;
 valor = soma do `fn_Exe_RetornaValorAtualizado` dos débitos vigentes).
 PDFs: `processos/nereu_desconto_folha/<NNNNNN_AAAA>/` e cópia do lote em
-`saidas/automacao/nereu_desconto_folha_20260807/`.
+`output/automacao/nereu_desconto_folha_20260807/`.
 
 | Processo | Informação (assinada) | Débito | Situação | Valor atualizado | Marcador |
 |---|---|---|---|---|---|

@@ -26,11 +26,11 @@ from pathlib import Path
 import docx
 from docx.oxml.ns import qn
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR, REPO_ROOT
 from ccd.docs import docx_to_pdf
 
 TEMPLATE = REPO_ROOT / "scripts" / "automacao" / "templates" / "modelo_informacao.docx"
-DESTINO = REPO_ROOT / "saidas" / "analise" / "relatorio_auditoria_financeira"
+DESTINO = OUTPUT_DIR / "analise" / "relatorio_auditoria_financeira"
 
 # Paleta institucional TCE/RN (skill tce-rn-identity).
 TCE = {

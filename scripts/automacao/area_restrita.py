@@ -3,7 +3,7 @@
 Uso:
     python -m scripts.automacao.area_restrita distribuir 12345/2024 [12346/2024 ...] [--dry-run]
     python -m scripts.automacao.area_restrita informacao 12345/2024 --pdf caminho.pdf [--dry-run]
-    python -m scripts.automacao.area_restrita informacao-lote --pasta saidas/automacao/x [--dry-run]
+    python -m scripts.automacao.area_restrita informacao-lote --pasta output/automacao/x [--dry-run]
     python -m scripts.automacao.area_restrita substituir 12345/2024 [--autor Luzenildo] [--dry-run]
     python -m scripts.automacao.area_restrita cancelar-distribuicao 12345/2024 [--setor DIP] [--dry-run]
     python -m scripts.automacao.area_restrita excluir-informacao 12345/2024 [--dry-run]

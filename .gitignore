@@ -183,7 +183,7 @@ cython_debug/
 ~$*.xlsx
 
 # Artefatos gerados pelos notebooks
-/saidas/
+/output/
 
 # Cofre Obsidian (vault/): versionar SÓ a wiki em markdown (vault/wiki/ + schema na raiz).
 # raw/ = fontes internas do TCE (sensível — não vai para o GitHub).
@@ -247,7 +247,6 @@ docs/**/*.xlsx
 
 # Saídas locais / artefatos gerados com dados de processos
 /tmp/
-/outputs/
 /votos.zip
 /processos/[0-9]*_[0-9]*/
 /processos/verificacao_frap/completo/

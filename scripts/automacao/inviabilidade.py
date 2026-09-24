@@ -3,7 +3,7 @@
 
 Consulta o banco `processo` pelo conjunto que casa marcador + relator e, para
 cada processo, renderiza `templates/inviabilidade.docx` com as variáveis
-`processo` e `relator`, salvando `.docx` e `.pdf` em `saidas/automacao/inviabilidade/`.
+`processo` e `relator`, salvando `.docx` e `.pdf` em `output/automacao/inviabilidade/`.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 from docxtpl import DocxTemplate
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 
@@ -23,7 +23,7 @@ RELATOR_NOME = "ANTONIO ED SOUZA SANTANA"
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATE_PATH = BASE_DIR / "templates" / "inviabilidade.docx"
-OUT_DIR = REPO_ROOT / "saidas" / "automacao" / "inviabilidade"
+OUT_DIR = OUTPUT_DIR / "automacao" / "inviabilidade"
 
 # Marcador mais recente por processo (mc.rn = 1), mesma semântica do módulo
 # CCD em web/backend/app/ccd/service.py.

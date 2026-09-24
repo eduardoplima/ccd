@@ -9,7 +9,7 @@ metadata:
 ---
 
 Auditoria `scripts/analise/verificar_verbas_saude_nereu.py` (saídas em
-`saidas/analise/verificacao_verbas_saude_nereu.{xlsx,md}`). Dois bugs corrigidos
+`output/analise/verificacao_verbas_saude_nereu.{xlsx,md}`). Dois bugs corrigidos
 em 23/07/2026:
 
 1. Regra "órgão da origem é da saúde" dava OK sem exigir verba **transitória**
@@ -41,7 +41,7 @@ Resultado final (168 OK / 5 NAO_SAUDE / 3 MANUAL):
   (média das 80%, Lei 10.887/2004).
 
 **002564/2024 (24/07/2026)**: usuário resgatou do GCAED à CCD; informação de
-correção gerada (`saidas/automacao/nereu_ms_correcao/002564_2024.pdf`, template
+correção gerada (`output/automacao/nereu_ms_correcao/002564_2024.pdf`, template
 modelo_nereu_correcao) e cadastrada como CCD_002564_2024_0060 — **pendente de
 assinatura** (usuário pediu só cadastrar). Após assinar: substituir a
 instrutiva errada de 15/07 e decidir tramitação.

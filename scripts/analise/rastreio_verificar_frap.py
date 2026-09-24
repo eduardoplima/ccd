@@ -13,7 +13,7 @@ Para cada processo cruza, pelo CPF do responsável pelo débito de multa vigente
                           casado por CpfCnpjDepositante);
   - plano cadastrado   <- BdDIP.FRAPDescontoFolha(Parcela).
 
-Saída:  saidas/analise/rastreio_verificar_frap.xlsx (abas resumo / descontos / repasses)
+Saída:  output/analise/rastreio_verificar_frap.xlsx (abas resumo / descontos / repasses)
         + no console, a lista de processos que devem receber o marcador 5953.
 
 Limites: contracheque cobre só folhas ingeridas no SIAI DP (folha municipal pode não
@@ -26,10 +26,10 @@ import re
 
 import pandas as pd
 
-from ccd.config import REPO_ROOT
+from ccd.config import OUTPUT_DIR
 from ccd.db import get_connection, run_query_df
 
-OUT = REPO_ROOT / "saidas" / "analise" / "rastreio_verificar_frap.xlsx"
+OUT = OUTPUT_DIR / "analise" / "rastreio_verificar_frap.xlsx"
 
 # Família "DESCONTO EM FOLHA" em Pro_Marcador (IdSetor 762 = CCD):
 # 5021 Implementar | 5022 Implementar Nereu | 5469 Acompanhamento Nereu

@@ -323,8 +323,8 @@ A correspondência NBC TSP × IPSAS utilizada consta do item 2.2 e foi conferida
 
 Todos os números deste relatório são reproduzíveis a partir do repositório da CCD, com acesso de leitura ao banco de dados do sistema de processos e ao banco de apoio do FRAP:
 
-- Carteira, matriz de perda esperada e resumo: `python -m scripts.analise.carteira_ipsas --data-corte 2026-08-14`, com saída em `saidas/analise/ipsas/carteira_ipsas_20260814.xlsx`, abas `carteira`, `matriz_ecl` e `resumo`.
-- Confronto competência × caixa: `python -m scripts.analise.conciliacao_competencia_caixa --de 2021 --ate 2026`, com saída em `saidas/analise/ipsas/conciliacao_competencia_caixa_2021_2026.xlsx`.
+- Carteira, matriz de perda esperada e resumo: `python -m scripts.analise.carteira_ipsas --data-corte 2026-08-14`, com saída em `output/analise/ipsas/carteira_ipsas_20260814.xlsx`, abas `carteira`, `matriz_ecl` e `resumo`.
+- Confronto competência × caixa: `python -m scripts.analise.conciliacao_competencia_caixa --de 2021 --ate 2026`, com saída em `output/analise/ipsas/conciliacao_competencia_caixa_2021_2026.xlsx`.
 - Ambos os programas possuem verificação interna executável sem acesso ao banco, pela opção `--self-check`, que valida as invariantes de classificação e de fechamento dos totais.
 
 Critérios de mensuração adotados: o grão é o crédito, identificado pela raiz da cadeia de registros; o valor imputado é o da raiz; a situação vigente é a da folha; o valor recuperado é a soma dos pagamentos de toda a cadeia; o saldo é o valor imputado menos o recuperado, com piso em zero; o reconhecimento se dá no trânsito em julgado; e o desreconhecimento por decisão superveniente é excluído do cálculo da taxa de perda.
