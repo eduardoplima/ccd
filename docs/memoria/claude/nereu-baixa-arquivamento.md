@@ -13,8 +13,8 @@ Trilha pós-baixa do lote [[nereu-desconto-folha-progresso]] (processos já pago
 informação de baixa e cancelou o saldo residual — débitos-filho 29059/29063/29062 constam
 "Cancelada por decisão do relator"; certidão declaratória de quitação juntada aos autos.
 Em 01/09/2026 geradas as informações de arquivamento (envio à DE, art. 26 da Res.
-013/2015) com `processos/gerar_informacoes_nereu_arquivamento.py` → saídas em
-`processos/nereu_arquivamento/`. Em **01/09/2026** o ciclo completo foi executado na Área
+013/2015) com `processos/utils/gerar_informacoes_nereu_arquivamento.py` → saídas em
+`processos/projetos/nereu_arquivamento/`. Em **01/09/2026** o ciclo completo foi executado na Área
 Restrita: distribuídos, informações cadastradas (CCD_000100_2023_0094 /
 CCD_000106_2023_0099 / CCD_001391_2023_0096), assinadas (Web PKI) e **tramitadas CCD→DIP
 com providência "ENVIO A GCCTH"** (saíram da listagem da CCD). Texto final revisado pelo

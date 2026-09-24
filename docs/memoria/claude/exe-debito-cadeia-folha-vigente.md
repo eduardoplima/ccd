@@ -15,7 +15,7 @@ f.IdDebitoAnterior = d.IdDebito)`), e `IdDebitoAnterior IS NULL` devolve o **ori
 
 **Why:** o repo inteiro usa `e.IdDebitoAnterior IS NULL` comentado como "head do débito"
 (`scripts/analise/carteira_ipsas.py`, `debitos_nereu.py`, `ccd/sql/processos_transito_nome.sql`,
-`processos/nereu_desconto_folha/gerar.py`). Em 1.602 das cadeias (de 27.709 débitos / 17.115
+`processos/projetos/nereu_desconto_folha/gerar.py`). Em 1.602 das cadeias (de 27.709 débitos / 17.115
 raízes / 17.931 folhas) raiz ≠ folha e a leitura pela raiz pega status e saldo errados — ex.:
 raiz 924 em status 3 cuja folha 17476 já é status 2 (Pago Integralmente).
 
@@ -30,7 +30,7 @@ agrega por cadeia: valor imputado da raiz, situação da folha, `SUM(ValorPago)`
 Efeito medido: ativo bruto 356,8 → 353,2 mi; provisão 88,50% → 83,89%; recuperação 5,16 → 7,81 mi
 (+51%). Desempate de fork (200 cadeias, 546 folhas descartadas): folha mais profunda, depois
 `datainclusao` mais recente — exposição de só R$ 7,6 mil ainda em aberto. Os demais pontos do repo
-(`debitos_nereu.py`, `ccd/sql/processos_transito_nome.sql`, `processos/nereu_desconto_folha/gerar.py`)
+(`debitos_nereu.py`, `ccd/sql/processos_transito_nome.sql`, `processos/projetos/nereu_desconto_folha/gerar.py`)
 **seguem lendo a raiz**.
 
 Relacionado: [[exe-debito-valorapagar-vazio]], [[exe-parcelamento-semantica]],

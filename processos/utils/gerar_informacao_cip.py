@@ -15,7 +15,7 @@ entra no mérito nem discute se houve análise preliminar anterior pela unidade
 técnica — por isso o art. 31 é invocado como um todo (incisos I a III), e não pelo
 inciso I, cuja hipótese é condicionada àquela análise.
 
-Rodar: .venv/Scripts/python.exe processos/gerar_informacao_cip.py
+Rodar: .venv/Scripts/python.exe processos/utils/gerar_informacao_cip.py
 """
 import time
 from copy import deepcopy
@@ -140,7 +140,7 @@ def gerar(c: dict) -> Path:
         prox.getparent().remove(prox)
 
     # nome novo: não sobrescreve a informação de mérito substituída
-    out = (Path(__file__).parent / f'{c["numero"]}_{c["ano"]}'
+    out = (Path(__file__).resolve().parents[1] / "informacoes" / f'{c["numero"]}_{c["ano"]}'
            / f'informacao_cip_{c["numero"]}_{c["ano"]}.docx')
     doc.save(str(out))
 

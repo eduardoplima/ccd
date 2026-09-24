@@ -33,4 +33,4 @@ Armadilhas na leitura da folha:
 - Nomes vêm com erros de digitação do jurisdicionado (ex.: `GILAMR` por Gilmar) — casar por CPF.
 
 Modelo de consulta pronto em `scripts/automacao/calculo_vencimentos.ipynb` (`sql_vencimentos`) e
-em `processos/000486_2019/gerar_informacao.py`. Ver [[gerar-informacao-legendas-quadros]].
+em `processos/informacoes/000486_2019/gerar_informacao.py`. Ver [[gerar-informacao-legendas-quadros]].

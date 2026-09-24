@@ -176,7 +176,7 @@ A fazer:
 2. **Excluir o nome** da Sra. Maria de Fátima Cordeiro da Silva Medeiros dos
    cadastros do processo (substituição pela responsável correta, conforme voto).
 3. **Emitir informação** certificando as anotações (padrão
-   `processos/002264_2016/gerar_informacao.py`, skill `legislacao-ccd`) e devolver
+   `processos/informacoes/002264_2016/gerar_informacao.py`, skill `legislacao-ccd`) e devolver
    para arquivamento.
 
 ⚠️ **Antes de anotar**: o dispositivo do acórdão publicado (Evento 46) está errado —
@@ -194,10 +194,10 @@ Em **17/08/2026** os **8 processos não suspensos** foram tramitados **CCD → D
 (providência "Envio DE Nereu Desconto"; verificado: saíram da listagem da CCD).
 **002564/2024 ficou de fora** (débito 27187 Suspenso) — separado para outro momento.
 
-Gerador: `processos/gerar_informacoes_nereu_desconto_folha.py`
+Gerador: `processos/utils/gerar_informacoes_nereu_desconto_folha.py`
 (modelo `scripts/automacao/templates/desconto_folha.docx`; órgão notificado = SEAD;
 valor = soma do `fn_Exe_RetornaValorAtualizado` dos débitos vigentes).
-PDFs: `processos/nereu_desconto_folha/<NNNNNN_AAAA>/` e cópia do lote em
+PDFs: `processos/projetos/nereu_desconto_folha/<NNNNNN_AAAA>/` e cópia do lote em
 `output/automacao/nereu_desconto_folha_20260807/`.
 
 | Processo | Informação (assinada) | Débito | Situação | Valor atualizado | Marcador |

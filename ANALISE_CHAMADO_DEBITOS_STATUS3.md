@@ -335,7 +335,7 @@ Pontos do repositório que usam a convenção da raiz:
 - `scripts/analise/carteira_ipsas.py`
 - `scripts/analise/debitos_nereu.py`, `atualizar_debitos_nereu_definitiva.py` e demais scripts nereu
 - `ccd/sql/processos_transito_nome.sql` e `scripts/consultas/processos_transito_cpf.sql`
-- `processos/nereu_desconto_folha/gerar.py`
+- `processos/projetos/nereu_desconto_folha/gerar.py`
 
 Registrado aqui como pendência. **Nenhum desses arquivos foi alterado neste trabalho** — a
 correção exige decidir caso a caso se a análise quer o débito original (valor da condenação) ou o

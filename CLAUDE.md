@@ -39,6 +39,16 @@ Internal tooling for the **Coordenadoria de Controle de Decisões (CCD)** at a T
 - `ccd.econtas` — `EContas` (sessão no e-Contas, https://processos.tce.rn.gov.br, sucessor da Área Restrita ASP): login SSO via tceauth `/v2/token` (username = CPF, mesmas `AR_USER`/`AR_PASS`; override `ECONTAS_USER`/`ECONTAS_PASS`), token cru no header `Authorization`. Ações `consultar`, `tramitar` (`/api/tramitacao/tramitarAutomatico`), `cadastrar_informacao_digitalizada` (`/api/Informacao/formfile`, campos ainda a confirmar no primeiro uso real). CLI em `scripts/automacao/econtas.py` (`certificar` = bateria dry-run). Assinatura A3 continua via Web PKI/navegador.
 - `ccd/sql/` — bundled SQL files used by the package's API surface (`processo.sql`, `processos_transito_nome.sql`). Read with `ccd.config.read_sql("name.sql")`. **Note**: queries here use SQLAlchemy named placeholders (`:foo`); the older `.format()`-style files in `scripts/consultas/` are still used by notebooks and remain untouched.
 
+### `processos/` — informações e despachos por processo
+
+Peças da CCD geradas a partir de `.docx` (docxtpl/python-docx) e cadastradas na Área Restrita/e-Contas.
+**Nenhum `.py` no primeiro nível** — só estas quatro pastas:
+
+- `utils/` — drivers de lote (`gerar_informacoes_*.py`, `gerar_informacao_cip.py`, `gerar_informacoes_anotacao.py`). Versionados. Rodar da raiz: `.venv/Scripts/python.exe processos/utils/gerar_informacoes_x.py`. Cada um resolve `BASE = Path(__file__).resolve().parents[1]` (= `processos/`) e escreve em `BASE / "projetos" / "<lote>"` (ou `BASE / "informacoes" / "<numero_ano>"`).
+- `projetos/<lote>/` — um conjunto de processos tratado junto (`nereu_baixa`, `nereu_retomada_gcaed`, `prescritos`, `verificacao_frap`…), com uma subpasta `<numero_ano>/` por processo. Scripts próprios do lote (`montar_envio.py`, `verificacao_frap/gerar_informacoes.py`) ficam aqui e são versionados; os `.docx`/`.pdf` gerados não.
+- `informacoes/<numero_ano>/` — processos avulsos, cada um com o seu `gerar_informacao.py` (template `scripts/automacao/templates/modelo_informacao.docx`, saída na própria pasta com backup timestamped). A pasta inteira é gitignored: os scripts trazem nome+CPF do responsável.
+- `modelos/` — templates específicos dos lotes (`modelo_cadastro.docx`, `nereu_baixa.docx`, `modelo_analise_retomada_nereu*.docx`). Versionados; backups `*_AAAAMMDD_HHMMSS.docx` não.
+
 ### `scripts/` — notebooks and entrypoints
 
 - `scripts/utils_ccd.py` — compatibility shim. Re-exports `get_connection`, `extract_text_from_pdf`, `merge_pdfs`, `get_info_file_path`, `get_pdf_files_processo`, `get_informacoes_processo`, `download_processo`, `generate_pdf` (= `docx_to_pdf_libreoffice`), `generate_pdf_office` (= `docx_to_pdf_word`), `DIR_INFORMACOES`. The 22 notebooks that do `from utils_ccd import ...` keep working unchanged.

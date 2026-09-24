@@ -13,7 +13,7 @@ exposto, esta Unidade de Controle Externo remete os autos ao"; e o destinatário
 vinha fixo no feminino ("à Conselheira Relatora"), o que não serve aos dois
 processos relatados pelo Conselheiro Gilberto Jales.
 
-Rodar: .venv/Scripts/python.exe processos/gerar_informacoes_anotacao.py
+Rodar: .venv/Scripts/python.exe processos/utils/gerar_informacoes_anotacao.py
 """
 import shutil
 from datetime import datetime
@@ -23,7 +23,7 @@ from docxtpl import DocxTemplate
 
 from ccd.db import run_query_df
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parents[1]  # processos/
 TEMPLATE = str(BASE / "modelos" / "modelo_cadastro.docx")
 
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
@@ -124,7 +124,7 @@ PROCESSOS = [
 
 def gerar(item: dict) -> Path:
     numero, ano = item["processo"].split("/")
-    pasta = BASE / f"{numero}_{ano}"
+    pasta = BASE / "informacoes" / f"{numero}_{ano}"
     pasta.mkdir(exist_ok=True)
     out = pasta / f"informacao_{numero}_{ano}.docx"
 

@@ -21,7 +21,7 @@ da cadeia ainda constar "Em Aberto" — não se afirma providência não conclu�
 
 Modelo: scripts/automacao/templates/modelo_informacao.docx (parágrafos numerados pelo
 modelo; a data entra por pós-processamento antes da assinatura).
-Rodar: .venv/Scripts/python.exe processos/gerar_informacoes_nereu_arquivamento.py
+Rodar: .venv/Scripts/python.exe processos/utils/gerar_informacoes_nereu_arquivamento.py
 """
 import shutil
 from copy import deepcopy
@@ -35,9 +35,9 @@ from ccd.config import REPO_ROOT
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parents[1]  # processos/
 TEMPLATE = str(REPO_ROOT / "scripts" / "automacao" / "templates" / "modelo_informacao.docx")
-DESTINO = BASE / "nereu_arquivamento"
+DESTINO = BASE / "projetos" / "nereu_arquivamento"
 
 RESPONSAVEL = "Nereu Batista Linhares"
 

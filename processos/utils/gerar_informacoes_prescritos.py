@@ -19,7 +19,7 @@ Interno e o Tema 899/STF para o ressarcimento) e submete a questão ao Relator.
 
 Modelo: scripts/automacao/templates/modelo_informacao.docx (parágrafos numerados pelo
 modelo; a data entra por pós-processamento antes da assinatura).
-Rodar: .venv/Scripts/python.exe processos/gerar_informacoes_prescritos.py [001126/2015 ...]
+Rodar: .venv/Scripts/python.exe processos/utils/gerar_informacoes_prescritos.py [001126/2015 ...]
 """
 import shutil
 import sys
@@ -35,9 +35,9 @@ from ccd.config import REPO_ROOT
 from ccd.db import get_connection, run_query_df
 from ccd.docs import docx_to_pdf
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parents[1]  # processos/
 TEMPLATE = str(REPO_ROOT / "scripts" / "automacao" / "templates" / "modelo_informacao.docx")
-DESTINO = BASE / "prescritos"
+DESTINO = BASE / "projetos" / "prescritos"
 
 PRAZO_DIAS = 5 * 365  # igual a service.py::_PRAZO_PRESCRICIONAL_DIAS (Tema 899/STF)
 PARALISACAO_DIAS = 3 * 365  # art. 328 do RITCE (prescrição intercorrente)

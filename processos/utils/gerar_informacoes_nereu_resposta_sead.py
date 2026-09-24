@@ -6,14 +6,18 @@ cada = R$ 2.562,74) e implantou o desconto no contracheque de novembro/2025 (tel
 rubrica 644 FRAP TC, 1 parcela, vínculo 3 – IPERN). Nem o SIAI Pessoal mostra a retenção
 em 11/2025, nem o extrato do FRAP mostra o crédito. Uma informação por processo com:
 resumo, resposta do órgão, consultas ao SIAI Pessoal e ao FRAP (dois quadros) e sugestão
-de notificação do órgão; a do 107/2023 contextualiza o sobrestamento (MS 0807247-93).
+de notificação do órgão; a do 107/2023 contextualiza o sobrestamento (MS 0807247-93) e a
+do 130/2023 registra que não é alcançada pelo MS nem teve o débito suspenso.
+Texto uniformizado em 22/09/2026 a partir das edições manuais dos dois .docx (versão
+enxuta: sem SEI do anexo, alcance do SIAI/extrato, "sob pena" e "É a informação").
 
 Modelo: scripts/automacao/templates/modelo_informacao.docx (quadros no padrão de
-processos/verificacao_frap/gerar_informacoes.py). Saída: processos/nereu_resposta_sead/.
+processos/projetos/verificacao_frap/gerar_informacoes.py). Saída: processos/projetos/nereu_resposta_sead/.
 
-Rodar: .venv/Scripts/python.exe processos/gerar_informacoes_nereu_resposta_sead.py
+Rodar: .venv/Scripts/python.exe processos/utils/gerar_informacoes_nereu_resposta_sead.py
 """
 import shutil
+import sys
 from copy import deepcopy
 from datetime import date, datetime
 from pathlib import Path
@@ -30,7 +34,7 @@ from ccd.db import get_connection, run_query_df
 from ccd.docs import docx_to_pdf
 
 TEMPLATE = str(REPO_ROOT / "scripts" / "automacao" / "templates" / "modelo_informacao.docx")
-DESTINO = Path(__file__).parent / "nereu_resposta_sead"
+DESTINO = Path(__file__).resolve().parents[1] / "projetos" / "nereu_resposta_sead"
 CPF = cpf("NEREU")
 VALOR_NOTIFICADO = 1281.37
 VALOR_SOMADO = 2562.74
@@ -47,24 +51,24 @@ DATA = f"Natal/RN, {hoje.day} de {MESES[hoje.month - 1]} de {hoje.year}."
 CASOS = {
     "000130/2023": dict(
         origem="012540/2017", decisao="2614/2020", acordao="141/2022",
-        notificacao="001981/2024", notificacao_no_despacho="001981/2024",
-        par="000107/2023", notificacao_par="001976/2024", notificacao_par_no_despacho="001978/2024",
+        notificacao="001981/2024", par="000107/2023",
         apenso="300046/2025", oficio="10364/2024", sei_processo="00110012.003264/2024-60",
-        sei_despacho="31107685", sei_anexo="31107703",
+        sei_despacho="31107685",
         sobrestado=False,
         ordens=dict(despacho=65, notificacao=67, certidao=68, apensamento=71, relator=74, quota=75),
-        eventos_esperados=dict(despacho=75, notificacao=78, relator=90, quota=93),
+        eventos_esperados=dict(despacho=75, notificacao=78, certidao=80, apensamento=84,
+                               relator=90, quota=93),
     ),
     "000107/2023": dict(
         origem="006602/2016", decisao="856/2020", acordao="78/2022",
-        notificacao="001976/2024", notificacao_no_despacho="001978/2024",
-        par="000130/2023", notificacao_par="001981/2024", notificacao_par_no_despacho="001981/2024",
+        notificacao="001976/2024", par="000130/2023",
         apenso="300045/2025", oficio="10365/2024", sei_processo="00110012.003263/2024-15",
-        sei_despacho="31107262", sei_anexo="31107535",
+        sei_despacho="31107262",
         sobrestado=True,
         ordens=dict(despacho=71, notificacao=73, certidao=74, apensamento=75, relator=78,
                     suspensao=79, sugestao=80, decisao_sobr=81, ccd_2026=82, mantem=83),
-        eventos_esperados=dict(despacho=81, notificacao=84, relator=93, decisao_sobr=100, mantem=106),
+        eventos_esperados=dict(despacho=81, notificacao=84, certidao=86, apensamento=87, relator=93,
+                               suspensao=96, sugestao=97, decisao_sobr=100, mantem=106),
     ),
 }
 
@@ -141,11 +145,6 @@ FROM dbo.FRAPLancamento L JOIN dbo.FRAPConta c ON c.IdConta = L.IdConta
 WHERE L.ValorDC = 'C' AND L.IdCategoria IN (1, 3) AND L.DtMovimento >= :desde
 ORDER BY L.DtMovimento
 """
-SQL_FRAP_ALCANCE = """
-SELECT RTRIM(c.Conta) AS conta, MIN(L.DtMovimento) AS ini, MAX(L.DtMovimento) AS fim
-FROM dbo.FRAPLancamento L JOIN dbo.FRAPConta c ON c.IdConta = L.IdConta
-GROUP BY c.Conta
-"""
 
 
 def brl(v: float) -> str:
@@ -165,7 +164,7 @@ def rubrica_tce(tipo, nome) -> bool:
     return str(tipo or "").strip() == "2" and any(k in n for k in ("TCE", "FRAP", "TRIBUNAL DE CONTAS"))
 
 
-# --- identidade visual TCE/RN (ref. processos/verificacao_frap/gerar_informacoes.py) ---
+# --- identidade visual TCE/RN (ref. processos/projetos/verificacao_frap/gerar_informacoes.py) ---
 TCE = {"verde_principal": "2E5B3C", "verde_escuro": "1A3D28",
        "cinza_claro": "F2F2F2", "cinza_borda": "CCCCCC", "cinza_texto": "333333"}
 
@@ -222,7 +221,6 @@ def carregar_conciliacao() -> dict:
     itens = run_query_df(SQL_SIAI_ITENS, eng, cpf=CPF, ano_min=2024)
     assert not itens.empty, "SIAI Pessoal sem folhas do CPF"
     itens["valor"] = itens.valor.astype(float)
-    ultima = itens.loc[(itens.ano * 100 + itens.mes).idxmax()]
     ano, mes = COMPETENCIA
     contracheque = itens[(itens.ano == ano) & (itens.mes == mes)].sort_values(
         ["id_orgao", "tipo", "codigo"])
@@ -239,7 +237,6 @@ def carregar_conciliacao() -> dict:
     creditos = run_query_df(SQL_FRAP_CREDITOS, eng, desde=desde)
     creditos["Valor"] = creditos.Valor.astype(float)
     creditos["DtMovimento"] = pd.to_datetime(creditos.DtMovimento)
-    alcance = run_query_df(SQL_FRAP_ALCANCE, eng)
 
     # padrão IPERN: retenção em M -> OB de valor idêntico no fim de M ou em M+1 (até M+2);
     # cada OB casa uma vez
@@ -255,10 +252,7 @@ def carregar_conciliacao() -> dict:
         if ob is not None:
             usados.add(int(ob.IdLancamento))
         casadas.append((r, ob))
-    return dict(contracheque=contracheque, retencoes=casadas,
-                ultima_folha=(int(ultima.ano), int(ultima.mes)),
-                fim_extrato=pd.to_datetime(alcance.fim).max().date(),
-                contas=sorted(alcance.conta))
+    return dict(contracheque=contracheque, retencoes=casadas)
 
 
 def carregar_processo(proc: str) -> dict:
@@ -285,66 +279,36 @@ def montar_paragrafos(it: dict, conc: dict) -> tuple[list[str], list[tuple]]:
     sobrestado = it["sobrestado"]
 
     pars = [
-        f'Trata-se do Processo nº {it["processo"]}-TC, referente à execução da multa de '
-        f'R$ {brl(it["valor_original"])} imputada ao Sr. {it["nome"].title()} (CPF nº {fmt_cpf(CPF)}), '
-        "então Presidente do Instituto de Previdência dos Servidores do Estado do Rio Grande do "
-        f'Norte – IPERN, pelo Acórdão nº {it["acordao"]}-TC, proferido nos autos do Processo nº '
-        f'{it["origem"]}-TC, em face do descumprimento da Decisão nº {it["decisao"]}-TC (débito nº '
-        f'{it["id_debito"]}, valor atualizado de R$ {brl(it["valor"])}). Citado, o responsável '
-        "quedou-se inerte, razão pela qual a Diretoria de Atos e Execuções – DAE, com fundamento no "
-        "art. 339, inciso II, do Regimento Interno e no art. 25, inciso I e § 1º, inciso I, da "
-        "Resolução nº 013/2015-TCE, determinou a notificação da Secretaria de Estado da "
-        "Administração e dos Recursos Humanos – SEARH (atual SEAD), órgão responsável pela folha de "
-        f"pagamento do servidor, para efetivar o desconto de R$ {brl(VALOR_NOTIFICADO)} e comprovar "
-        f'o repasse à conta do FRAP (Evento {ev["despacho"]}). A Notificação nº {it["notificacao"]}-DAE '
-        f'foi expedida em 30/10/2024 (Evento {ev["notificacao"]}) e recebida pelo órgão (certidão no '
-        f'Evento {ev["certidao"]}).'
+        f'Trata-se de execução de multa imputada ao Sr. {it["nome"].title()} (CPF nº {fmt_cpf(CPF)}), '
+        f'então Presidente do IPERN, pelo Acórdão nº {it["acordao"]}-TC (Processo nº {it["origem"]}-TC), '
+        f'por descumprimento da Decisão nº {it["decisao"]}-TC (débito nº {it["id_debito"]}, valor '
+        f'atualizado de R$ {brl(it["valor"])}). Diante da inércia do responsável, a Diretoria de Atos e '
+        f'Execuções – DAE determinou o desconto em folha de R$ {brl(VALOR_NOTIFICADO)} (Evento '
+        f'{ev["despacho"]}), expedindo-se a Notificação nº {it["notificacao"]}-DAE à SEARH (atual SEAD) em '
+        f'30/10/2024 (Eventos {ev["notificacao"]} e {ev["certidao"]}).'
     ]
     if sobrestado:
         pars[0] += (
-            " Após a resposta do órgão, o Conselheiro Relator, por despacho de 21/01/2025 (Evento "
-            f'{ev["relator"]}), determinou a remessa dos autos à Diretoria de Instrução Processual e '
-            "Controle de Decisões – DIP para acompanhamento da execução, tendo em vista a informação "
-            f"da SEAD de que o desconto fora implantado no contracheque de {comp_txt}."
+            " Respondida a notificação, os autos vieram à DIP para acompanhamento da execução "
+            f'(Evento {ev["relator"]}).'
         )
     else:
         pars[0] += (
-            " Após a resposta do órgão, o Conselheiro Relator remeteu os autos ao Ministério Público "
-            f'de Contas (Evento {ev["relator"]}), que, em Quota de 27/02/2025 (Evento {ev["quota"]}), '
-            "sugeriu a remessa à Diretoria de Instrução Processual e Controle de Decisões – DIP para "
-            "acompanhamento dos descontos e, comprovado o adimplemento integral, emissão da certidão "
-            "de quitação. Os autos encontram-se nesta Coordenadoria de Controle de Decisões, para "
-            "essa finalidade, desde 10/03/2025."
+            " Respondida a notificação, o Ministério Público de Contas sugeriu o acompanhamento dos "
+            f'descontos pela DIP (Eventos {ev["relator"]} e {ev["quota"]}).'
         )
 
     pars.append(
-        f'Em resposta à notificação, a SEAD encaminhou o Ofício nº {it["oficio"]}/SEAD – GABINETE/SEAD '
-        f'(Processo SEI nº {it["sei_processo"]}), autuado como Processo nº {it["apenso"]}-TC e apensado a '
-        f'estes autos (Evento {ev["apensamento"]}). O ofício traz Despacho da Coordenadoria da Folha de '
-        f'Pagamento – COPAG/SEAD, de 26/12/2024 (SEI nº {it["sei_despacho"]}), segundo o qual a multa '
-        f'relativa à Notificação nº {it["notificacao_no_despacho"]}-DAE, no valor de '
-        f'R$ {brl(VALOR_NOTIFICADO)}, foi somada à multa objeto da Notificação nº '
-        f'{it["notificacao_par_no_despacho"]}-DAE, vinculada ao Processo nº {n_par}-TC, no mesmo valor, '
-        f'"totalizando um montante de R$ {brl(VALOR_SOMADO)}, desconto este que fora implantado na '
-        f'integralidade através do contracheque do mês de {MESES[mes_c - 1]}/{ano_c}". '
-        f'O Anexo II (SEI nº {it["sei_anexo"]}) reproduz tela do sistema ERGON/SIGERH-RN com a '
-        f"consignação: rubrica 644 – FRAP TC, espécie MULTA, início {mes_c:02d}/{ano_c}, 1 parcela, fim "
-        f"{mes_c:02d}/{ano_c}, valor R$ {brl(VALOR_SOMADO)}, funcionário 1732889, vínculo 3, setor "
-        "Presidência – PR/IPERN. O mesmo despacho ressalva que compete à COPAG apenas implantar o "
-        'desconto, sendo o repasse dos valores "de inteira responsabilidade do órgão de lotação" do '
-        "servidor, no caso o IPERN."
+        f'A resposta da SEAD (Ofício nº {it["oficio"]}/SEAD, SEI nº {it["sei_processo"]}) foi autuada '
+        f'como Processo nº {it["apenso"]}-TC e apensada a estes autos (Evento {ev["apensamento"]}). '
+        f'Segundo Despacho da COPAG/SEAD de 26/12/2024 (SEI nº {it["sei_despacho"]}), esta multa foi '
+        f'somada à do Processo nº {n_par}-TC, "totalizando um montante de '
+        f'R$ {brl(VALOR_SOMADO)}, desconto este que fora implantado na integralidade através do '
+        f'contracheque do mês de {MESES[mes_c - 1]}/{ano_c}". O Anexo II '
+        f"reproduz tela do ERGON com a consignação: rubrica 644 – FRAP TC, 1 parcela em {mes_c:02d}/{ano_c}, "
+        f"R$ {brl(VALOR_SOMADO)}, funcionário 1732889, vínculo 3 – PR/IPERN. O despacho ressalva que o "
+        'repasse é "de inteira responsabilidade do órgão de lotação", o IPERN.'
     )
-    notas = []
-    if it["notificacao"] != it["notificacao_no_despacho"]:
-        notas.append(f'a notificação expedida neste processo é a de nº {it["notificacao"]}-DAE, e não '
-                     f'a de nº {it["notificacao_no_despacho"]}, como consta do despacho da COPAG')
-    if it["notificacao_par"] != it["notificacao_par_no_despacho"]:
-        notas.append(f'a notificação expedida no Processo nº {n_par}-TC é a de nº '
-                     f'{it["notificacao_par"]}-DAE, e não a de nº {it["notificacao_par_no_despacho"]}, '
-                     "como consta do despacho da COPAG")
-    notas.append("a resposta, datada de dezembro de 2024, programou o desconto para a competência de "
-                 f"{comp_txt}, onze meses depois, em parcela única")
-    pars.append("Registre-se que " + "; e que ".join(notas) + ".")
 
     # --- SIAI Pessoal ---
     cc = conc["contracheque"]
@@ -367,27 +331,23 @@ def montar_paragrafos(it: dict, conc: dict) -> tuple[list[str], list[tuple]]:
                 ["Órgão / matrícula", "Rubrica", "Tipo", "Valor (R$)"], linhas1)]
 
     ret = conc["retencoes"]
-    ua, um = conc["ultima_folha"]
     pars.append(
         "A rubrica 644 – FRAP TC aparece nas folhas do servidor em outras competências – de dezembro "
         "de 2024 a maio de 2025 (IPERN) e a partir de abril de 2026 (Procuradoria-Geral do Estado) –, "
         f"sempre em valores distintos de R$ {brl(VALOR_SOMADO)} e de R$ {brl(VALOR_NOTIFICADO)}, "
-        "relacionados a outros processos de execução em curso contra o mesmo responsável. As folhas "
-        f"disponíveis no SIAI Pessoal alcançam a competência de {comp(ua, um)}."
+        "relacionados a outros processos de execução em curso contra o mesmo responsável."
     )
 
     # --- FRAP ---
-    contas = " e ".join(f"nº {c}" for c in conc["contas"])
     pars.append(
-        "No extrato bancário das contas do FRAP no Banco do Brasil, agência 3795-8 (contas "
-        f"{contas}), carregado nesta unidade até {conc['fim_extrato']:%d/%m/%Y}, não há crédito de "
-        f"R$ {brl(VALOR_SOMADO)} nem de R$ {brl(VALOR_NOTIFICADO)} desde novembro de 2024. Observa-se "
+        "No extrato bancário das contas do FRAP no Banco do Brasil não há crédito de "
+        f"R$ {brl(VALOR_SOMADO)} nem de R$ {brl(VALOR_NOTIFICADO)}. Observa-se "
         "que os repasses do IPERN relativos a este servidor seguem padrão regular: cada retenção lançada "
         "na folha de uma competência ingressa na conta nº 700000-6 como Ordem Bancária de valor idêntico "
         f"no mês seguinte, como demonstra o quadro abaixo. Para a competência de {comp_txt} não há "
         "retenção nem crédito correspondente. As retenções lançadas pela Procuradoria-Geral do "
         "Estado a partir de abril de 2026, relativas a outros processos, têm um único crédito "
-        "identificado até o limite do extrato carregado e são acompanhadas nos respectivos autos:"
+        "identificado."
     )
     linha_nov = [comp(*COMPETENCIA), "IPERN (informado pela SEAD)",
                  f"não localizada (informado: {brl(VALOR_SOMADO)})", "—"]
@@ -417,17 +377,28 @@ def montar_paragrafos(it: dict, conc: dict) -> tuple[list[str], list[tuple]]:
             "perante o Tribunal de Justiça do Estado, que determinou a sustação da imposição de multas "
             "decorrentes da matéria discutida no Processo Judicial nº 0811707-97.2021.8.20.5001; e, "
             f'acolhendo sugestão desta unidade (Evento {ev["sugestao"]}), o Conselheiro Relator determinou o '
-            "sobrestamento do feito, com a suspensão da prescrição, nos termos do art. 36, inciso III, "
-            f'c/c o art. 113 da Lei Complementar Estadual nº 464/2012 (Evento {ev["decisao_sobr"]}). Em '
-            "23/01/2026 o Pleno do TJ/RN denegou a segurança e revogou a liminar, mas, diante dos "
+            f'sobrestamento do feito (Evento {ev["decisao_sobr"]}).'
+        )
+        pars.append(
+            "Em 23/01/2026 o Pleno do TJ/RN denegou a segurança e revogou a liminar, mas, diante dos "
             "embargos de declaração opostos pelo impetrante e dos recursos especial e extraordinário "
             "interpostos na Apelação Cível nº 0811707-97.2021.8.20.5001, o Relator manteve o "
             f'sobrestamento em 23/06/2026 (Evento {ev["mantem"]}), determinando o acompanhamento do feito '
-            "por esta Coordenadoria. A resposta da SEAD, contudo, é anterior ao sobrestamento e é comum "
+            "por esta Coordenadoria."
+        )
+        pars.append(
+            "A resposta da SEAD, contudo, é anterior ao sobrestamento e é comum "
             f"aos Processos nº {it['processo']}-TC e nº {n_par}-TC, de modo que a apuração da veracidade "
             "do desconto informado não implica retomada da execução: se houve retenção em "
             f"{comp_txt} – já sob a vigência da liminar –, o valor retido precisa ser identificado e "
             "destinado; se não houve, a informação prestada ao Tribunal não corresponde aos fatos."
+        )
+    else:
+        pars.append(
+            "Registre-se que este processo não é alcançado pelo Mandado de Segurança "
+            "nº 0807247-93.2025.8.20.0000, impetrado pelo responsável perante o Tribunal de "
+            "Justiça do Estado, nem teve suspensa a exigibilidade do débito, prosseguindo "
+            "regularmente a execução."
         )
 
     pars.append(
@@ -443,10 +414,8 @@ def montar_paragrafos(it: dict, conc: dict) -> tuple[list[str], list[tuple]]:
         f"que, no prazo de 15 (quinze) dias, esclareça se o desconto de R$ {brl(VALOR_SOMADO)} foi "
         f"efetivamente realizado no contracheque de {comp_txt}, juntando o contracheque e o comprovante "
         "de crédito à conta do FRAP, ou, em caso negativo, informe as razões da não efetivação e a data "
-        "em que o desconto será implantado, sob pena de aplicação da multa prevista no art. 27 da "
-        "Resolução nº 013/2015-TCE."
+        "em que o desconto será implantado."
     )
-    pars.append("É a informação.")
     return pars, quadros
 
 
@@ -491,10 +460,9 @@ if __name__ == "__main__":
     import docx
 
     conc = carregar_conciliacao()
-    print(f"SIAI até {comp(*conc['ultima_folha'])}; extrato FRAP até {conc['fim_extrato']}; "
-          f"retenções FRAP TC: {len(conc['retencoes'])}, casadas com OB: "
+    print(f"retenções FRAP TC: {len(conc['retencoes'])}, casadas com OB: "
           f"{sum(ob is not None for _, ob in conc['retencoes'])}")
-    for proc in CASOS:
+    for proc in (sys.argv[1:] or CASOS):  # opcional: só os processos passados na linha de comando
         it = carregar_processo(proc)
         out = gerar(it, conc)
         d = docx.Document(str(out))
@@ -503,8 +471,12 @@ if __name__ == "__main__":
         assert "{{" not in texto and "}}" not in texto, "placeholder solto"
         for s in (brl(VALOR_SOMADO), brl(VALOR_NOTIFICADO), "novembro/2025", it["apenso"],
                   it["notificacao"], f'Evento {it["eventos"]["despacho"]}',
-                  f'Evento {it["eventos"]["notificacao"]}', DATA, "É a informação."):
+                  f'Eventos {it["eventos"]["notificacao"]} e', DATA,
+                  "têm um único crédito identificado."):
             assert s in texto, f"{proc}: falta '{s}'"
+        for s in ("sob pena", "de igual valor", "É a informação", "SEI nº 31107703", "SEI nº 31107535",
+                  "desde novembro de 2024", "alcançam a competência"):
+            assert s not in texto, f"{proc}: sobrou '{s}'"
         assert ("sobrestado" in texto) == it["sobrestado"], f"{proc}: sobrestamento"
         assert len(d.tables) == 2, f"{proc}: {len(d.tables)} quadros"
         assert "644" not in "\n".join(c.text for r in d.tables[0].rows for c in r.cells)

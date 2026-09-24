@@ -8,7 +8,7 @@ metadata:
   modified: 2026-08-28T14:56:36.728Z
 ---
 
-Processo 010613/2005 (DCD, CM Santana do Matos; Acórdão 239/2012, trânsito 29/05/2012; responsável Maria das Dores B. Assunção, CPF 00906234441): informação da CCD (`processos/010613_2005/gerar_informacao.py`, ordem 0063) cadastrada, assinada e tramitada CCD→DIP em 28/08/2026, providência "ENVIO A GCREN". Sugestões: notificar a SEAD (repasse de 4×R$ 391,96 = R$ 1.567,84 descontadas e não repassadas ao FRAP) e deliberar sobre prescrição (multas art. 115; ressarcimento via Tema 899).
+Processo 010613/2005 (DCD, CM Santana do Matos; Acórdão 239/2012, trânsito 29/05/2012; responsável Maria das Dores B. Assunção, CPF 00906234441): informação da CCD (`processos/informacoes/010613_2005/gerar_informacao.py`, ordem 0063) cadastrada, assinada e tramitada CCD→DIP em 28/08/2026, providência "ENVIO A GCREN". Sugestões: notificar a SEAD (repasse de 4×R$ 391,96 = R$ 1.567,84 descontadas e não repassadas ao FRAP) e deliberar sobre prescrição (multas art. 115; ressarcimento via Tema 899).
 
 Achados reutilizáveis:
 

@@ -34,7 +34,7 @@ instrutiva: a última informação da CCD (Evento 118) é o despacho sobre o pr�
 parágrafo sai sem citar o mandado.
 
 Base: processos/modelos/nereu_baixa.docx.
-Rodar: .venv/Scripts/python.exe processos/gerar_informacoes_nereu_baixa.py
+Rodar: .venv/Scripts/python.exe processos/utils/gerar_informacoes_nereu_baixa.py
 """
 import shutil
 from datetime import datetime
@@ -46,9 +46,9 @@ from ccd.config import cpf
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parents[1]  # processos/
 TEMPLATE = str(BASE / "modelos" / "nereu_baixa.docx")
-DESTINO = BASE / "nereu_baixa"
+DESTINO = BASE / "projetos" / "nereu_baixa"
 
 RESPONSAVEL = "Nereu Batista Linhares"
 _cpf = cpf("NEREU")

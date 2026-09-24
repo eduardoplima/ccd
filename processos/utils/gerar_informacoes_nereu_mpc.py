@@ -36,7 +36,7 @@ Duas ressalvas do levantamento:
   por erro de cadastro. Vale o que está Em Aberto.
 
 Base: scripts/automacao/templates/modelo_informacao.docx (o mesmo do modelo 002551/2024).
-Rodar: .venv/Scripts/python.exe processos/gerar_informacoes_nereu_mpc.py
+Rodar: .venv/Scripts/python.exe processos/utils/gerar_informacoes_nereu_mpc.py
 """
 import re
 import shutil
@@ -49,14 +49,14 @@ from docx.enum.text import WD_LINE_SPACING
 from docx.shared import Pt
 from docxtpl import DocxTemplate
 
-from ccd.config import informacoes_dir
+from ccd.config import REPO_ROOT, informacoes_dir
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 from ccd.pdf import extract_text_from_pdf
 
-BASE = Path(__file__).parent
-TEMPLATE = str(BASE.parent / "scripts" / "automacao" / "templates" / "modelo_informacao.docx")
-DESTINO = BASE / "nereu_mpc_antonio_ed"
+BASE = Path(__file__).resolve().parents[1]  # processos/
+TEMPLATE = str(REPO_ROOT / "scripts" / "automacao" / "templates" / "modelo_informacao.docx")
+DESTINO = BASE / "projetos" / "nereu_mpc_antonio_ed"
 
 RESPONSAVEL = "Nereu Batista Linhares"
 CONSELHEIRO = "Marco Antônio de Moraes Rêgo Montenegro"
@@ -265,7 +265,7 @@ def bloco_assinatura(doc) -> None:
 
     A linha "Auditor de Controle Externo" está no modelo 002551/2024 e não no template —
     clona-se o parágrafo do nome para herdar centralização e fonte, reescrevendo o texto do
-    primeiro run (idioma de processos/001454_2023/gerar_informacao.py).
+    primeiro run (idioma de processos/informacoes/001454_2023/gerar_informacao.py).
 
     As quatro linhas saem em espaço simples e sem espaço depois: o padrão do documento é 1,15
     com 10 pt após cada parágrafo, o que esparramaria a assinatura. Só o bloco é alterado —

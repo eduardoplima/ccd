@@ -9,7 +9,7 @@ metadata:
 ---
 
 Lote de desconto em folha do Nereu ([[nereu-presidente-ipern]]): 9 informações
-assinadas em 07/08/2026 (gerador `processos/gerar_informacoes_nereu_desconto_folha.py`).
+assinadas em 07/08/2026 (gerador `processos/utils/gerar_informacoes_nereu_desconto_folha.py`).
 Em **17/08/2026** os **8 não suspensos** foram tramitados **CCD → DIP** com providência
 "Envio DE Nereu Desconto" (destino final = Diretoria de Expediente, sigla DE; a DIP é
 intermediária) — verificado: saíram da listagem da CCD.

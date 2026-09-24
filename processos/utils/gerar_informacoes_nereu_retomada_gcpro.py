@@ -9,7 +9,7 @@ Mesmo modelo do lote GCREN (scripts/automacao/templates/desconto_folha.docx); a 
 parágrafo introdutório com a referência ao despacho, inserido via python-docx entre render() e
 save() (docxtpl: get_docx() descarta o render — usar doc.docx).
 
-Rodar (de processos/): ../.venv/Scripts/python.exe gerar_informacoes_nereu_retomada_gcpro.py
+Rodar: .venv/Scripts/python.exe processos/utils/gerar_informacoes_nereu_retomada_gcpro.py
 """
 import copy
 import shutil
@@ -23,7 +23,7 @@ from ccd.config import cpf
 from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 
-DESTINO = Path(__file__).parent / "nereu_retomada_gcpro"
+DESTINO = Path(__file__).resolve().parents[1] / "projetos" / "nereu_retomada_gcpro"
 CPF = cpf("NEREU")
 RELATOR = "PAULO ROBERTO CHAVES ALVES"
 

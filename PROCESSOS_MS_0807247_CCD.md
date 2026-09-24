@@ -6,6 +6,14 @@ com o parágrafo do Mandado de Segurança Cível nº 0807247-93.2025.8.20.0000 (
 
 **58 processos.** Atualizado em 10/09/2026 após a tramitação de 19 processos em 09/09/2026.
 
+> **22/09/2026** — 57 destes (todos menos 003380/2024, tramitado em 24/07) carregam o marcador
+> `Pro_Marcador` 6139 "Nereu- substituir informação" (CCD, 06/07/2026) e continuam na CCD: a tramitação
+> de 21/07 não consta no banco (nenhum lote CCD→DIP desde 03/07). Como a SS 5.749/STF (28/07, trânsito
+> 27/08/2026) suspendeu o acórdão do TJ, a instrutiva de 17/07 ficou defasada (e afirma, errado, que
+> não houve sobrestamento do Relator). Ação: despacho de **retomada** ao GCAED, gerado por
+> `processos/utils/gerar_informacoes_nereu_retomada_gcaed.py` (57 em `processos/projetos/nereu_retomada_gcaed/`,
+> anexos em `envio/`), para substituir a de 17/07 — ainda não cadastrados.
+
 A situação é a do débito **vigente** (folha da cadeia `IdDebitoAnterior`), vinculado ao
 processo pelos dois papéis (`IdProcessoOrigem` **ou** `IdProcessoExecucao`). Processos com
 mais de um débito vigente trazem as situações separadas por ponto e vírgula.

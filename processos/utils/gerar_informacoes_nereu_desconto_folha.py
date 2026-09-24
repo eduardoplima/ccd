@@ -10,7 +10,7 @@ do processo — cancelados ficam de fora. O órgão notificado é a SEAD, como n
 de 06/05/2026 do relator nos processos 003023/2022 e 003659/2022.
 
 Base: scripts/automacao/templates/desconto_folha.docx (modelo atualizado pelo usuário).
-Rodar: .venv/Scripts/python.exe processos/gerar_informacoes_nereu_desconto_folha.py
+Rodar: .venv/Scripts/python.exe processos/utils/gerar_informacoes_nereu_desconto_folha.py
 """
 import shutil
 import sys
@@ -25,7 +25,7 @@ from ccd.db import run_query_df
 from ccd.docs import docx_to_pdf
 
 TEMPLATE = str(REPO_ROOT / "scripts/automacao/templates/desconto_folha.docx")
-DESTINO = Path(__file__).parent / "nereu_desconto_folha"
+DESTINO = Path(__file__).resolve().parents[1] / "projetos" / "nereu_desconto_folha"
 
 CPF = cpf("NEREU")
 ORGAO = "SECRETARIA DE ADMINISTRAÇÃO DO ESTADO (SEAD)"

@@ -17,7 +17,7 @@ Duas regras invioláveis ao alterar qualquer coisa neste projeto:
 ## 2. Sempre preserve a versão anterior em outro arquivo
 
 - Antes de sobrescrever um arquivo gerado (`.docx`, `.xlsx`, `.pdf`), copie a versão atual para um arquivo de backup com timestamp: `<nome>_YYYYmmdd_HHMMSS.<ext>` na mesma pasta.
-- Em scripts geradores, o padrão é embutir o backup antes do `doc.save(OUT)` (exemplo em `scripts/processos/000068_2024/gerar_informacao.py`):
+- Em scripts geradores, o padrão é embutir o backup antes do `doc.save(OUT)` (exemplo em `processos/informacoes/000068_2024/gerar_informacao.py`):
 
 ```python
 out_path = Path(OUT)

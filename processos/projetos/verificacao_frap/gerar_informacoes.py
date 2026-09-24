@@ -13,9 +13,9 @@ Base legal: art. 25, § 1º, I (desconto com crédito ao FRAP) e §§ 3º e 4º
 (comprovação do desconto e do crédito em 15 dias) da Resolução nº 013/2015-TCE.
 
 Modelo: scripts/automacao/templates/modelo_informacao.docx; quadros no padrão
-visual TCE/RN com legenda "Quadro N – título" (ref.: processos/001454_2023).
+visual TCE/RN com legenda "Quadro N – título" (ref.: processos/informacoes/001454_2023).
 
-Rodar: .venv/Scripts/python.exe processos/verificacao_frap/gerar_informacoes.py
+Rodar: .venv/Scripts/python.exe processos/projetos/verificacao_frap/gerar_informacoes.py
 """
 import re
 import shutil
@@ -129,7 +129,7 @@ def fmt_cpf(c: str) -> str:
     return f"{c[:3]}.{c[3:6]}.{c[6:9]}-{c[9:]}"
 
 
-# --- identidade visual TCE/RN (skill tce-rn-identity; ref. processos/001454_2023) ---
+# --- identidade visual TCE/RN (skill tce-rn-identity; ref. processos/informacoes/001454_2023) ---
 TCE = {"verde_principal": "2E5B3C", "verde_escuro": "1A3D28",
        "cinza_claro": "F2F2F2", "cinza_borda": "CCCCCC", "cinza_texto": "333333"}
 

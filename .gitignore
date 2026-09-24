@@ -197,20 +197,18 @@ vault/.trash/
 # repos/ = clones de referência (frap-controle, decicontas.app) com .git próprio.
 repos/
 
-# processos/ = versionar só os drivers compartilhados (gerar_informacoes_*.py) e os
-# modelos. Os scripts por processo trazem nome+CPF do responsável no texto da
-# informação (dado pessoal), e as informações geradas (.docx/.pdf) ficam de fora.
+# processos/ = versionar só os drivers de lote (utils/), os modelos (modelos/) e os
+# scripts próprios de cada projeto (projetos/<lote>/*.py). Os avulsos (informacoes/)
+# trazem nome+CPF do responsável no script (dado pessoal) e ficam inteiros de fora,
+# assim como as informações geradas (.docx/.pdf) de qualquer pasta.
 processos/**/*.doc
-scripts/processos/**/*.doc
 processos/**/*.docx
-scripts/processos/**/*.docx
 processos/**/*.pdf
-scripts/processos/**/*.pdf
 processos/**/*.tmp
-processos/*/gerar_informacao.py
 !processos/modelos/*.doc
 !processos/modelos/*.docx
 processos/modelos/*_20??????_??????.docx
+/processos/informacoes/
 
 # Backups timestamped dos templates (gerados antes de sobrescrever)
 *_20??????_??????.docx
@@ -248,8 +246,7 @@ docs/**/*.xlsx
 # Saídas locais / artefatos gerados com dados de processos
 /tmp/
 /votos.zip
-/processos/[0-9]*_[0-9]*/
-/processos/verificacao_frap/completo/
-/processos/verificacao_frap/curso/
+/processos/projetos/verificacao_frap/completo/
+/processos/projetos/verificacao_frap/curso/
 web/backend/worker.err
 **/~$*

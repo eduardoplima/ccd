@@ -152,7 +152,7 @@ informação certificando).
 
 - **Fazer (os quatro em série)**: ler a decisão apensada → anotar obrigações/
   recomendações no CGAD → gerar informação certificando as anotações (padrão
-  `processos/003594_2025/gerar_informacao.py`, com guard nos ids do cadastro) →
+  `processos/informacoes/003594_2025/gerar_informacao.py`, com guard nos ids do cadastro) →
   cadastrar/assinar/tramitar.
 - 302904 e 005202 são os mais rápidos: a execução já foi instaurada, resta a anotação.
 

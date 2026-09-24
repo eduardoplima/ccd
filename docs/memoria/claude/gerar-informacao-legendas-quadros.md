@@ -20,5 +20,5 @@ o vínculo formal.
 (identidade [[tce-rn-identity]] — os quadros seguem o padrão TCE/RN: cabeçalho
 `#2E5B3C` branco, alternância `#F2F2F2`, total `#1A3D28`), inserido entre o
 parágrafo-âncora e a tabela. Implementação de referência: helper `_tabela_apos`
-em `processos/001454_2023/gerar_informacao.py`. Incluir as legendas no
+em `processos/informacoes/001454_2023/gerar_informacao.py`. Incluir as legendas no
 self-check (`assert trecho in texto_final`).

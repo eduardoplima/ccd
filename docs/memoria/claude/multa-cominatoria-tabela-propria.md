@@ -21,4 +21,4 @@ Multa cominatória (multa diária) = `Exe_Debito.CodigoTipoDebito` **5**, com o 
 **How to apply:** derivar `DIAS = round(CcTotalMultaCominatoria / ValorMultaCominatoria)` e
 travar com assert. O teto costuma ser o do art. 323, II, "b", do RITCE, atualizado por
 portaria da Presidência (ex.: R$ 17.728,31 pela Portaria nº 014/2022-GP/TCE).
-Exemplo em `processos/002166_2024/gerar_informacao.py`.
+Exemplo em `processos/informacoes/002166_2024/gerar_informacao.py`.
