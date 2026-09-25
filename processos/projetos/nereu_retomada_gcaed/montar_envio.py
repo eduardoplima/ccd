@@ -1,6 +1,6 @@
 """Junta despacho + decisão do STF (SS 5.749) + certidão de trânsito em envio/NNNNNN_YYYY.pdf.
 
-Mesmos anexos do lote GCREN (processos/projetos/nereu_retomada/anexos/). O texto do despacho cita "documento
+Anexos em anexos/ (cópia dos do lote GCREN). O texto do despacho cita "documento
 anexo" e "anexa certidão"; o cadastro na Área Restrita sobe um único PDF, então o `informacao-lote`
 deve apontar para a pasta envio/.
 Rodar: .venv/Scripts/python.exe processos/projetos/nereu_retomada_gcaed/montar_envio.py
@@ -10,7 +10,7 @@ from pathlib import Path
 from ccd.pdf import extract_text_from_pdf, merge_pdfs
 
 BASE = Path(__file__).parent
-ANEXOS_DIR = BASE.parent / "nereu_retomada" / "anexos"
+ANEXOS_DIR = BASE / "anexos"
 ANEXOS = [ANEXOS_DIR / "decisao_STF_SS5749_28072026.pdf",
           ANEXOS_DIR / "certidao_transito_SS5749_27082026.pdf"]
 ENVIO = BASE / "envio"
