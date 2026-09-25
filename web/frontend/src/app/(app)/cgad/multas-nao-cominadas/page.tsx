@@ -69,6 +69,7 @@ export default function MultasNaoCominadasPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Processo</TableHead>
+                <TableHead>Setor</TableHead>
                 <TableHead>Obrigação</TableHead>
                 <TableHead>Responsável pela multa</TableHead>
                 <TableHead className="text-right">Valor/dia</TableHead>
@@ -82,7 +83,7 @@ export default function MultasNaoCominadasPage() {
               {isLoading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="py-10 text-center text-sm text-muted-foreground"
                   >
                     Carregando...
@@ -91,7 +92,7 @@ export default function MultasNaoCominadasPage() {
               ) : pagina.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="py-10 text-center text-sm text-muted-foreground"
                   >
                     Nenhuma obrigação.
@@ -103,6 +104,7 @@ export default function MultasNaoCominadasPage() {
                     <TableCell className="font-mono">
                       {formatProcesso(m.numero_processo, m.ano_processo, m.id_processo)}
                     </TableCell>
+                    <TableCell>{m.setor_atual ?? "—"}</TableCell>
                     <TableCell className="max-w-md">
                       <span title={m.descricao}>{truncate(m.descricao, 90)}</span>
                       {m.orgao && <div className="text-xs text-muted-foreground">{m.orgao}</div>}

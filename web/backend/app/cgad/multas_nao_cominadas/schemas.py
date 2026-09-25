@@ -18,6 +18,7 @@ class MultaNaoCominada(BaseModel):
     id_processo: int
     numero_processo: Optional[int] = None
     ano_processo: Optional[int] = None
+    setor_atual: Optional[str] = None
     id_decisao: Optional[int] = None
     descricao: str
     prazo: Optional[str] = None

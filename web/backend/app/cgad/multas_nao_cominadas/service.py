@@ -8,17 +8,19 @@ obrigações saem da lista.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.cgad.multas_nao_cominadas import schemas
-from app.cgad.review.service import _load_processo_numero_ano
 from cgad.etl.staging import ObrigacaoStagingORM, ReviewStatus
 from cgad.models import NERDecisaoORM
 from cgad.utils import DB_PROCESSOS, get_connection
+
+logger = logging.getLogger(__name__)
 
 _ATIVOS = (ReviewStatus.approved, ReviewStatus.dispatched)
 TIPO_MULTA_COMINATORIA = 5  # Exe_Debito.CodigoTipoDebito
@@ -87,13 +89,44 @@ def _processos_com_multa_cadastrada(id_processos: list[int]) -> set[int]:
     return out
 
 
+def _load_processo(
+    id_processos: list[int],
+) -> dict[int, tuple[Optional[int], Optional[int], Optional[str]]]:
+    """``IdProcesso → (numero, ano, setor_atual)``. ``{}`` em falha (testes sem
+    MSSQL): o frontend cai para o id e mostra o setor vazio."""
+    unique = sorted({int(i) for i in id_processos})
+    out: dict[int, tuple[Optional[int], Optional[int], Optional[str]]] = {}
+    if not unique:
+        return out
+    try:
+        with get_connection(DB_PROCESSOS).connect() as conn:
+            for i in range(0, len(unique), 1000):
+                placeholders = ", ".join(str(x) for x in unique[i : i + 1000])
+                rows = conn.execute(
+                    text(
+                        "SELECT IdProcesso, Numero_Processo, Ano_Processo, "
+                        "RTRIM(setor_atual) AS setor FROM dbo.Processos "
+                        f"WHERE IdProcesso IN ({placeholders})"
+                    )
+                ).all()
+                for r in rows:
+                    out[int(r.IdProcesso)] = (
+                        int(r.Numero_Processo) if r.Numero_Processo is not None else None,
+                        int(r.Ano_Processo) if r.Ano_Processo is not None else None,
+                        r.setor or None,
+                    )
+    except Exception:
+        logger.exception("failed to resolve processos for %d ids", len(unique))
+    return out
+
+
 def listar(session: Session) -> schemas.MultasNaoCominadas:
     linhas = _carregar(session)
     cadastradas = _processos_com_multa_cadastrada([ln["id_processo"] for ln in linhas])
     linhas = [ln for ln in linhas if ln["id_processo"] not in cadastradas]
 
     ids = sorted({ln["id_processo"] for ln in linhas})
-    numero_ano = _load_processo_numero_ano(ids)
+    processos = _load_processo(ids)
     decisao_por_tripla = {
         (d.IdProcesso, d.IdComposicaoPauta, d.IdVotoPauta): d.IdNerDecisao
         for d in session.execute(
@@ -101,7 +134,9 @@ def listar(session: Session) -> schemas.MultasNaoCominadas:
         ).scalars()
     }
     for ln in linhas:
-        ln["numero_processo"], ln["ano_processo"] = numero_ano.get(ln["id_processo"], (None, None))
+        ln["numero_processo"], ln["ano_processo"], ln["setor_atual"] = processos.get(
+            ln["id_processo"], (None, None, None)
+        )
         ln["id_decisao"] = decisao_por_tripla.get(ln["tripla"])
     linhas.sort(key=lambda ln: ln["data_revisao"] or datetime.min, reverse=True)
 

@@ -6,6 +6,7 @@ export const multaNaoCominadaSchema = z.object({
   id_processo: z.number().int(),
   numero_processo: z.number().int().nullable().optional(),
   ano_processo: z.number().int().nullable().optional(),
+  setor_atual: z.string().nullable().optional(),
   id_decisao: z.number().int().nullable().optional(),
   descricao: z.string(),
   prazo: z.string().nullable().optional(),
