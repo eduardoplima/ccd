@@ -19,6 +19,12 @@ export const MODULOS = [
   { key: "cgad.etl", grupo: "cgad", label: "Extrações", href: "/cgad/etl" },
   { key: "cgad.dashboards", grupo: "cgad", label: "Painéis", href: "/cgad/dashboards" },
   { key: "cgad.dataset", grupo: "cgad", label: "Conjunto de Dados", href: "/cgad/dataset" },
+  {
+    key: "cgad.multas-nao-cominadas",
+    grupo: "cgad",
+    label: "Multas não cominadas",
+    href: "/cgad/multas-nao-cominadas",
+  },
   { key: "frap.extratos", grupo: "frap", label: "Extratos", href: "/frap/extratos" },
   { key: "frap.jobs", grupo: "frap", label: "Extrações", href: "/frap/jobs" },
   { key: "wiki", grupo: "wiki", label: "Wiki", href: "/wiki" },

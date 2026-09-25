@@ -20,6 +20,7 @@ from app.cgad.dashboards.router import router as cgad_dashboards_router
 from app.cgad.dataset.router import router as cgad_dataset_router
 from app.cgad.dataset_corrections.router import router as cgad_dataset_corrections_router
 from app.cgad.etl.router import router as cgad_etl_router
+from app.cgad.multas_nao_cominadas.router import router as cgad_multas_nao_cominadas_router
 from app.cgad.review.router import router as cgad_review_router
 from app.config import get_settings
 from app.debitos.router import router as frap_debitos_router
@@ -97,6 +98,7 @@ def create_app() -> FastAPI:
     app.include_router(cgad_dashboards_router)
     app.include_router(cgad_dataset_corrections_router)
     app.include_router(cgad_dataset_router)
+    app.include_router(cgad_multas_nao_cominadas_router)
 
     # Módulo WIKI
     app.include_router(wiki_router)

@@ -25,6 +25,7 @@ MODULOS: tuple[str, ...] = (
     "cgad.etl",
     "cgad.dashboards",
     "cgad.dataset",
+    "cgad.multas-nao-cominadas",
     "frap.extratos",
     "frap.jobs",
     "wiki",
