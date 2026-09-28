@@ -96,6 +96,39 @@ async def task_localizar_notificacoes_desconto_folha(
         raise
 
 
+def conciliar_pendentes() -> str:
+    """Roda o match automático nos cadastros ativos com valor ainda sem conciliação."""
+    from app.ccd.desconto_folha import match
+    from app.jobs.tasks import _session_factory
+
+    factory = _session_factory()
+    with factory() as s:
+        ids = (
+            s.execute(
+                text(
+                    """
+                SELECT DISTINCT d.IdCCDDescontoFolha
+                FROM CCDDescontoFolha d
+                JOIN CCDDescontoFolhaValor v ON v.IdCCDDescontoFolha = d.IdCCDDescontoFolha
+                LEFT JOIN CCDDescontoFolhaMatch m
+                    ON m.IdCCDDescontoFolhaValor = v.IdCCDDescontoFolhaValor
+                WHERE d.Ativo = 1 AND m.IdCCDDescontoFolhaMatch IS NULL
+                """
+                )
+            )
+            .scalars()
+            .all()
+        )
+        vinculados = sum(match.match_automatico(s, id_cadastro=int(i)) for i in ids)
+    return f"{len(ids)} cadastro(s) com valor pendente, {vinculados} conciliação(ões) nova(s)"
+
+
+async def task_conciliar_desconto_folha(ctx: dict[str, Any]) -> str:
+    """Cron diário: créditos que entram no FRAP depois da extração não eram
+    conciliados sem alguém clicar em "Match automático"."""
+    return await asyncio.to_thread(conciliar_pendentes)
+
+
 async def task_extrair_resposta_desconto_folha(
     ctx: dict[str, Any], id_frap_job: int, id_cadastro: int
 ) -> str:

@@ -132,6 +132,21 @@ def test_match_automatico_vincula_candidato_unico(env) -> None:
     assert row is not None and (int(row[0]), int(row[1])) == (1, 1)
 
 
+def test_cron_concilia_pendentes_e_e_idempotente(env, monkeypatch) -> None:
+    from app.ccd.desconto_folha import tasks
+    from app.jobs import tasks as jobs_tasks
+
+    monkeypatch.setattr(jobs_tasks, "_session_factory", lambda: env["factory"])
+    assert (
+        tasks.conciliar_pendentes()
+        == "1 cadastro(s) com valor pendente, 1 conciliação(ões) nova(s)"
+    )
+    assert (
+        tasks.conciliar_pendentes()
+        == "0 cadastro(s) com valor pendente, 0 conciliação(ões) nova(s)"
+    )
+
+
 def test_match_automatico_nao_vincula_com_dois_candidatos(env) -> None:
     with env["factory"]() as s:
         s.execute(

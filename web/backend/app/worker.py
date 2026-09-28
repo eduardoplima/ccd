@@ -13,6 +13,7 @@ from app.ccd.automacao.antecedentes.tasks import task_gerar_antecedentes
 from app.ccd.automacao.desconto_folha.tasks import task_gerar_desconto_folha
 from app.ccd.beneficios.tasks import task_detectar_beneficios
 from app.ccd.desconto_folha.tasks import (
+    task_conciliar_desconto_folha,
     task_extrair_resposta_desconto_folha,
     task_localizar_notificacoes_desconto_folha,
 )
@@ -43,10 +44,13 @@ class WorkerSettings:
         task_detectar_beneficios,
         task_extrair_resposta_desconto_folha,
         task_localizar_notificacoes_desconto_folha,
+        task_conciliar_desconto_folha,
     ]
     # Benefícios (dias 1 e 15): detecção é insert-only e idempotente por ChaveOrigem.
+    # Desconto em folha (diário): match automático só vincula candidato único; idempotente.
     cron_jobs = [
         cron(task_detectar_beneficios, day={1, 15}, hour={7}, minute={30}),
+        cron(task_conciliar_desconto_folha, hour={8}, minute={0}),
     ]
     redis_settings = _redis_settings()
     allow_abort_jobs = True
