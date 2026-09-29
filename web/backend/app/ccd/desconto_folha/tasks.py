@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import date
 from typing import Any
 
 from sqlalchemy import text
@@ -94,6 +95,84 @@ async def task_localizar_notificacoes_desconto_folha(
     except Exception as exc:
         _set_failed(factory, id_frap_job, repr(exc))
         raise
+
+
+# Mesmo critério de processo_lookup.notificacao: informação de notificação alusiva a folha.
+_SQL_NOTIFICADOS = """
+SELECT DISTINCT p.IdProcesso
+FROM dbo.vw_ata_informacao inf
+JOIN dbo.Processos p
+  ON RTRIM(p.numero_processo) = RTRIM(inf.numero_processo)
+ AND RTRIM(p.ano_processo) = RTRIM(inf.ano_processo)
+WHERE (inf.nome_informacao LIKE '%NOTIFICA%' OR inf.resumo LIKE '%Notifica%')
+  AND (inf.nome_informacao LIKE '%FOLHA%' OR inf.resumo LIKE '%folha%')
+  AND inf.data_resumo >= :desde
+"""
+
+
+def _pessoas_novas(
+    debitos: list[dict[str, Any]], existentes: set[int | None]
+) -> list[tuple[int, int | None]]:
+    """(id_pessoa, id_debito) a cadastrar: pessoa física com débito vigente e sem cadastro.
+
+    id_debito só quando a pessoa tem um único débito vigente (convenção da migração 0024).
+    `None` em `existentes` = cadastro migrado sem pessoa: o processo inteiro já está coberto.
+    """
+    if None in existentes:
+        return []
+    por_pessoa: dict[int, list[int]] = {}
+    for d in debitos:
+        doc = "".join(ch for ch in str(d.get("documento") or "") if ch.isdigit())
+        if d["data_cancelamento"] is not None or d.get("desdobrado") or len(doc) != 11:
+            continue
+        if d["id_pessoa"] is None or int(d["id_pessoa"]) in existentes:
+            continue
+        por_pessoa.setdefault(int(d["id_pessoa"]), []).append(int(d["id_debito"]))
+    return [(p, ds[0] if len(ds) == 1 else None) for p, ds in por_pessoa.items()]
+
+
+def detectar_cadastros(desde: date = date(2024, 1, 1)) -> str:
+    """Cria cadastro para cada processo notificado desde `desde` que ainda não está na tela.
+
+    Pares (processo, pessoa) já existentes, inclusive removidos (Ativo = 0), não voltam.
+    """
+    from fastapi import HTTPException
+
+    from app.ccd.desconto_folha import processo_lookup, schemas, service
+    from app.db import get_processo_engine
+    from app.jobs.tasks import _session_factory
+
+    factory = _session_factory()
+    obs = f"detectado automaticamente em {date.today():%d/%m/%Y}"
+    criados = sem_pessoa = 0
+    with Session(get_processo_engine()) as sp, factory() as s:
+        ids = [int(i) for i in sp.execute(text(_SQL_NOTIFICADOS), {"desde": desde}).scalars()]
+        existentes: dict[int, set[int | None]] = {}
+        for idp, idpes in s.execute(text("SELECT IdProcesso, IdPessoa FROM CCDDescontoFolha")):
+            existentes.setdefault(int(idp), set()).add(None if idpes is None else int(idpes))
+        for idp in ids:
+            debitos = processo_lookup.debitos_do_processo(sp, idp)
+            novas = _pessoas_novas(debitos, existentes.get(idp, set()))
+            if not novas and idp not in existentes:
+                sem_pessoa += 1
+            for id_pessoa, id_debito in novas:
+                payload = schemas.CadastroInput(
+                    id_processo=idp, id_debito=id_debito, id_pessoa=id_pessoa, observacoes=obs
+                )
+                try:
+                    service.criar(s, sp, payload, id_usuario=None)
+                except HTTPException:  # 409: o débito já tem cadastro de outra pessoa
+                    continue
+                criados += 1
+    return (
+        f"{len(ids)} processo(s) notificado(s) desde {desde:%d/%m/%Y}: {criados} cadastro(s) "
+        f"criado(s), {sem_pessoa} sem pessoa física com débito vigente"
+    )
+
+
+async def task_detectar_cadastros_desconto_folha(ctx: dict[str, Any]) -> str:
+    """Cron diário: notificações emitidas depois da carga de 14/09/2026 não entravam na tela."""
+    return await asyncio.to_thread(detectar_cadastros)
 
 
 def conciliar_pendentes() -> str:

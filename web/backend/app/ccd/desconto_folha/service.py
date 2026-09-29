@@ -670,7 +670,7 @@ def criar(
     sessao_processo: Session,
     payload: schemas.CadastroInput,
     *,
-    id_usuario: int,
+    id_usuario: int | None,
 ) -> schemas.CadastroDetalhe:
     p = processo_lookup.processo_por_id(sessao_processo, payload.id_processo)
     if p is None:
@@ -738,9 +738,9 @@ def criar(
     novo = session.execute(
         text(
             "SELECT MAX(IdCCDDescontoFolha) FROM CCDDescontoFolha "
-            "WHERE IdProcesso = :p AND IdUsuario = :u AND DataInclusao = :agora"
+            "WHERE IdProcesso = :p AND COALESCE(IdUsuario, -1) = :u AND DataInclusao = :agora"
         ),
-        {"p": payload.id_processo, "u": id_usuario, "agora": agora},
+        {"p": payload.id_processo, "u": -1 if id_usuario is None else id_usuario, "agora": agora},
     ).scalar_one()
     return detalhe(session, int(novo))
 
