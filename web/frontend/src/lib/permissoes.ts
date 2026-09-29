@@ -5,7 +5,8 @@ type Permissoes = {
 };
 
 export const MODULOS = [
-  { key: "ccd.inicio", grupo: "ccd", label: "Início", href: "/ccd" },
+  { key: "ccd.painel", grupo: "ccd", label: "Início", href: "/ccd/painel" },
+  { key: "ccd.inicio", grupo: "ccd", label: "Processos", href: "/ccd" },
   {
     key: "ccd.desconto-folha",
     grupo: "ccd",

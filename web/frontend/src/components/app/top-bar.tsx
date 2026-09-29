@@ -21,7 +21,8 @@ const MODULES = [
 
 const SUBNAV: Record<string, NavItem[]> = {
   ccd: [
-    { href: "/ccd", label: "Início", modulo: "ccd.inicio" },
+    { href: "/ccd/painel", label: "Início", modulo: "ccd.painel" },
+    { href: "/ccd", label: "Processos", modulo: "ccd.inicio" },
     { href: "/ccd/desconto-folha", label: "Desconto em Folha", modulo: "ccd.desconto-folha" },
     { href: "/ccd/beneficios", label: "Benefícios", modulo: "ccd.beneficios" },
     { href: "/ccd/automacao", label: "Automação", modulo: "ccd.automacao" },
@@ -81,7 +82,7 @@ export function TopBar({ user }: { user: UserOut }) {
       {/* faixa de módulos */}
       <div className="flex h-16 items-center justify-between bg-[var(--brand-dark)] px-6 text-white">
         <div className="flex items-center gap-8">
-          <Link href="/ccd" className="text-lg font-bold tracking-tight whitespace-nowrap">
+          <Link href="/" className="text-lg font-bold tracking-tight whitespace-nowrap">
             Coordenadoria de Controle de Decisões
           </Link>
           <nav className="flex items-center gap-2 text-sm font-medium">

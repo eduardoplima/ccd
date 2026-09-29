@@ -16,6 +16,7 @@ from app.auth.models import FRAPUsuario
 from app.deps import get_current_user
 
 MODULOS: tuple[str, ...] = (
+    "ccd.painel",
     "ccd.inicio",
     "ccd.desconto-folha",
     "ccd.beneficios",

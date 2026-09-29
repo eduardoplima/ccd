@@ -61,7 +61,7 @@ export default function CcdInicioPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="section-heading text-2xl">Início — Processos na CCD</h1>
+      <h1 className="section-heading text-2xl">Processos na CCD</h1>
 
       <Tabs value={tab} onValueChange={(v) => void setTab(v)}>
         <div className="flex flex-wrap items-center justify-between gap-3">
