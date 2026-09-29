@@ -14,7 +14,6 @@ from datetime import date
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.ccd import service as ccd_service
 from app.ccd.indicadores.schemas import Indicador, Painel, Sentido, Unidade
 from app.cgad.multas_nao_cominadas import service as multas_service
 
@@ -80,13 +79,6 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
         ).scalar()
         or 0
     )
-    prescritos = _por_ano(
-        processo,
-        f"""SELECT YEAR(e.DataCancelamento), SUM(e.valorOriginalDebito) FROM dbo.Exe_Debito e
-            WHERE e.CodigoStatusDivida = 6 AND e.DataCancelamento >= :ini AND {_FOLHA}
-            GROUP BY YEAR(e.DataCancelamento)""",
-        ini,
-    )
     inicio_execucao = _por_ano(
         processo,
         """SELECT YEAR(p.data_registro), AVG(CAST(DATEDIFF(DAY, d.dt, p.data_registro) AS float))
@@ -143,10 +135,6 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
                WHERE p.setor_atual = 'CCD' AND p.IdProcessoApensador IS NULL"""
         )
     ).one()
-
-    presc = ccd_service.listar_prescricao(processo).items
-    presc_n = {c: sum(1 for i in presc if i.categoria == c) for c in ("prescrito", "risco")}
-    presc_valor = sum(i.valor_total for i in presc if i.categoria in ("prescrito", "risco"))
 
     multas = multas_service.listar(bddip)
 
@@ -235,18 +223,6 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
                 if carteira_multas
                 else {},
                 detalhe=f"arrecadação FRAP ÷ multas em aberto hoje ({brl(carteira_multas)})",
-            ),
-            ind(
-                "prescricao",
-                "Débitos cancelados por prescrição",
-                "brl",
-                "menor",
-                "Proposta da CCD (OE4)",
-                prescritos,
-                detalhe=(
-                    f"hoje na CCD: {presc_n['prescrito']} processos prescritos e "
-                    f"{presc_n['risco']} em risco ({brl(presc_valor)})"
-                ),
             ),
             ind(
                 "estoque",
