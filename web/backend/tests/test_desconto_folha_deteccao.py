@@ -27,3 +27,6 @@ def test_pessoas_novas():
     # já cadastrada (ativa ou removida) não volta; migrado sem pessoa cobre o processo
     assert _pessoas_novas([_d(1, 10), _d(2, 20)], {10}) == [(20, 2)]
     assert _pessoas_novas([_d(1, 10)], {None}) == []
+    # débito na PGE não é mais da CCD; a pessoa só entra se tiver outro fora de lá
+    assert _pessoas_novas([_d(1, 10)], set(), {1}) == []
+    assert _pessoas_novas([_d(1, 10), _d(2, 10)], set(), {1}) == [(10, 2)]

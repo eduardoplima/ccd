@@ -109,11 +109,64 @@ WHERE (inf.nome_informacao LIKE '%NOTIFICA%' OR inf.resumo LIKE '%Notifica%')
   AND inf.data_resumo >= :desde
 """
 
+# Envio vivo à PGE (qualquer status lá): a cobrança deixou de ser da CCD. 4 = Cancelado.
+_PGE_VIVO = "p.DataCancelamento IS NULL AND p.IdStatusEnvio <> 4"
+_SQL_NA_PGE = f"SELECT DISTINCT p.IdDebitoExecucao FROM dbo.PGE_Processo p WHERE {_PGE_VIVO}"
+
+# Débito vigente da pessoa do cadastro no processo (folha da cadeia, não cancelado).
+_DEBITOS_DA_PESSOA = """
+    FROM processo.dbo.Exe_Debito d
+    JOIN processo.dbo.Exe_DebitoPessoa dp ON dp.IDDebito = d.IdDebito
+    WHERE dp.IDPessoa = c.IdPessoa
+      AND (d.IdProcessoExecucao = c.IdProcesso OR d.IdProcessoOrigem = c.IdProcesso)
+      AND d.DataCancelamento IS NULL
+      AND NOT EXISTS (SELECT 1 FROM processo.dbo.Exe_Debito f
+                      WHERE f.IdDebitoAnterior = d.IdDebito AND f.DataCancelamento IS NULL)
+"""
+_PGE_DO = (
+    "EXISTS (SELECT 1 FROM processo.dbo.PGE_Processo p WHERE p.IdDebitoExecucao = {deb} AND {vivo})"
+)
+
+# ponytail: match pelo IdDebito exato; envio feito no filho de cadeia desdobrada não é visto.
+_WHERE_ENVIADOS_PGE = f"""
+WHERE c.Ativo = 1 AND (
+    (c.IdDebito IS NOT NULL AND {_PGE_DO.format(deb="c.IdDebito", vivo=_PGE_VIVO)})
+    OR (c.IdDebito IS NULL AND c.IdPessoa IS NOT NULL
+        AND EXISTS (SELECT 1 {_DEBITOS_DA_PESSOA}
+                    AND {_PGE_DO.format(deb="d.IdDebito", vivo=_PGE_VIVO)})
+        AND NOT EXISTS (SELECT 1 {_DEBITOS_DA_PESSOA}
+                        AND NOT {_PGE_DO.format(deb="d.IdDebito", vivo=_PGE_VIVO)}))
+)
+"""
+
+
+def desativar_enviados_pge(s: Session) -> int:
+    """Desativa cadastros cujo débito (ou todos os vigentes da pessoa) foi enviado à PGE.
+
+    Sem débito e sem pessoa: fica, revisão manual.
+    """
+    from datetime import datetime
+
+    agora = datetime.utcnow().replace(microsecond=0)
+    n = s.execute(
+        text(
+            "UPDATE c SET Ativo = 0, DataAtualizacao = :agora,"
+            " Observacoes = COALESCE(c.Observacoes + ' | ', '') + :obs"
+            f" FROM CCDDescontoFolha c {_WHERE_ENVIADOS_PGE}"
+        ),
+        {"agora": agora, "obs": f"desativado: débito enviado à PGE ({date.today():%d/%m/%Y})"},
+    ).rowcount
+    s.commit()
+    return int(n or 0)
+
 
 def _pessoas_novas(
-    debitos: list[dict[str, Any]], existentes: set[int | None]
+    debitos: list[dict[str, Any]],
+    existentes: set[int | None],
+    na_pge: frozenset[int] | set[int] = frozenset(),
 ) -> list[tuple[int, int | None]]:
-    """(id_pessoa, id_debito) a cadastrar: pessoa física com débito vigente e sem cadastro.
+    """(id_pessoa, id_debito) a cadastrar: pessoa física com débito vigente fora da PGE e
+    sem cadastro.
 
     id_debito só quando a pessoa tem um único débito vigente (convenção da migração 0024).
     `None` em `existentes` = cadastro migrado sem pessoa: o processo inteiro já está coberto.
@@ -125,6 +178,8 @@ def _pessoas_novas(
         doc = "".join(ch for ch in str(d.get("documento") or "") if ch.isdigit())
         if d["data_cancelamento"] is not None or d.get("desdobrado") or len(doc) != 11:
             continue
+        if int(d["id_debito"]) in na_pge:
+            continue
         if d["id_pessoa"] is None or int(d["id_pessoa"]) in existentes:
             continue
         por_pessoa.setdefault(int(d["id_pessoa"]), []).append(int(d["id_debito"]))
@@ -134,7 +189,8 @@ def _pessoas_novas(
 def detectar_cadastros(desde: date = date(2024, 1, 1)) -> str:
     """Cria cadastro para cada processo notificado desde `desde` que ainda não está na tela.
 
-    Pares (processo, pessoa) já existentes, inclusive removidos (Ativo = 0), não voltam.
+    Antes, desativa os cadastros enviados à PGE. Pares (processo, pessoa) já existentes,
+    inclusive removidos ou desativados (Ativo = 0), não voltam.
     """
     from fastapi import HTTPException
 
@@ -146,13 +202,15 @@ def detectar_cadastros(desde: date = date(2024, 1, 1)) -> str:
     obs = f"detectado automaticamente em {date.today():%d/%m/%Y}"
     criados = sem_pessoa = 0
     with Session(get_processo_engine()) as sp, factory() as s:
+        desativados = desativar_enviados_pge(s)
+        na_pge = {int(i) for i in sp.execute(text(_SQL_NA_PGE)).scalars()}
         ids = [int(i) for i in sp.execute(text(_SQL_NOTIFICADOS), {"desde": desde}).scalars()]
         existentes: dict[int, set[int | None]] = {}
         for idp, idpes in s.execute(text("SELECT IdProcesso, IdPessoa FROM CCDDescontoFolha")):
             existentes.setdefault(int(idp), set()).add(None if idpes is None else int(idpes))
         for idp in ids:
             debitos = processo_lookup.debitos_do_processo(sp, idp)
-            novas = _pessoas_novas(debitos, existentes.get(idp, set()))
+            novas = _pessoas_novas(debitos, existentes.get(idp, set()), na_pge)
             if not novas and idp not in existentes:
                 sem_pessoa += 1
             for id_pessoa, id_debito in novas:
@@ -165,8 +223,9 @@ def detectar_cadastros(desde: date = date(2024, 1, 1)) -> str:
                     continue
                 criados += 1
     return (
-        f"{len(ids)} processo(s) notificado(s) desde {desde:%d/%m/%Y}: {criados} cadastro(s) "
-        f"criado(s), {sem_pessoa} sem pessoa física com débito vigente"
+        f"{desativados} cadastro(s) desativado(s) por envio à PGE; {len(ids)} processo(s) "
+        f"notificado(s) desde {desde:%d/%m/%Y}: {criados} cadastro(s) criado(s), {sem_pessoa} "
+        "sem pessoa física com débito vigente fora da PGE"
     )
 
 
