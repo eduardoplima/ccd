@@ -94,7 +94,7 @@ def carregar() -> list[dict]:
         assert re.search(FRASE, sem_acento(extract_text_from_pdf(str(pdf))), re.I), (
             f"{processo}: o despacho {pdf.name} não contém a frase citada")
 
-        itens.append({"processo": processo, "evento": int(desp.evento)})
+        itens.append({"processo": processo, "evento": int(desp.evento), "data": desp.data})
     return itens
 
 

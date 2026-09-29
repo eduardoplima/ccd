@@ -322,7 +322,12 @@ def montar_paragrafos(item: dict) -> tuple[list[str], list[tuple]]:
             "com a proposta de notificação do órgão responsável pela folha de pagamento para "
             "que, no prazo de 15 (quinze) dias, comprove a implantação do desconto e o "
             f"respectivo crédito à conta do FRAP, na forma do {FUNDAMENTO}, ou informe as "
-            "razões da não implantação, observado o disposto no art. 27 da mesma Resolução.")
+            "razões da não implantação, com a advertência de que o descumprimento "
+            "injustificado sujeitará o titular do órgão à apuração de responsabilidade, "
+            "assegurado o direito de defesa (art. 37 da Lei Complementar Estadual "
+            "nº 464/2012), com vistas à eventual aplicação da multa prevista no art. 107, "
+            "inciso II, alínea \"f\", da mesma Lei Complementar, na forma do art. 27 da "
+            "Resolução nº 013/2015-TCE.")
 
     if item["outros_processos"]:
         outros = ", ".join(f"nº {p}-TC" for p in item["outros_processos"])
@@ -426,8 +431,11 @@ def carregar() -> list[dict]:
 
 
 if __name__ == "__main__":
+    import sys
+
     import docx
 
+    PROCESSOS[:] = sys.argv[1:] or PROCESSOS  # regenerar só os processos informados
     resumo = []
     for item in carregar():
         out = gerar(item)
