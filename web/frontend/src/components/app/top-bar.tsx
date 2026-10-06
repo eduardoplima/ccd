@@ -17,6 +17,7 @@ const MODULES = [
   { key: "cgad", label: "CGAD" },
   { key: "frap", label: "FRAP" },
   { key: "wiki", label: "WIKI" },
+  { key: "admin", label: "ADMIN" },
 ] as const;
 
 const SUBNAV: Record<string, NavItem[]> = {
@@ -49,10 +50,17 @@ const SUBNAV: Record<string, NavItem[]> = {
   ],
 };
 
+// só para admin (não passa pela matriz de permissões por módulo)
+const ADMIN_NAV = [
+  { href: "/admin/usuarios", label: "Usuários" },
+  { href: "/admin/jobs", label: "Jobs" },
+];
+
 function activeModule(pathname: string | null): string {
   if (pathname?.startsWith("/cgad")) return "cgad";
   if (pathname?.startsWith("/frap")) return "frap";
   if (pathname?.startsWith("/wiki")) return "wiki";
+  if (pathname?.startsWith("/admin")) return "admin";
   return "ccd";
 }
 
@@ -61,10 +69,14 @@ export function TopBar({ user }: { user: UserOut }) {
   const router = useRouter();
   const isAdmin = user.papel === "admin";
   const current = activeModule(pathname);
-  const visiveis = (key: string) =>
-    (SUBNAV[key] ?? []).filter((l) =>
-      l.editar ? podeEditar(user, l.modulo) : podeVer(user, l.modulo),
-    );
+  const visiveis = (key: string): { href: string; label: string }[] =>
+    key === "admin"
+      ? isAdmin
+        ? ADMIN_NAV
+        : []
+      : (SUBNAV[key] ?? []).filter((l) =>
+          l.editar ? podeEditar(user, l.modulo) : podeVer(user, l.modulo),
+        );
   const subnav = visiveis(current);
   // link ativo = correspondência de prefixo mais longa (evita o root "/ccd"
   // ficar aceso junto com "/ccd/desconto-folha" etc.)
@@ -108,19 +120,6 @@ export function TopBar({ user }: { user: UserOut }) {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          {isAdmin && (
-            <Link
-              href="/admin/usuarios"
-              className={cn(
-                "text-sm",
-                pathname?.startsWith("/admin")
-                  ? "text-white underline underline-offset-4"
-                  : "text-yellow-300 hover:text-white",
-              )}
-            >
-              Usuários
-            </Link>
-          )}
           <Link
             href="/conta"
             className="text-sm text-yellow-300 hover:text-white"

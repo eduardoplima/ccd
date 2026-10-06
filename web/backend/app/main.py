@@ -7,6 +7,7 @@ from arq.connections import RedisSettings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.admin.router import router as admin_router
 from app.auth.router import router as auth_router
 from app.busca.router import router as frap_busca_router
 from app.ccd.alertas.router import router as ccd_alertas_router
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
     # Compartilhados
     app.include_router(auth_router)
     app.include_router(usuarios_router)
+    app.include_router(admin_router)
 
     # Módulo CCD
     app.include_router(ccd_router)

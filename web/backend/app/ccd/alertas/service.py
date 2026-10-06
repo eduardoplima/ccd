@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -164,3 +165,26 @@ def listar_alertas(session: Session, *, tipo: TipoAlerta | None = None) -> Alert
         )
         items.extend(coletados)
     return AlertasResponse(tipos=tipos, items=items, total=len(items))
+
+
+# Snapshot gravado no Redis pelo job diário (`tasks.task_calcular_alertas`).
+SNAPSHOT_KEY = "ccd:alertas:snapshot"
+
+
+def calcular_snapshot(session: Session) -> AlertasResponse:
+    resp = listar_alertas(session)
+    resp.calculado_em = datetime.now(UTC).replace(microsecond=0)
+    return resp
+
+
+def filtrar(resp: AlertasResponse, tipo: TipoAlerta | None) -> AlertasResponse:
+    if tipo is None:
+        return resp
+    items = [i for i in resp.items if i.tipo == tipo]
+    return resp.model_copy(
+        update={
+            "tipos": [t for t in resp.tipos if t.tipo == tipo],
+            "items": items,
+            "total": len(items),
+        }
+    )

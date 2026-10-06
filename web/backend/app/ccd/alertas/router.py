@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+import asyncio
+
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.auth.models import Usuario
@@ -17,9 +19,15 @@ router = APIRouter(
 
 
 @router.get("", response_model=AlertasResponse)
-def listar_alertas(
+async def listar_alertas(
+    request: Request,
     tipo: TipoAlerta | None = Query(None),
     session: Session = Depends(get_processo_session),
     _: Usuario = Depends(get_current_user),
 ) -> AlertasResponse:
-    return service.listar_alertas(session, tipo=tipo)
+    # snapshot do job diário; sem ele (job ainda não rodou, Redis fora), calcula na hora
+    pool = getattr(request.app.state, "arq_pool", None)
+    bruto = await pool.get(service.SNAPSHOT_KEY) if pool is not None else None
+    if bruto:
+        return service.filtrar(AlertasResponse.model_validate_json(bruto), tipo)
+    return await asyncio.to_thread(service.listar_alertas, session, tipo=tipo)

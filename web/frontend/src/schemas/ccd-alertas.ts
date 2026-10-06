@@ -44,5 +44,6 @@ export const alertasResponseSchema = z.object({
   tipos: z.array(tipoAlertaInfoSchema),
   items: z.array(alertaSchema),
   total: z.number(),
+  calculado_em: z.string().nullable().optional(),
 });
 export type AlertasResponse = z.infer<typeof alertasResponseSchema>;

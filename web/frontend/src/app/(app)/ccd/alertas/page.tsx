@@ -28,6 +28,9 @@ export default function AlertasPage() {
       <p className="text-sm text-muted-foreground">
         Inconsistências entre marcadores e a situação real dos processos no setor CCD, para a equipe
         revisar e dar a devida providência.
+        {data?.calculado_em
+          ? ` Calculado em ${new Date(data.calculado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.`
+          : null}
       </p>
 
       {isError ? (

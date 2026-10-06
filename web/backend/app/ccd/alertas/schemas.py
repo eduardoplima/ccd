@@ -48,3 +48,4 @@ class AlertasResponse(BaseModel):
     tipos: list[TipoAlertaInfo]
     items: list[AlertaOut]
     total: int
+    calculado_em: datetime | None = None  # preenchido quando vem do snapshot do job diário

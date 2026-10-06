@@ -9,6 +9,7 @@ from arq.connections import RedisSettings
 from arq.cron import cron
 from dotenv import load_dotenv
 
+from app.ccd.alertas.tasks import task_calcular_alertas
 from app.ccd.automacao.antecedentes.tasks import task_gerar_antecedentes
 from app.ccd.automacao.desconto_folha.tasks import task_gerar_desconto_folha
 from app.ccd.beneficios.tasks import task_detectar_beneficios
@@ -20,6 +21,7 @@ from app.ccd.desconto_folha.tasks import (
 )
 from app.cgad.tasks import run_full_extraction
 from app.config import get_settings
+from app.jobs.agenda import JOBS
 from app.jobs.tasks import task_conciliar_mes, task_parse_e_publicar
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -33,29 +35,28 @@ def _redis_settings() -> RedisSettings:
     return RedisSettings.from_dsn(url)
 
 
+# FRAP (parse/conciliação) + CGAD (extração NER→obrigação→recomendação)
+# + CCD (geração de despachos, extração da resposta do desconto em folha)
+FUNCTIONS = [
+    task_parse_e_publicar,
+    task_conciliar_mes,
+    run_full_extraction,
+    task_gerar_desconto_folha,
+    task_gerar_antecedentes,
+    task_detectar_beneficios,
+    task_extrair_resposta_desconto_folha,
+    task_localizar_notificacoes_desconto_folha,
+    task_conciliar_desconto_folha,
+    task_detectar_cadastros_desconto_folha,
+    task_calcular_alertas,
+]
+_POR_NOME = {f.__name__: f for f in FUNCTIONS}
+
+
 class WorkerSettings:
-    # FRAP (parse/conciliação) + CGAD (extração NER→obrigação→recomendação)
-    # + CCD (geração de despachos, extração da resposta do desconto em folha)
-    functions = [
-        task_parse_e_publicar,
-        task_conciliar_mes,
-        run_full_extraction,
-        task_gerar_desconto_folha,
-        task_gerar_antecedentes,
-        task_detectar_beneficios,
-        task_extrair_resposta_desconto_folha,
-        task_localizar_notificacoes_desconto_folha,
-        task_conciliar_desconto_folha,
-        task_detectar_cadastros_desconto_folha,
-    ]
-    # Benefícios (dias 1 e 15): detecção é insert-only e idempotente por ChaveOrigem.
-    # Desconto em folha (diário): detecção cria cadastro de notificação nova (não recria
-    # removidos) e roda antes do match, que só vincula candidato único; idempotentes.
-    cron_jobs = [
-        cron(task_detectar_beneficios, day={1, 15}, hour={7}, minute={30}),
-        cron(task_detectar_cadastros_desconto_folha, hour={7}, minute={45}),
-        cron(task_conciliar_desconto_folha, hour={8}, minute={0}),
-    ]
+    functions = FUNCTIONS
+    # Horários em app/jobs/agenda.py (UTC), a mesma lista que a tela ADMIN › Jobs mostra.
+    cron_jobs = [cron(_POR_NOME[j["nome"]], **j["cron"]) for j in JOBS if j["cron"]]
     redis_settings = _redis_settings()
     allow_abort_jobs = True
     job_timeout = 60 * 60  # NER do CGAD pode demorar em janelas largas
