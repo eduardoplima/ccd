@@ -171,9 +171,11 @@ def _responsaveis_str(nomes: list[str]) -> str:
 
 
 def gerar(processos: list[str], out_dir: Path,
-          responsaveis: list[str] | None = None) -> list[Path]:
+          responsaveis: list[str] | None = None,
+          cabecalho: dict[str, str] | None = None) -> list[Path]:
     """`responsaveis` substitui a extração do LLM (despacho-fonte errado, nome a
-    mais/a menos). Só faz sentido com um processo por vez."""
+    mais/a menos); `cabecalho` substitui assunto/interessado do banco (cadastro
+    "xxx"). Só fazem sentido com um processo por vez."""
     with contextlib.suppress(locale.Error):
         locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
     engine = get_connection()
@@ -214,6 +216,12 @@ def gerar(processos: list[str], out_dir: Path,
                 "responsaveis": _responsaveis_str([v["nome"] for v in valores]),
                 "data": datetime.now().strftime("%d/%m/%Y"),
                 "sem_valores": all(not v["transitos"] for v in valores),
+                # quem não tem condenação vai em parágrafo, fora da tabela
+                "sem_condenacoes": _responsaveis_str([
+                    f"{v['nome']} (CPF: {v['cpf']})" if v["cpf"] else v["nome"]
+                    for v in valores if not v["transitos"]
+                ]),
+                **(cabecalho or {}),
             }
             stem = processo.replace("/", "_")
             docx_path = render_template(TEMPLATE, context, out_dir / f"{stem}.docx")
@@ -234,9 +242,12 @@ def main() -> int:
     ap.add_argument("--responsavel", action="append", metavar="NOME",
                     help="força o(s) responsável(is) em vez de extrair do despacho "
                          "(repetível; exige exatamente um processo)")
+    ap.add_argument("--assunto", help="força o assunto do cabeçalho (exige um processo)")
+    ap.add_argument("--interessado", help="força o interessado do cabeçalho (exige um processo)")
     args = ap.parse_args()
-    if args.responsavel and len(args.processos) != 1:
-        ap.error("--responsavel exige exatamente um processo")
+    cabecalho = {k: v for k in ("assunto", "interessado") if (v := getattr(args, k))}
+    if (args.responsavel or cabecalho) and len(args.processos) != 1:
+        ap.error("--responsavel/--assunto/--interessado exigem exatamente um processo")
 
     engine = get_connection()
     if args.processos:
@@ -258,7 +269,7 @@ def main() -> int:
 
     out_dir = Path(args.saida)
     print(f"\nGerando em {out_dir} ...")
-    pdfs = gerar(processos, out_dir, responsaveis=args.responsavel)
+    pdfs = gerar(processos, out_dir, responsaveis=args.responsavel, cabecalho=cabecalho)
     print(f"\n{len(pdfs)}/{len(processos)} PDF(s) gerado(s) em {out_dir}")
     return 0 if len(pdfs) == len(processos) else 1
 
