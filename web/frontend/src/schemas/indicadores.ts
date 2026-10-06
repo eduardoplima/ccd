@@ -6,7 +6,7 @@ export const indicadorSchema = z.object({
   titulo: z.string(),
   unidade: z.enum(["brl", "pct", "dias", "qtd"]),
   sentido: z.enum(["maior", "menor"]),
-  ref_dpg: z.string(),
+  explicacao: z.string(),
   valores: z.record(z.string(), z.number().nullable()),
   atual: z.number().nullable(),
   linha_base: z.number().nullable(),

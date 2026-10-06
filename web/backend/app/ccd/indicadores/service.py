@@ -1,8 +1,8 @@
 """Painel de indicadores da CCD (página inicial do app).
 
 Recorte da CCD sobre a proposta de indicadores estratégicos 2027-2028 da DPG
-(docs/indicadores/). Cada indicador traz o valor por ano e a linha de base
-(média dos dois anos anteriores ao corrente). Todas as consultas vão nas
+(docs/indicadores/). Cada indicador traz o valor por ano, a linha de base
+(média dos dois anos anteriores ao corrente) e uma explicação (hover do card). Todas as consultas vão nas
 tabelas-base — a vwCCDDebito leva minutos na varredura completa.
 """
 
@@ -53,13 +53,6 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
     anos = [ano - 2, ano - 1, ano]
     ini = date(ano - 2, 1, 1)
 
-    beneficios = _por_ano(
-        bddip,
-        """SELECT YEAR(DataOcorrencia), SUM(ValorQuantidade) FROM dbo.CCDBeneficio
-           WHERE IdBeneficioSituacaoEfetivacao = 1 AND Ativo = 1 AND DataOcorrencia >= :ini
-           GROUP BY YEAR(DataOcorrencia)""",
-        ini,
-    )
     frap = _por_ano(
         bddip,
         """SELECT YEAR(DtMovimento), SUM(Valor) FROM dbo.FRAPLancamento
@@ -78,17 +71,6 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
             )
         ).scalar()
         or 0
-    )
-    inicio_execucao = _por_ano(
-        processo,
-        """SELECT YEAR(p.data_registro), AVG(CAST(DATEDIFF(DAY, d.dt, p.data_registro) AS float))
-           FROM (SELECT IdProcessoExecucao, MIN(dataTransito) AS dt FROM dbo.Exe_Debito
-                 WHERE IdProcessoExecucao IS NOT NULL AND dataTransito IS NOT NULL
-                 GROUP BY IdProcessoExecucao) d
-           JOIN dbo.Processos p ON p.IdProcesso = d.IdProcessoExecucao
-           WHERE p.data_registro >= :ini AND p.data_registro >= d.dt
-           GROUP BY YEAR(p.data_registro)""",
-        ini,
     )
     # ponytail: movimentação por lote (Lotes/Itens_Lote); só há saídas da CCD a partir de 2025
     fluxo = processo.execute(
@@ -143,7 +125,7 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
         titulo: str,
         unidade: Unidade,
         sentido: Sentido,
-        ref_dpg: str,
+        explicacao: str,
         valores: dict[int, float] | None = None,
         atual: float | None = None,
         detalhe: str | None = None,
@@ -154,7 +136,7 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
             titulo=titulo,
             unidade=unidade,
             sentido=sentido,
-            ref_dpg=ref_dpg,
+            explicacao=explicacao,
             valores=serie,
             atual=atual,
             linha_base=_linha_base(serie, ano),
@@ -173,7 +155,8 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
                 "Processos tramitados pela CCD",
                 "qtd",
                 "maior",
-                "Índice de Produtividade do Controle Externo (OE5), numerador",
+                "Processos distintos que a CCD enviou a outro setor no ano, contados pelos lotes de "
+                "tramitação. Quanto mais, melhor.",
                 tramitados,
                 detalhe="processos distintos enviados pela CCD a outro setor no ano",
             ),
@@ -182,7 +165,8 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
                 "Multas cadastradas",
                 "qtd",
                 "maior",
-                "Volume da execução (CCD)",
+                "Débitos de multa (tipos 2, 4 e 5) incluídos no ano, contando só o débito original "
+                "da cadeia (sem as atualizações).",
                 multas_cad,
                 detalhe=f"{ano}: {brl(float(cad_atual[2] or 0))} imputados",
             ),
@@ -191,25 +175,18 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
                 "Ressarcimentos cadastrados",
                 "qtd",
                 "maior",
-                "Volume da execução (CCD)",
+                "Débitos de ressarcimento (tipo 1) incluídos no ano, contando só o débito original "
+                "da cadeia (sem as atualizações).",
                 ress_cad,
                 detalhe=f"{ano}: {brl(float(cad_atual[4] or 0))} imputados",
-            ),
-            ind(
-                "beneficios_efetivos",
-                "Benefícios financeiros efetivos",
-                "brl",
-                "maior",
-                "Benefícios Financeiros Efetivos das Ações de Controle (OE5)",
-                beneficios,
-                detalhe="SisBenefícios, efetivos, pela data do acórdão",
             ),
             ind(
                 "arrecadacao_frap",
                 "Arrecadação do FRAP",
                 "brl",
                 "maior",
-                "Índice de crescimento nominal do FRAP (OE9)",
+                "Soma, por ano, dos créditos de arrecadação no extrato do FRAP (categorias 1, 2, 3 "
+                "e 9).",
                 frap,
                 detalhe="créditos de arrecadação no extrato (categorias 1, 2, 3 e 9)",
             ),
@@ -218,7 +195,8 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
                 "Taxa de recuperação de multas",
                 "pct",
                 "maior",
-                "Proposta da CCD (OE4)",
+                "Arrecadação do FRAP no ano ÷ total das multas em aberto hoje (débito vigente da "
+                "cadeia). O FRAP só recebe multa; ressarcimento vai ao ente.",
                 {a: 100.0 * v / carteira_multas for a, v in frap.items()}
                 if carteira_multas
                 else {},
@@ -229,7 +207,8 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
                 "Tempo médio de estoque na CCD",
                 "dias",
                 "menor",
-                "Tempo Médio de Estoque de Processos (OE4), recorte da CCD",
+                "Média de dias desde o último recebimento na CCD dos processos que estão hoje no "
+                "setor (sem apensados). Quanto menos, melhor.",
                 atual=float(estoque_dias) if estoque_dias is not None else None,
                 detalhe=f"{estoque_qtd} processos no setor hoje",
             ),
@@ -238,25 +217,18 @@ def painel(bddip: Session, processo: Session, hoje: date | None = None) -> Paine
                 "Produtividade da CCD",
                 "pct",
                 "maior",
-                "Índice de Produtividade do Controle Externo (OE5), recorte da CCD",
+                "Saídas ÷ entradas de processos na CCD no ano. Acima de 100%, o estoque do setor "
+                "está diminuindo.",
                 produtividade,
                 detalhe=f"{ano}: {fluxo_atual[1]} saídas ÷ {fluxo_atual[0]} entradas",
-            ),
-            ind(
-                "inicio_execucao",
-                "Tempo do trânsito à execução",
-                "dias",
-                "menor",
-                "Proposta da CCD (OE4)",
-                inicio_execucao,
-                detalhe="trânsito em julgado → autuação do processo de execução",
             ),
             ind(
                 "multas_nao_cominadas",
                 "Multas cominatórias sem débito",
                 "qtd",
                 "menor",
-                "Proposta da CCD",
+                "Obrigações aprovadas no CGAD com multa cominatória, mas sem débito de multa "
+                "cominatória (tipo 5) cadastrado no processo. Quanto menos, melhor.",
                 atual=float(multas.total_obrigacoes),
                 detalhe=f"{multas.total_processos} processos",
             ),

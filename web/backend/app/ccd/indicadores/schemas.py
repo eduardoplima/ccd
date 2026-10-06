@@ -13,7 +13,7 @@ class Indicador(BaseModel):
     titulo: str
     unidade: Unidade
     sentido: Sentido
-    ref_dpg: str  # indicador da proposta DPG 2027-2028 a que corresponde
+    explicacao: str  # como o número é calculado (hover do card)
     valores: dict[int, float | None]  # por ano; vazio p/ indicador só de retrato
     atual: float | None  # retrato de hoje (quando não há série)
     linha_base: float | None  # média dos dois anos anteriores ao corrente

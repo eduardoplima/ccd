@@ -1,19 +1,7 @@
 "use client";
 
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePainelIndicadores } from "@/hooks/use-indicadores";
-import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Indicador } from "@/schemas/indicadores";
 
@@ -42,7 +30,7 @@ function IndicadorCard({ ind, ano }: { ind: Indicador; ano: number }) {
   const melhora = variacao !== null && (ind.sentido === "maior" ? variacao > 0 : variacao < 0);
 
   return (
-    <Card>
+    <Card title={ind.explicacao} className="cursor-help">
       <CardHeader>
         <CardTitle className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           {ind.titulo}
@@ -72,7 +60,6 @@ function IndicadorCard({ ind, ano }: { ind: Indicador; ano: number }) {
           </div>
         ) : null}
         {ind.detalhe ? <div className="text-muted-foreground text-xs">{ind.detalhe}</div> : null}
-        <div className="text-muted-foreground/80 border-t pt-2 text-[11px]">DPG: {ind.ref_dpg}</div>
       </CardContent>
     </Card>
   );
@@ -80,12 +67,6 @@ function IndicadorCard({ ind, ano }: { ind: Indicador; ano: number }) {
 
 export default function PainelPage() {
   const { data, isLoading, isError } = usePainelIndicadores();
-
-  const serie = (data?.anos ?? []).map((a) => {
-    const v = (chave: string) =>
-      data?.indicadores.find((i) => i.chave === chave)?.valores[String(a)] ?? 0;
-    return { ano: String(a), beneficios: v("beneficios_efetivos"), frap: v("arrecadacao_frap") };
-  });
 
   return (
     <div className="space-y-6">
@@ -102,36 +83,11 @@ export default function PainelPage() {
       ) : isError || !data ? (
         <div className="text-destructive text-sm">Falha ao carregar os indicadores.</div>
       ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {data.indicadores.map((ind) => (
-              <IndicadorCard key={ind.chave} ind={ind} ano={data.ano} />
-            ))}
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Benefícios efetivos × arrecadação do FRAP</CardTitle>
-            </CardHeader>
-            <CardContent className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={serie} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis dataKey="ano" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    width={72}
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(v: number) => BRL_COMPACTO.format(v)}
-                  />
-                  <Tooltip formatter={(v) => formatBRL(v as number)} />
-                  <Legend />
-                  <Bar dataKey="beneficios" name="Benefícios efetivos" fill="#347d6b" />
-                  <Bar dataKey="frap" name="Arrecadação FRAP" fill="#1a3d28" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {data.indicadores.map((ind) => (
+            <IndicadorCard key={ind.chave} ind={ind} ano={data.ano} />
+          ))}
+        </div>
       )}
     </div>
   );
