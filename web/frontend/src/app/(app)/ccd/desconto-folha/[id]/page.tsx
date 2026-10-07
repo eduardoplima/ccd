@@ -22,13 +22,12 @@ import {
 import { useCcdJob } from "@/hooks/use-ccd-job";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
-  useAdotarCreditosFrap,
   useAtualizarProcesso,
   useCadastro,
-  useCreditosFrap,
   useCriarValor,
   useDesvincular,
   useExtrairResposta,
+  useMapaRetencoes,
   useMatchAutomatico,
   useRemoverCadastro,
   useRemoverValor,
@@ -36,9 +35,10 @@ import {
 } from "@/hooks/use-desconto-folha";
 import { messageForError } from "@/lib/error-messages";
 import { formatCpf, formatCurrencyBRL } from "@/lib/format";
-import type { CreditoFrap, Lancamento, Valor } from "@/schemas/desconto-folha";
+import type { Lancamento, Valor } from "@/schemas/desconto-folha";
 import { podeEditar } from "@/lib/permissoes";
 
+import { RetencoesTabela } from "../_retencoes-tabela";
 import { STATUS_EXTRACAO, TIPO_NOTIFICACAO, TIPO_RECEBIMENTO, formatData } from "../_shared";
 
 const JOB_LABEL: Record<string, string> = {
@@ -134,6 +134,18 @@ export default function DescontoFolhaDetalhePage() {
           <Button variant="outline" onClick={() => router.push("/ccd/desconto-folha")}>
             Voltar
           </Button>
+          {c.cpfCnpj && c.cpfCnpj.replace(/\D/g, "").length === 11 && (
+            <Link
+              href={`/ccd/siai-pessoal/contracheque?${new URLSearchParams({
+                cpf: c.cpfCnpj.replace(/\D/g, ""),
+                processo: c.processo,
+                cadastro: String(c.id),
+              }).toString()}`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              SIAI Pessoal
+            </Link>
+          )}
           {canEdit && (
             <Button
               variant="outline"
@@ -219,7 +231,7 @@ export default function DescontoFolhaDetalhePage() {
             c.eventosResposta.length === 0 &&
             "nenhuma resposta localizada (apensado ou evento com resumo de resposta)"
           )}
-          {c.eventosResposta.length > 0 && (
+          {!c.resposta.processo && c.eventosResposta.length > 0 && (
             <ul className="mt-2 space-y-0.5 text-xs">
               {c.eventosResposta.map((e) => (
                 <li key={e.idEvento}>
@@ -306,11 +318,15 @@ export default function DescontoFolhaDetalhePage() {
         </CardContent>
       </Card>
 
-      <CreditosFrapCard
-        id={c.id}
-        canEdit={canEdit}
-        desdePadrao={c.notificacao.data ? c.notificacao.data.slice(0, 10) : ""}
-      />
+      {c.cpfCnpj && c.cpfCnpj.replace(/\D/g, "").length === 11 && (
+        <RetencoesCard
+          cpf={c.cpfCnpj.replace(/\D/g, "")}
+          processo={c.processo}
+          id={c.id}
+          debitoOriginal={c.debitoValorOriginal ?? null}
+          debitoAtualizado={c.debitoValorAtualizado ?? null}
+        />
+      )}
     </main>
   );
 }
@@ -583,165 +599,55 @@ function NovoValorForm({ id }: { id: number }) {
   );
 }
 
-// Busca "FRAP-first": créditos do extrato pelo órgão/valor/data, sem depender da
-// resposta do órgão (o cadastro fica SEM_RESPOSTA quando ela vem no próprio principal).
-function CreditosFrapCard({
+function RetencoesCard({
+  cpf,
+  processo,
   id,
-  canEdit,
-  desdePadrao,
+  debitoOriginal,
+  debitoAtualizado,
 }: {
+  cpf: string;
+  processo: string;
   id: number;
-  canEdit: boolean;
-  desdePadrao: string;
+  debitoOriginal: number | null;
+  debitoAtualizado: number | null;
 }) {
-  const [texto, setTexto] = useState<string | null>(null); // null = default do órgão
-  const [valor, setValor] = useState("");
-  const [desde, setDesde] = useState(desdePadrao);
-  const valorNum = Number(valor.replace(/\./g, "").replace(",", "."));
-  const params = {
-    texto: texto ?? undefined,
-    valor: valor && Number.isFinite(valorNum) && valorNum > 0 ? valorNum : undefined,
-    desde: desde || undefined,
-  };
-  const { data, isLoading } = useCreditosFrap(id, params);
-  const adotar = useAdotarCreditosFrap(id);
-  const textoEfetivo = texto ?? data?.texto ?? "";
-
-  const grupos = new Map<number, CreditoFrap[]>();
-  for (const l of data?.items ?? []) {
-    const g = grupos.get(l.valor) ?? [];
-    g.push(l);
-    grupos.set(l.valor, g);
-  }
-
-  const adotarIds = (ids: number[]) =>
-    adotar.mutate(ids, {
-      onSuccess: () =>
-        toast.success(ids.length === 1 ? "Crédito adotado." : `${ids.length} créditos adotados.`),
-      onError: (err) => toast.error(messageForError(err, "Erro ao adotar créditos.")),
-    });
-
+  const { data, isPending, isError, error } = useMapaRetencoes(cpf);
+  const moeda = (v: number | null | undefined) => (v == null ? "—" : formatCurrencyBRL(v));
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Créditos no FRAP</CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Repasses do extrato (OB/transferência) desde a notificação, filtrados pelo texto do órgão.
-          Adotar cria a parcela com a competência do crédito, já vinculada.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="f-texto" className="text-xs">
-              Texto no extrato
-            </Label>
-            <Input
-              id="f-texto"
-              className="w-40"
-              value={textoEfetivo}
-              onChange={(e) => setTexto(e.target.value)}
-            />
+      <CardHeader className="gap-3">
+        <CardTitle className="text-base">Retenções TCE/FRAP no SIAI Pessoal</CardTitle>
+        <div className="flex flex-wrap gap-x-8 gap-y-2 rounded-lg border px-4 py-3">
+          <div>
+            <div className="text-xs text-muted-foreground">Total retido</div>
+            <div className="text-lg font-semibold">{moeda(data?.totalRetido)}</div>
+            <div className="text-xs text-muted-foreground">
+              {data ? `${data.meses.length} mês(es)` : ""}
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="f-valor" className="text-xs">
-              Valor (R$)
-            </Label>
-            <Input
-              id="f-valor"
-              className="w-28"
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="f-desde" className="text-xs">
-              Desde
-            </Label>
-            <Input
-              id="f-desde"
-              type="date"
-              className="w-40"
-              value={desde}
-              onChange={(e) => setDesde(e.target.value)}
-            />
+          <div>
+            <div className="text-xs text-muted-foreground">Débito do processo</div>
+            <div className="text-lg font-semibold">{moeda(debitoAtualizado)}</div>
+            <div className="text-xs text-muted-foreground">
+              atualizado · original {moeda(debitoOriginal)}
+            </div>
           </div>
         </div>
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Consultando o extrato...</p>
-        ) : data?.aviso ? (
-          <p className="text-sm text-muted-foreground">{data.aviso}</p>
-        ) : grupos.size === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum crédito com esses filtros.</p>
+      </CardHeader>
+      <CardContent>
+        {isPending ? (
+          <p className="text-sm text-muted-foreground">Consultando o SIAI Pessoal...</p>
+        ) : isError ? (
+          <p className="text-sm text-destructive">
+            {messageForError(error, "Erro ao consultar as retenções.")}
+          </p>
+        ) : data.meses.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma retenção TCE/FRAP no SIAI Pessoal para este CPF.
+          </p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Valor</TableHead>
-                <TableHead>Qtd.</TableHead>
-                <TableHead>Créditos</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...grupos.entries()]
-                .sort((a, b) => b[1].length - a[1].length || a[0] - b[0])
-                .map(([v, ls]) => {
-                  const livres = ls.filter((l) => l.idCadastroVinculado == null);
-                  return (
-                    <TableRow key={v}>
-                      <TableCell className="font-medium">{formatCurrencyBRL(v)}</TableCell>
-                      <TableCell>{ls.length}</TableCell>
-                      <TableCell>
-                        <ul className="space-y-1">
-                          {ls.map((l) => (
-                            <li key={l.idLancamento} className="flex flex-wrap items-center gap-2">
-                              <span>
-                                {formatData(l.dtMovimento)}
-                                <span className="ml-1 text-xs text-muted-foreground">
-                                  {l.descricao ?? l.historico ?? ""}
-                                  {l.documento ? ` · doc. ${l.documento}` : ""}
-                                </span>
-                              </span>
-                              {l.idCadastroVinculado != null ? (
-                                <Badge variant="secondary">
-                                  {l.idCadastroVinculado === id
-                                    ? "já vinculado"
-                                    : `vinculado ao cadastro ${l.idCadastroVinculado}`}
-                                </Badge>
-                              ) : (
-                                canEdit && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    disabled={adotar.isPending}
-                                    onClick={() => adotarIds([l.idLancamento])}
-                                  >
-                                    Adotar
-                                  </Button>
-                                )
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </TableCell>
-                      <TableCell>
-                        {canEdit && livres.length > 1 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={adotar.isPending}
-                            onClick={() => adotarIds(livres.map((l) => l.idLancamento))}
-                          >
-                            Adotar {livres.length}
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-            </TableBody>
-          </Table>
+          <RetencoesTabela cpf={cpf} meses={data.meses} processo={processo} cadastro={id} />
         )}
       </CardContent>
     </Card>

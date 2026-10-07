@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { parseAsBoolean, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -29,6 +31,7 @@ import {
 import { useCcdJob } from "@/hooks/use-ccd-job";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
+  useAbrirProcesso,
   useCadastros,
   useCriarCadastro,
   useLocalizarNotificacoes,
@@ -70,19 +73,39 @@ const TOTAIS = [
 export default function DescontoFolhaPage() {
   const { data: me } = useCurrentUser();
   const canEdit = podeEditar(me, "ccd.desconto-folha");
-  const [qInput, setQInput] = useState("");
-  const [q, setQ] = useState("");
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const abrirProcesso = useAbrirProcesso();
+  const [url, setUrl] = useQueryStates(
+    {
+      q: parseAsString.withDefault(""),
+      page: parseAsInteger.withDefault(1),
+      comNotificacao: parseAsBoolean.withDefault(false),
+      comRecebimento: parseAsBoolean.withDefault(false),
+      comResposta: parseAsBoolean.withDefault(false),
+      comValores: parseAsBoolean.withDefault(false),
+      comConciliacao: parseAsBoolean.withDefault(false),
+      cpf: parseAsString,
+      orgao: parseAsString,
+      rotulo: parseAsString,
+    },
+    { history: "push" },
+  );
+  const { q, page } = url;
+  const setPage = (p: number) => setUrl({ page: p });
+  const filtros = {
+    comNotificacao: url.comNotificacao,
+    comRecebimento: url.comRecebimento,
+    comResposta: url.comResposta,
+    comValores: url.comValores,
+    comConciliacao: url.comConciliacao,
+  };
+  const selecao: Selecao | null = url.cpf
+    ? { tipo: "pessoa", valor: url.cpf, rotulo: url.rotulo ?? formatCpf(url.cpf) }
+    : url.orgao
+      ? { tipo: "orgao", valor: url.orgao, rotulo: url.rotulo ?? url.orgao }
+      : null;
+  const [qInput, setQInput] = useState(q);
   const [novoOpen, setNovoOpen] = useState(false);
-  const [filtros, setFiltros] = useState({
-    comNotificacao: false,
-    comRecebimento: false,
-    comResposta: false,
-    comValores: false,
-    comConciliacao: false,
-  });
-
-  const [selecao, setSelecao] = useState<Selecao | null>(null);
   const [sugestoesAbertas, setSugestoesAbertas] = useState(false);
   const { data: sugestoes } = useSugestoes(qInput);
 
@@ -99,17 +122,19 @@ export default function DescontoFolhaPage() {
   const { data: retencoes } = useRetencoes(cpfSelecionado);
 
   const escolher = (s: Selecao) => {
-    setSelecao(s);
+    void setUrl({
+      cpf: s.tipo === "pessoa" ? s.valor : null,
+      orgao: s.tipo === "orgao" ? s.valor : null,
+      rotulo: s.rotulo,
+      q: null,
+      page: null,
+    });
     setQInput("");
-    setQ("");
-    setPage(1);
     setSugestoesAbertas(false);
   };
   const limparTudo = () => {
-    setSelecao(null);
+    void setUrl({ cpf: null, orgao: null, rotulo: null, q: null, page: null });
     setQInput("");
-    setQ("");
-    setPage(1);
   };
   const temSugestoes =
     sugestoesAbertas &&
@@ -210,9 +235,16 @@ export default function DescontoFolhaPage() {
         className="flex flex-wrap items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          setQ(qInput.trim());
-          setPage(1);
+          const texto = qInput.trim();
           setSugestoesAbertas(false);
+          const filtrar = () => void setUrl({ q: texto || null, page: null });
+          // Busca por nº/ano com um único cadastro abre direto a página do processo.
+          if (!/^\d{1,6}\/\d{4}$/.test(texto)) return filtrar();
+          abrirProcesso.mutate(texto, {
+            onSuccess: (r) =>
+              r.total === 1 ? router.push(`/ccd/desconto-folha/${r.items[0].id}`) : filtrar(),
+            onError: filtrar,
+          });
         }}
       >
         <div className="relative w-full max-w-sm">
@@ -297,8 +329,7 @@ export default function DescontoFolhaPage() {
             variant="ghost"
             onClick={() => {
               setQInput("");
-              setQ("");
-              setPage(1);
+              void setUrl({ q: null, page: null });
             }}
           >
             Limpar
@@ -312,10 +343,7 @@ export default function DescontoFolhaPage() {
             <Checkbox
               id={`f-${chave}`}
               checked={filtros[chave]}
-              onCheckedChange={(c) => {
-                setFiltros((f) => ({ ...f, [chave]: c === true }));
-                setPage(1);
-              }}
+              onCheckedChange={(c) => void setUrl({ [chave]: c === true, page: null })}
             />
             <Label htmlFor={`f-${chave}`} className="cursor-pointer font-normal">
               {rotulo}

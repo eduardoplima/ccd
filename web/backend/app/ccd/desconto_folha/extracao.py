@@ -46,6 +46,9 @@ class RespostaDescontoFolha(BaseModel):
     trecho: str = Field(
         "", description="Cópia literal do trecho do texto que informa o valor (uma frase)"
     )
+    beneficiario: Optional[str] = Field(
+        None, description="Nome da pessoa em cujos vencimentos/proventos incide o desconto"
+    )
 
 
 _PROMPT = """Você lê a resposta de um órgão público a uma notificação do TCE/RN para desconto em folha
@@ -56,6 +59,10 @@ de pagamento de uma multa ou débito. Extraia SOMENTE o que o texto afirma sobre
 Não invente valores nem competências. Se o texto não informa o valor do desconto em folha
 (ex.: só acusa recebimento, ou nega vínculo), responda encontrou=false e deixe o resto vazio.
 Valores em reais no formato numérico (R$2.477,35 → 2477.35).
+O processo pode ter mais de um responsável e a resposta pode tratar de outra pessoa. Informe em
+`beneficiario` o nome de quem sofre o desconto, como escrito no texto. Só responda encontrou=true
+se o desconto incide sobre {responsavel}. Se o texto tratar de várias pessoas, o valor total e as
+parcelas são SÓ os de {responsavel}; ignore os valores das demais.
 
 Texto:
 \"\"\"{texto}\"\"\"
@@ -83,6 +90,18 @@ def trecho_confere(trecho: str, texto: str, minimo: int = 15, tolerancia: float 
         return True
     blocos = difflib.SequenceMatcher(None, t, n, autojunk=False).get_matching_blocks()
     return sum(b.size for b in blocos if b.size >= 10) / len(t) >= tolerancia
+
+
+_PARTICULAS = {"de", "da", "do", "das", "dos", "e"}
+
+
+def mesma_pessoa(a: str | None, b: str | None) -> bool:
+    """Nomes compatíveis: 2+ palavras em comum (ou todas, se o menor tiver uma só)."""
+    ta = {p for p in _normalizar(a or "").split() if p not in _PARTICULAS}
+    tb = {p for p in _normalizar(b or "").split() if p not in _PARTICULAS}
+    if not ta or not tb:
+        return False
+    return len(ta & tb) >= min(2, len(ta), len(tb))
 
 
 def _session_factory() -> sessionmaker[Session]:
@@ -230,7 +249,7 @@ def extrair_resposta(id_cadastro: int) -> str:
             s.execute(
                 text(
                     "SELECT IdProcesso, RTRIM(NumeroProcesso) AS numero, RTRIM(AnoProcesso) AS ano, "
-                    "NumeroNotificacao, DataNotificacao "
+                    "NumeroNotificacao, DataNotificacao, NomePessoa "
                     "FROM CCDDescontoFolha WHERE IdCCDDescontoFolha = :c AND Ativo = 1"
                 ),
                 {"c": id_cadastro},
@@ -281,16 +300,27 @@ def extrair_resposta(id_cadastro: int) -> str:
 
     chain = _llm_chain()
     ultimo_erro: str | None = None
+    outra_pessoa: str | None = None
     for ap, texto_ap, arquivos in textos:
         if not texto_ap:
             continue
-        resposta: RespostaDescontoFolha = chain.invoke({"texto": texto_ap})
+        resposta: RespostaDescontoFolha = chain.invoke(
+            {"texto": texto_ap, "responsavel": cad["NomePessoa"] or "o responsável notificado"}
+        )
         evento = (
             int(ap["evento"])
             if "evento" in ap
             else processo_lookup.evento_apensamento(infos_principal, ap["data_registro"])
         )
         if not resposta.encontrou:
+            continue
+        # A LLM às vezes atribui ao cadastro a resposta de outro responsável do mesmo processo
+        # (003636/2017: desconto do pensionista João Dimas gravado no cadastro de Francisco).
+        if cad["NomePessoa"] and not mesma_pessoa(resposta.beneficiario, cad["NomePessoa"]):
+            outra_pessoa = (
+                f"resposta em {ap['numero']}/{ap['ano']} é de outra pessoa "
+                f"({resposta.beneficiario or 'não identificada'})"
+            )
             continue
         if not trecho_confere(resposta.trecho, texto_ap):
             ultimo_erro = f"trecho citado não encontrado em {ap['numero']}/{ap['ano']}"
@@ -339,4 +369,4 @@ def extrair_resposta(id_cadastro: int) -> str:
             arquivos=[],
             resposta=None,
         )
-    return "nenhuma resposta informa o valor do desconto"
+    return outra_pessoa or "nenhuma resposta informa o valor do desconto"

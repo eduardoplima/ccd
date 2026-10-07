@@ -25,7 +25,7 @@ WITH cc AS (
     SELECT CC.IdContraCheque, F.IdTipoFolhaPagamento, ER.IdOrgao,
            TRY_CAST(LTRIM(RTRIM(F.Ano)) AS INT) AS ano,
            TRY_CAST(LTRIM(RTRIM(F.Mes)) AS INT) AS mes,
-           FU.Matricula, FU.NomeCargo, FU.Lotacao, P.Nome,
+           CC.Matricula, CC.NomeCargo, CC.Lotacao, P.Nome,
            CC.TotalVantagens, CC.TotalDescontos,
            ROW_NUMBER() OVER (
                PARTITION BY TRY_CAST(LTRIM(RTRIM(F.Ano)) AS INT),
@@ -37,8 +37,22 @@ WITH cc AS (
                             TRY_CAST(LTRIM(RTRIM(F.Mes)) AS INT),
                             ER.IdOrgao, F.IdTipoFolhaPagamento) AS remessas
     FROM BDSiaiPessoal.dbo.Comum_Pessoa P
-    JOIN BDSiaiPessoal.dbo.SiaiDp_Funcionario FU ON FU.IdPessoa = P.IdPessoa
-    JOIN BDSiaiPessoal.dbo.SiaiDp_ContraCheque CC ON CC.IdFuncionario = FU.IdFuncionario
+    -- Servidor (SiaiDp_Funcionario) ou pensionista (SiaiDp_Pensionista, ex.: IPERN).
+    CROSS APPLY (
+        SELECT C.IdContraCheque, C.IdFolhaPagamento, C.TotalVantagens, C.TotalDescontos,
+               FU.Matricula, FU.NomeCargo, FU.Lotacao
+        FROM BDSiaiPessoal.dbo.SiaiDp_Funcionario FU
+        JOIN BDSiaiPessoal.dbo.SiaiDp_ContraCheque C ON C.IdFuncionario = FU.IdFuncionario
+        WHERE FU.IdPessoa = P.IdPessoa
+        UNION ALL
+        SELECT C.IdContraCheque, C.IdFolhaPagamento, C.TotalVantagens, C.TotalDescontos,
+               PE.Matricula,
+               'Pensão' + COALESCE(' – ' + LTRIM(RTRIM(PE.NomeCargoInstituidorPensao)), ''),
+               PE.UnidadeLotacaoInstituidorPensao
+        FROM BDSiaiPessoal.dbo.SiaiDp_Pensionista PE
+        JOIN BDSiaiPessoal.dbo.SiaiDp_ContraCheque C ON C.IdPensionista = PE.IdPensionista
+        WHERE PE.IdPessoa = P.IdPessoa
+    ) CC
     JOIN BDSiaiPessoal.dbo.SiaiDp_FolhaPagamento F ON F.IdFolhaPagamento = CC.IdFolhaPagamento
     JOIN BDSiaiPessoal.dbo.SiaiDp_RemessaFolhaPagamento RFP
       ON RFP.IdRemessaFolhaPagamento = F.IdRemessaFolhaPagamento

@@ -3,14 +3,12 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  adotarCreditosFrap,
   atualizarProcesso,
   criarCadastro,
   criarValor,
   desvincular,
   extrairResposta,
   getCadastro,
-  getCreditosFrap,
   getMapaRetencoes,
   getRetencoes,
   getSugestoes,
@@ -23,7 +21,7 @@ import {
   vincular,
 } from "@/lib/api/desconto-folha";
 import type { FiltrosCadastro } from "@/lib/api/desconto-folha";
-import type { CadastroInput, CreditosFrapParams, ValorInput } from "@/schemas/desconto-folha";
+import type { CadastroInput, ValorInput } from "@/schemas/desconto-folha";
 
 const KEY = ["ccd-desconto-folha"] as const;
 
@@ -62,6 +60,10 @@ export function useCadastros(params: FiltrosCadastro) {
     queryFn: () => listCadastros(params),
     placeholderData: keepPreviousData,
   });
+}
+
+export function useAbrirProcesso() {
+  return useMutation({ mutationFn: (q: string) => listCadastros({ q, page: 1, size: 2 }) });
 }
 
 export function useCadastro(id: number | null) {
@@ -148,21 +150,4 @@ export function useDesvincular(id: number) {
 export function useMatchAutomatico(id: number) {
   const invalidar = useInvalidar();
   return useMutation({ mutationFn: () => matchAutomatico(id), onSuccess: invalidar });
-}
-
-export function useCreditosFrap(id: number | null, params: CreditosFrapParams) {
-  return useQuery({
-    queryKey: [...KEY, "frap-creditos", id, params],
-    queryFn: () => getCreditosFrap(id as number, params),
-    enabled: id != null,
-    placeholderData: keepPreviousData,
-  });
-}
-
-export function useAdotarCreditosFrap(id: number) {
-  const invalidar = useInvalidar();
-  return useMutation({
-    mutationFn: (idsLancamento: number[]) => adotarCreditosFrap(id, idsLancamento),
-    onSuccess: invalidar,
-  });
 }

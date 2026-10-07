@@ -56,7 +56,7 @@ DDL = [
     )""",
     """CREATE TABLE CCDDescontoFolhaMatch (
         IdCCDDescontoFolhaMatch INTEGER PRIMARY KEY AUTOINCREMENT,
-        IdCCDDescontoFolhaValor INTEGER NOT NULL UNIQUE, IdLancamentoFRAP INTEGER NOT NULL,
+        IdCCDDescontoFolhaValor INTEGER NOT NULL UNIQUE, IdLancamentoFRAP INTEGER NOT NULL UNIQUE,
         Automatico INTEGER DEFAULT 0, IdUsuario INTEGER, DataMatch DATETIME, Observacao TEXT
     )""",
 ]
@@ -130,6 +130,24 @@ def test_match_automatico_vincula_candidato_unico(env) -> None:
             text("SELECT IdLancamentoFRAP, Automatico FROM CCDDescontoFolhaMatch")
         ).first()
     assert row is not None and (int(row[0]), int(row[1])) == (1, 1)
+
+
+def test_match_automatico_nao_reusa_credito_ja_vinculado(env) -> None:
+    # Mais duas parcelas sem competência e um único crédito: só a primeira leva a OB.
+    with env["factory"]() as s:
+        s.execute(
+            text(
+                "INSERT INTO CCDDescontoFolhaValor (IdCCDDescontoFolha, NumeroParcela, Valor, Origem) "
+                "VALUES (1, 2, 2477.35, 'L'), (1, 3, 2477.35, 'L')"
+            )
+        )
+        s.execute(text("UPDATE CCDDescontoFolhaValor SET Valor = 1.0 WHERE NumeroParcela = 1"))
+        s.commit()
+        assert match.match_automatico(s, id_cadastro=1) == 1
+        n = s.execute(
+            text("SELECT COUNT(*) FROM CCDDescontoFolhaMatch WHERE IdLancamentoFRAP = 1")
+        ).scalar_one()
+    assert n == 1
 
 
 def test_cron_concilia_pendentes_e_e_idempotente(env, monkeypatch) -> None:
@@ -299,14 +317,15 @@ def test_retencoes_vazio_no_sqlite(env) -> None:
     }
 
 
-def test_recebido_conta_a_mesma_ob_uma_vez(env) -> None:
-    """Uma OB vinculada a parcelas de dois cadastros entra uma vez no recebido."""
+def test_ob_reservada_nao_concilia_segundo_cadastro(env) -> None:
+    """Uma OB serve a uma parcela só: o segundo cadastro de mesmo valor fica a receber."""
     base = "/api/v1/ccd/desconto-folha"
     with env["factory"]() as s:
         s.execute(
             text(
                 "INSERT INTO CCDDescontoFolha (IdProcesso, NumeroProcesso, AnoProcesso, NomePessoa,"
-                " CpfCnpj, DataInclusao) VALUES (2, '000106', '2023', 'NEREU', '13006444434', '2026-09-14')"
+                " CpfCnpj, DataResposta, DataInclusao)"
+                " VALUES (2, '000106', '2023', 'NEREU', '13006444434', '2025-01-07', '2026-09-14')"
             )
         )
         s.execute(
@@ -317,11 +336,14 @@ def test_recebido_conta_a_mesma_ob_uma_vez(env) -> None:
         )
         s.commit()
     client = env["client"]
-    for cadastro in (1, 2):
-        client.post(f"{base}/{cadastro}/match-automatico")
+    client.post(f"{base}/1/match-automatico")
+    client.post(f"{base}/2/match-automatico")
+    r = client.post(f"{base}/2/valores/2/match", json={"idLancamento": 1})
+    assert r.status_code == 409
+    assert "cadastro 1 parcela 1" in r.json()["detail"]
     totais = client.get(base).json()["totais"]
     assert totais["valorEsperado"] == 4954.7
-    assert totais["valorRecebido"] == 2477.35  # e não 4954.70
+    assert totais["valorRecebido"] == 2477.35
     assert totais["valorAReceber"] == 2477.35
 
 
@@ -789,3 +811,13 @@ def test_parcela_sem_valor_nao_derruba_a_extracao() -> None:
     )
     assert [p.valor for p in r.parcelas] == [None, 10.0]
     assert ParcelaExtraida(numero=1).valor is None
+
+
+def test_mesma_pessoa_rejeita_outro_responsavel_do_processo() -> None:
+    from app.ccd.desconto_folha.extracao import mesma_pessoa
+
+    assert mesma_pessoa("pensionista João Dimas Bezerra", "JOÃO DIMAS BEZERRA")
+    assert mesma_pessoa("Maria Helena de Queiroga", "Maria Helena Leite de Queiroga")
+    assert not mesma_pessoa("João Dimas Bezerra", "Francisco Nobre Neto")
+    assert not mesma_pessoa("João da Silva", "João Bezerra")  # só o prenome não basta
+    assert not mesma_pessoa(None, "Francisco Nobre Neto")

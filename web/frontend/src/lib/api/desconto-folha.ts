@@ -2,7 +2,6 @@ import { apiClient } from "@/lib/api-client";
 import {
   cadastroDetalheSchema,
   cadastroListResponseSchema,
-  creditosFrapResponseSchema,
   matchAutomaticoResultadoSchema,
   processoLookupSchema,
   mapaRetencoesSchema,
@@ -11,8 +10,6 @@ import {
   type CadastroDetalhe,
   type CadastroInput,
   type CadastroListResponse,
-  type CreditosFrapParams,
-  type CreditosFrapResponse,
   type ProcessoLookup,
   type MapaRetencoes,
   type Retencoes,
@@ -130,20 +127,4 @@ export async function desvincular(id: number, idValor: number): Promise<Cadastro
 export async function matchAutomatico(id: number): Promise<number> {
   const { data } = await apiClient.post(`${BASE}/${id}/match-automatico`);
   return matchAutomaticoResultadoSchema.parse(data).vinculados;
-}
-
-export async function getCreditosFrap(
-  id: number,
-  params: CreditosFrapParams,
-): Promise<CreditosFrapResponse> {
-  const { data } = await apiClient.get(`${BASE}/${id}/frap-creditos`, { params });
-  return creditosFrapResponseSchema.parse(data);
-}
-
-export async function adotarCreditosFrap(
-  id: number,
-  idsLancamento: number[],
-): Promise<CadastroDetalhe> {
-  const { data } = await apiClient.post(`${BASE}/${id}/frap-creditos`, { idsLancamento });
-  return cadastroDetalheSchema.parse(data);
 }

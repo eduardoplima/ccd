@@ -194,6 +194,8 @@ class CadastroDetalhe(CadastroListItem):
     observacoes: Optional[str] = None
     valores: list[ValorOut] = []
     eventos_resposta: list[EventoRespostaOut] = []
+    debito_valor_original: Optional[float] = None
+    debito_valor_atualizado: Optional[float] = None  # folhas vivas da cadeia, pela UDF
 
 
 # ----- lookup do processo (formulário) --------------------------------------

@@ -29,6 +29,8 @@ def candidatos(session: Session, valor: float, data_min: date | None) -> list[di
             WHERE L.ValorDC = 'C' AND L.IdCategoria IN (1, 3)
               AND ABS(L.Valor - :valor) < 0.005
               AND (:data_min IS NULL OR L.DtMovimento >= :data_min)
+              AND NOT EXISTS (SELECT 1 FROM CCDDescontoFolhaMatch m
+                               WHERE m.IdLancamentoFRAP = L.IdLancamento)
             ORDER BY L.DtMovimento, L.IdLancamento
             """
         ),
@@ -173,6 +175,10 @@ def data_minima(
     return None
 
 
+class CreditoJaVinculado(Exception):
+    """O lançamento já reserva outra parcela (índice UNIQUE em IdLancamentoFRAP)."""
+
+
 def vincular(
     session: Session,
     *,
@@ -182,6 +188,18 @@ def vincular(
     automatico: bool = False,
     observacao: str | None = None,
 ) -> int:
+    dono = session.execute(
+        text(
+            "SELECT v.IdCCDDescontoFolha, v.NumeroParcela FROM CCDDescontoFolhaMatch m "
+            "JOIN CCDDescontoFolhaValor v ON v.IdCCDDescontoFolhaValor = m.IdCCDDescontoFolhaValor "
+            "WHERE m.IdLancamentoFRAP = :l AND m.IdCCDDescontoFolhaValor <> :v"
+        ),
+        {"l": id_lancamento, "v": id_valor},
+    ).first()
+    if dono is not None:
+        raise CreditoJaVinculado(
+            f"lancamento already linked to cadastro {dono[0]} parcela {dono[1]}"
+        )
     session.execute(
         text("DELETE FROM CCDDescontoFolhaMatch WHERE IdCCDDescontoFolhaValor = :v"),
         {"v": id_valor},

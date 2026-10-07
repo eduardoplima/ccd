@@ -106,6 +106,44 @@ def debitos_do_processo(session: Session, id_processo: int) -> list[dict[str, An
     return [dict(r) for r in rows]
 
 
+def valores_debito(session: Session, id_debito: int) -> dict[str, Any]:
+    """Valor original do débito cadastrado e o atualizado das folhas vivas da sua cadeia.
+
+    O cadastro pode apontar para o original já desdobrado; o saldo vigente está nas folhas.
+    """
+    row = (
+        session.execute(
+            text(
+                """
+                WITH cadeia AS (
+                    SELECT IdDebito FROM dbo.Exe_Debito WHERE IdDebito = :id
+                    UNION ALL
+                    SELECT f.IdDebito FROM dbo.Exe_Debito f
+                    JOIN cadeia c ON f.IdDebitoAnterior = c.IdDebito
+                )
+                SELECT (SELECT valorOriginalDebito FROM dbo.Exe_Debito WHERE IdDebito = :id)
+                           AS original,
+                       SUM(dbo.fn_Exe_RetornaValorAtualizado(d.IdDebito)) AS atualizado
+                FROM cadeia JOIN dbo.Exe_Debito d ON d.IdDebito = cadeia.IdDebito
+                WHERE d.DataCancelamento IS NULL
+                  AND NOT EXISTS (SELECT 1 FROM dbo.Exe_Debito f
+                                   WHERE f.IdDebitoAnterior = d.IdDebito
+                                     AND f.DataCancelamento IS NULL)
+                """
+            ),
+            {"id": id_debito},
+        )
+        .mappings()
+        .first()
+    )
+    if row is None:
+        return {}
+    return {
+        k: round(float(row[k]), 2) if row[k] is not None else None
+        for k in ("original", "atualizado")
+    }
+
+
 def pessoa(session: Session, id_pessoa: int) -> Optional[dict[str, Any]]:
     row = (
         session.execute(

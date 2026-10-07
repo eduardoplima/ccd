@@ -522,7 +522,7 @@ def detalhe(
                 LEFT JOIN CCDDescontoFolhaMatch m ON m.IdCCDDescontoFolhaValor = v.IdCCDDescontoFolhaValor
                 LEFT JOIN FRAPLancamento L ON L.IdLancamento = m.IdLancamentoFRAP
                 WHERE v.IdCCDDescontoFolha = :c
-                ORDER BY v.AnoReferencia, v.MesReferencia, v.NumeroParcela, v.IdCCDDescontoFolhaValor
+                ORDER BY v.NumeroParcela, v.AnoReferencia, v.MesReferencia, v.IdCCDDescontoFolhaValor
                 """
             ),
             {"c": id_cadastro},
@@ -601,8 +601,16 @@ def detalhe(
             )
         except Exception:  # enriquecimento somente leitura
             logger.warning("1º evento da resposta indisponível (cadastro %s)", id_cadastro)
+    debito: dict[str, Any] = {}
+    if sessao_processo is not None and r["IdDebito"] is not None:
+        try:
+            debito = processo_lookup.valores_debito(sessao_processo, int(r["IdDebito"]))
+        except Exception:  # enriquecimento somente leitura
+            logger.warning("valor do débito indisponível (cadastro %s)", id_cadastro, exc_info=True)
     return schemas.CadastroDetalhe(
         **base.model_dump(),
+        debito_valor_original=debito.get("original"),
+        debito_valor_atualizado=debito.get("atualizado"),
         trecho_resposta=r["TrechoResposta"],
         arquivo_resposta=r["ArquivoResposta"],
         data_extracao=r["DataExtracao"],
@@ -920,14 +928,17 @@ def vincular(
     ).first()
     if not existe:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="lancamento not found")
-    match.vincular(
-        session,
-        id_valor=id_valor,
-        id_lancamento=payload.id_lancamento,
-        id_usuario=id_usuario,
-        automatico=False,
-        observacao=payload.observacao,
-    )
+    try:
+        match.vincular(
+            session,
+            id_valor=id_valor,
+            id_lancamento=payload.id_lancamento,
+            id_usuario=id_usuario,
+            automatico=False,
+            observacao=payload.observacao,
+        )
+    except match.CreditoJaVinculado as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     return detalhe(session, id_cadastro)
 
 

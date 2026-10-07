@@ -171,24 +171,6 @@ export const mapaRetencoesSchema = z.object({
 });
 export type MapaRetencoes = z.infer<typeof mapaRetencoesSchema>;
 
-// mirrors backend CreditoFrapOut / CreditosFrapResponse (busca FRAP-first)
-export const creditoFrapSchema = lancamentoSchema.extend({
-  descricao: z.string().nullable().optional(),
-  idCadastroVinculado: z.number().int().nullable().optional(),
-});
-export type CreditoFrap = z.infer<typeof creditoFrapSchema>;
-
-export const creditosFrapResponseSchema = z.object({
-  texto: z.string().nullable().optional(),
-  desde: z.string().nullable().optional(),
-  valor: z.number().nullable().optional(),
-  aviso: z.string().nullable().optional(),
-  items: z.array(creditoFrapSchema).default([]),
-});
-export type CreditosFrapResponse = z.infer<typeof creditosFrapResponseSchema>;
-
-export type CreditosFrapParams = { texto?: string; valor?: number; desde?: string };
-
 // mirrors backend EventoRespostaOut
 export const eventoRespostaSchema = z.object({
   processo: z.string().nullable().optional(),
@@ -208,6 +190,8 @@ export const cadastroDetalheSchema = cadastroListItemSchema.extend({
   observacoes: z.string().nullable().optional(),
   valores: z.array(valorSchema).default([]),
   eventosResposta: z.array(eventoRespostaSchema).default([]),
+  debitoValorOriginal: z.number().nullable().optional(),
+  debitoValorAtualizado: z.number().nullable().optional(),
 });
 export type CadastroDetalhe = z.infer<typeof cadastroDetalheSchema>;
 
