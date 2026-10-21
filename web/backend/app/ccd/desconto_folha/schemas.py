@@ -173,6 +173,7 @@ class ValorOut(_Camel):
     ano: Optional[int] = None
     valor: float
     origem: Literal["L", "M"]
+    competencia_inferida: bool = False  # mes/ano deduzidos da parcela vizinha com competência
     valor_siai: Optional[float] = None  # rubrica TCE/FRAP no SIAI Pessoal, mesma competência
     match: Optional[MatchOut] = None
     candidatos: list[LancamentoOut] = []

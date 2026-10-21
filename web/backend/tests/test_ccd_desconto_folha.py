@@ -821,3 +821,17 @@ def test_mesma_pessoa_rejeita_outro_responsavel_do_processo() -> None:
     assert not mesma_pessoa("João Dimas Bezerra", "Francisco Nobre Neto")
     assert not mesma_pessoa("João da Silva", "João Bezerra")  # só o prenome não basta
     assert not mesma_pessoa(None, "Francisco Nobre Neto")
+
+
+def test_competencias_inferidas_pela_parcela_vizinha() -> None:
+    # 000731/2025: só a 1ª parcela veio com competência (07/2025).
+    rows = [
+        {"id_valor": n, "NumeroParcela": n, "AnoReferencia": None, "MesReferencia": None}
+        for n in range(1, 9)
+    ]
+    rows[0] |= {"AnoReferencia": 2025, "MesReferencia": 7}
+    comp = service._competencias(rows)
+    assert comp[1] == (2025, 7, False)
+    assert comp[6] == (2025, 12, True)
+    assert comp[8] == (2026, 2, True)
+    assert service._competencias([{**rows[1], "id_valor": 2}]) == {}

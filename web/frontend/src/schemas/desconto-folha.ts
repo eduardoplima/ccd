@@ -126,6 +126,7 @@ export const valorSchema = z.object({
   ano: z.number().int().nullable().optional(),
   valor: z.number(),
   origem: z.enum(["L", "M"]),
+  competenciaInferida: z.boolean().default(false),
   valorSiai: z.number().nullable().optional(),
   match: matchSchema.nullable().optional(),
   candidatos: z.array(lancamentoSchema).default([]),

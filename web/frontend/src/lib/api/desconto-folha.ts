@@ -29,6 +29,7 @@ export type FiltrosCadastro = {
   comResposta?: boolean;
   comValores?: boolean;
   comConciliacao?: boolean;
+  naCcd?: boolean;
   cpf?: string;
   orgao?: string;
 };
@@ -59,6 +60,7 @@ export async function listCadastros(params: FiltrosCadastro): Promise<CadastroLi
       com_resposta: params.comResposta || undefined,
       com_valores: params.comValores || undefined,
       com_conciliacao: params.comConciliacao || undefined,
+      na_ccd: params.naCcd || undefined,
       cpf: params.cpf || undefined,
       orgao: params.orgao || undefined,
     },

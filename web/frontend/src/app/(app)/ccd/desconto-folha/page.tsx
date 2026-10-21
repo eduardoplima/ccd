@@ -59,6 +59,7 @@ const FILTROS_PRESENCA = [
   ["comResposta", "Com resposta"],
   ["comValores", "Com valores"],
   ["comConciliacao", "Com conciliação"],
+  ["naCcd", "Na CCD"],
 ] as const;
 
 type Selecao = { tipo: "pessoa" | "orgao"; valor: string; rotulo: string };
@@ -84,6 +85,7 @@ export default function DescontoFolhaPage() {
       comResposta: parseAsBoolean.withDefault(false),
       comValores: parseAsBoolean.withDefault(false),
       comConciliacao: parseAsBoolean.withDefault(false),
+      naCcd: parseAsBoolean.withDefault(false),
       cpf: parseAsString,
       orgao: parseAsString,
       rotulo: parseAsString,
@@ -98,6 +100,7 @@ export default function DescontoFolhaPage() {
     comResposta: url.comResposta,
     comValores: url.comValores,
     comConciliacao: url.comConciliacao,
+    naCcd: url.naCcd,
   };
   const selecao: Selecao | null = url.cpf
     ? { tipo: "pessoa", valor: url.cpf, rotulo: url.rotulo ?? formatCpf(url.cpf) }

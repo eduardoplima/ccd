@@ -115,6 +115,10 @@ _FILTROS_PRESENCA = {
         " JOIN CCDDescontoFolhaMatch m ON m.IdCCDDescontoFolhaValor = v.IdCCDDescontoFolhaValor"
         " WHERE v.IdCCDDescontoFolha = c.IdCCDDescontoFolha)"
     ),
+    "na_ccd": (
+        "EXISTS (SELECT 1 FROM processo.dbo.Processos p"
+        " WHERE p.IdProcesso = c.IdProcesso AND p.setor_atual = 'CCD')"
+    ),
 }
 
 
@@ -241,6 +245,7 @@ def listar(
     com_resposta: bool = False,
     com_valores: bool = False,
     com_conciliacao: bool = False,
+    na_ccd: bool = False,
     cpf: str | None = None,
     orgao: str | None = None,
 ) -> schemas.CadastroListResponse:
@@ -252,6 +257,7 @@ def listar(
         "com_resposta": com_resposta,
         "com_valores": com_valores,
         "com_conciliacao": com_conciliacao,
+        "na_ccd": na_ccd,
     }
     for nome, sql in _FILTROS_PRESENCA.items():
         if ligados[nome]:
@@ -395,6 +401,32 @@ def retencoes(session: Session, cpf: str) -> schemas.RetencoesOut:
     )
 
 
+def _competencias(rows: Any) -> dict[int, tuple[int, int, bool]]:
+    """id_valor -> (ano, mês, inferida) das parcelas de UM cadastro.
+
+    Sem mês/ano (a LLM costuma extrair só o da 1ª parcela), a competência vem da parcela
+    com competência mais próxima, um mês por parcela (000731/2025: parcela 1 = 07/2025 ⇒
+    parcela 8 = 02/2026, igual ao SIAI).
+
+    ponytail: assume parcelas mensais consecutivas; mês sem desconto desloca a inferência.
+    """
+    ancoras = [
+        (int(r["NumeroParcela"]), int(r["AnoReferencia"]) * 12 + int(r["MesReferencia"]) - 1)
+        for r in rows
+        if r["AnoReferencia"] is not None and r["MesReferencia"] is not None
+    ]
+    out: dict[int, tuple[int, int, bool]] = {}
+    for r in rows:
+        if r["AnoReferencia"] is not None and r["MesReferencia"] is not None:
+            out[int(r["id_valor"])] = (int(r["AnoReferencia"]), int(r["MesReferencia"]), False)
+        elif ancoras:
+            n = int(r["NumeroParcela"])
+            parcela, meses = min(ancoras, key=lambda a: abs(a[0] - n))
+            t = meses + n - parcela
+            out[int(r["id_valor"])] = (t // 12, t % 12 + 1, True)
+    return out
+
+
 def mapa_retencoes(session: Session, cpf: str) -> schemas.MapaRetencoesOut:
     """Meses com retenção TCE/FRAP no SIAI (por rubrica) e as parcelas conciliadas do CPF.
 
@@ -423,7 +455,7 @@ def mapa_retencoes(session: Session, cpf: str) -> schemas.MapaRetencoesOut:
             text(
                 """
                 SELECT c.IdCCDDescontoFolha AS id_cadastro, c.NumeroProcesso, c.AnoProcesso,
-                       v.NumeroParcela, v.AnoReferencia, v.MesReferencia, v.Valor,
+                       v.IdCCDDescontoFolhaValor AS id_valor, v.NumeroParcela, v.AnoReferencia, v.MesReferencia, v.Valor,
                        L.IdLancamento AS id_lancamento, L.DtMovimento AS dt_movimento,
                        L.Documento AS documento, L.Historico AS historico, L.Valor AS valor_lanc
                 FROM CCDDescontoFolhaValor v
@@ -455,11 +487,15 @@ def mapa_retencoes(session: Session, cpf: str) -> schemas.MapaRetencoesOut:
             )
         )
         mes.total_retido = round(mes.total_retido + r["valor"], 2)
+    comp: dict[int, tuple[int, int, bool]] = {}
+    for idc in {p["id_cadastro"] for p in parcelas}:
+        comp.update(_competencias([p for p in parcelas if p["id_cadastro"] == idc]))
     for p in parcelas:
         lanc = _lancamento({**p, "valor": p["valor_lanc"]}) if p["id_lancamento"] else None
         inferida = False
-        if p["AnoReferencia"] is not None and p["MesReferencia"] is not None:
-            chave = (int(p["AnoReferencia"]), int(p["MesReferencia"]))
+        if int(p["id_valor"]) in comp:
+            ano_c, mes_c, inferida = comp[int(p["id_valor"])]
+            chave = (ano_c, mes_c)
         elif lanc is not None and lanc.dt_movimento is not None:
             d = lanc.dt_movimento
             chave = (d.year, d.month - 1) if d.month > 1 else (d.year - 1, 12)
@@ -530,7 +566,8 @@ def detalhe(
         .mappings()
         .all()
     )
-    anos = [int(v["AnoReferencia"]) for v in valores_rows if v["AnoReferencia"] is not None]
+    comp = _competencias(valores_rows)
+    anos = [a for a, _, _ in comp.values()]
     siai: dict[tuple[int, int], float] = {}
     if anos and r["CpfCnpj"]:
         try:
@@ -570,19 +607,17 @@ def detalhe(
                     ),
                 )
             ]
+        c = comp.get(int(v["id_valor"]))
         valores.append(
             schemas.ValorOut(
                 id_valor=int(v["id_valor"]),
                 numero_parcela=int(v["NumeroParcela"]),
-                mes=v["MesReferencia"],
-                ano=v["AnoReferencia"],
+                mes=c[1] if c else None,
+                ano=c[0] if c else None,
+                competencia_inferida=bool(c and c[2]),
                 valor=float(v["Valor"]),
                 origem=v["Origem"],
-                valor_siai=(
-                    siai.get((int(v["AnoReferencia"]), int(v["MesReferencia"])))
-                    if v["AnoReferencia"] is not None and v["MesReferencia"] is not None
-                    else None
-                ),
+                valor_siai=siai.get((c[0], c[1])) if c else None,
                 match=m,
                 candidatos=cands,
             )

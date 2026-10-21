@@ -413,7 +413,17 @@ function ValoresTable({
             valores.map((v) => (
               <TableRow key={v.idValor}>
                 <TableCell>{v.numeroParcela}</TableCell>
-                <TableCell>{competencia(v)}</TableCell>
+                <TableCell>
+                  {competencia(v)}
+                  {v.competenciaInferida && (
+                    <span
+                      className="ml-1 text-muted-foreground"
+                      title="Parcela sem mês na resposta; deduzido da parcela vizinha (um mês por parcela)"
+                    >
+                      (inf.)
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="font-medium">{formatCurrencyBRL(v.valor)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">

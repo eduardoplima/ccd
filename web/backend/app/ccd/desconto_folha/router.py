@@ -41,6 +41,7 @@ def listar(
     com_resposta: bool = Query(default=False),
     com_valores: bool = Query(default=False),
     com_conciliacao: bool = Query(default=False),
+    na_ccd: bool = Query(default=False),
     cpf: str | None = Query(default=None, max_length=14),
     orgao: str | None = Query(default=None, max_length=200),
     session: Session = Depends(get_db_session),
@@ -56,6 +57,7 @@ def listar(
         com_resposta=com_resposta,
         com_valores=com_valores,
         com_conciliacao=com_conciliacao,
+        na_ccd=na_ccd,
         cpf=cpf,
         orgao=orgao,
     )
