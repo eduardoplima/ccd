@@ -11,6 +11,7 @@ from app.admin.router import router as admin_router
 from app.auth.router import router as auth_router
 from app.busca.router import router as frap_busca_router
 from app.ccd.alertas.router import router as ccd_alertas_router
+from app.ccd.monitoramentos.router import router as ccd_monitoramentos_router
 from app.ccd.automacao.antecedentes.router import router as ccd_automacao_antecedentes_router
 from app.ccd.automacao.desconto_folha.router import router as ccd_automacao_desconto_folha_router
 from app.ccd.beneficios.router import router as ccd_beneficios_router
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(ccd_automacao_desconto_folha_router)
     app.include_router(ccd_automacao_antecedentes_router)
     app.include_router(ccd_alertas_router)
+    app.include_router(ccd_monitoramentos_router)
     app.include_router(ccd_beneficios_router)
     app.include_router(ccd_indicadores_router)
 

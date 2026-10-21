@@ -13,6 +13,7 @@ from app.ccd.alertas.tasks import task_calcular_alertas
 from app.ccd.automacao.antecedentes.tasks import task_gerar_antecedentes
 from app.ccd.automacao.desconto_folha.tasks import task_gerar_desconto_folha
 from app.ccd.beneficios.tasks import task_detectar_beneficios
+from app.ccd.monitoramentos.tasks import task_atualizar_monitoramentos
 from app.ccd.desconto_folha.tasks import (
     task_conciliar_desconto_folha,
     task_detectar_cadastros_desconto_folha,
@@ -49,6 +50,7 @@ FUNCTIONS = [
     task_conciliar_desconto_folha,
     task_detectar_cadastros_desconto_folha,
     task_calcular_alertas,
+    task_atualizar_monitoramentos,
 ]
 _POR_NOME = {f.__name__: f for f in FUNCTIONS}
 

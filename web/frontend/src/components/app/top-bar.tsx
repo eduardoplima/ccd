@@ -24,6 +24,7 @@ const SUBNAV: Record<string, NavItem[]> = {
   ccd: [
     { href: "/ccd/painel", label: "Início", modulo: "ccd.painel" },
     { href: "/ccd", label: "Processos", modulo: "ccd.inicio" },
+    { href: "/ccd/monitoramentos", label: "Monitoramentos", modulo: "ccd.monitoramentos" },
     { href: "/ccd/desconto-folha", label: "Desconto em Folha", modulo: "ccd.desconto-folha" },
     { href: "/ccd/beneficios", label: "Benefícios", modulo: "ccd.beneficios" },
     { href: "/ccd/automacao", label: "Automação", modulo: "ccd.automacao" },

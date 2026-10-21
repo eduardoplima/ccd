@@ -27,6 +27,12 @@ JOBS: list[Job] = [
         "cron": {"hour": {3}, "minute": {0}},
     },
     {
+        "nome": "task_atualizar_monitoramentos",
+        "descricao": "Refaz a tela de Monitoramentos da CCD (MON + obrigação de fazer); o LLM "
+        "só reanalisa os processos com peça nova.",
+        "cron": {"hour": {4}, "minute": {0}},
+    },
+    {
         "nome": "task_detectar_beneficios",
         "descricao": "Varre as fontes do SisBenefícios e insere os candidatos novos em "
         "CCDBeneficio (idempotente por ChaveOrigem).",

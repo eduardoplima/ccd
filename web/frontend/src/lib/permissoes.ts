@@ -8,6 +8,12 @@ export const MODULOS = [
   { key: "ccd.painel", grupo: "ccd", label: "Início", href: "/ccd/painel" },
   { key: "ccd.inicio", grupo: "ccd", label: "Processos", href: "/ccd" },
   {
+    key: "ccd.monitoramentos",
+    grupo: "ccd",
+    label: "Monitoramentos",
+    href: "/ccd/monitoramentos",
+  },
+  {
     key: "ccd.desconto-folha",
     grupo: "ccd",
     label: "Desconto em Folha",

@@ -18,6 +18,7 @@ from app.deps import get_current_user
 MODULOS: tuple[str, ...] = (
     "ccd.painel",
     "ccd.inicio",
+    "ccd.monitoramentos",
     "ccd.desconto-folha",
     "ccd.beneficios",
     "ccd.automacao",
