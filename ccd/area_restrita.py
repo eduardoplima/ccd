@@ -226,8 +226,10 @@ class AreaRestrita:
         return m.group(1)
 
     def cadastrar_informacao_digitalizada(self, numero: int, ano: int, pdf: str,
-                                          dry_run: bool = False) -> None:
-        """Consultar processo -> upload do PDF -> Incluir informação (modelo InformacaoInstrutiva)."""
+                                          dry_run: bool = False, titulo_modelo: str = MODELO_TITULO,
+                                          resumo: str = MODELO_RESUMO, id_modelo: str = "") -> None:
+        """Consultar processo -> upload do PDF -> Incluir informação (default: modelo InformacaoInstrutiva).
+        O modelo tem de existir para o setor ativo (MODELOPORSETORINFO); senão a inclusão falha calada."""
         r = self._get(PAGINA_DIGITALIZAR)
         action, campos = self._form(r)
         campos.update(
@@ -246,8 +248,9 @@ class AreaRestrita:
         print(f"  upload: {nome_arquivo}")
         action, campos = self._form(r)
         campos.update(
-            txtTituloModelo=MODELO_TITULO,
-            txtResumo=MODELO_RESUMO,
+            txtTituloModelo=titulo_modelo,
+            txtResumo=resumo,
+            OcultoIdModelo=id_modelo,
             txtNomeArquivo1=nome_arquivo,
             oculto="I",
         )

@@ -4,7 +4,7 @@ Etapas, nesta ordem (cada uma com --dry-run; sem processos = os 57 do lote):
     tramitar-ida    CCD -> DIP ("ENVIO PARA DIP_SOBR"; a DIP_SOBR recebe manualmente)
     cadastrar       na DIP_SOBR: distribuição própria + informação digitalizada (<numero_ano>/<numero_ano>.pdf)
     (assinar)       python -m scripts.automacao.assinar_informacoes <procs> --cert EDUARDO  (lotes de 20)
-    substituir      peça DIP_SOBR antiga (Luzenildo, ordem do banco) -> despacho novo
+    substituir      peça DIP_SOBR antiga (Luzenildo, data do banco) -> despacho novo (após publicado)
     tramitar-volta  DIP_SOBR -> CCD
 
 Rodar da raiz: .venv/Scripts/python.exe processos/projetos/nereu_retomada_gcaed_dip_sobr/enviar.py <etapa> [procs]
@@ -25,6 +25,9 @@ SETOR = "DIP_SOBR"
 AUTOR_ANTIGA = "Luzenildo"
 PROV_IDA = "ENVIO PARA DIP_SOBR"  # CCD não tramita direto p/ DIP_SOBR; a DIP encaminha
 PROV_VOLTA = "ANÁLISE DE FATO SUPERVENIENTE"
+# modelo tem de ser da DIP_SOBR (o InformacaoInstrutiva da CCD falha calado); o mesmo da peça substituída
+MODELO, ID_MODELO = "Complementar Processo", "35667"
+RESUMO = "À CCD para análise de fato superveniente."
 
 
 def main() -> int:
@@ -34,9 +37,12 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    ordens = run_query_df(SQL_DIP_SOBR, marcador=MARCADOR).set_index("processo").ordem
-    alvos = args.processos or sorted(ordens.index, key=lambda p: p[-4:] + p)
-    fora = set(alvos) - set(ordens.index)
+    # a coluna "ordem" da tela de substituição tem outra numeração: a peça antiga é achada por autor + data
+    # após o cadastro há 2 peças DIP_SOBR ativas por processo: a antiga é a mais velha
+    pecas = run_query_df(SQL_DIP_SOBR, marcador=MARCADOR).sort_values("data")
+    datas = pecas.drop_duplicates("processo").set_index("processo").data
+    alvos = args.processos or sorted(datas.index, key=lambda p: p[-4:] + p)
+    fora = set(alvos) - set(datas.index)
     assert not fora, f"fora do lote: {fora}"
     procs = [parse_processo(p) for p in alvos]
 
@@ -55,11 +61,13 @@ def main() -> int:
             if args.etapa == "cadastrar":
                 pdf = PASTA / f"{numero:06d}_{ano}" / f"{numero:06d}_{ano}.pdf"
                 assert pdf.is_file(), f"PDF não gerado: {pdf}"
-                ar.distribuir_propria(numero, ano, dry_run=args.dry_run)
-                ar.cadastrar_informacao_digitalizada(numero, ano, str(pdf), dry_run=args.dry_run)
+                if "EDUARDO" not in ar._distribuido_para(numero, ano).upper():
+                    ar.distribuir_propria(numero, ano, dry_run=args.dry_run)
+                ar.cadastrar_informacao_digitalizada(numero, ano, str(pdf), dry_run=args.dry_run,
+                                                     titulo_modelo=MODELO, id_modelo=ID_MODELO, resumo=RESUMO)
             else:
-                ar.substituir_informacao(numero, ano, AUTOR_ANTIGA, ordem_substituida=int(ordens[p]),
-                                         dry_run=args.dry_run)
+                ar.substituir_informacao(numero, ano, AUTOR_ANTIGA, resumo_substituta=RESUMO,
+                                         data_substituida=f"{datas[p]:%d/%m/%Y}", dry_run=args.dry_run)
         except Exception as e:  # segue para o próximo do lote
             print(f"  ERRO: {e}")
             falhas += 1

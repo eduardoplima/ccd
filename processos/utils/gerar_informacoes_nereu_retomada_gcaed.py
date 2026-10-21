@@ -49,7 +49,7 @@ SQL_PROCESSOS = """
     FROM Pro_MarcadorProcesso mp
     JOIN Processos p ON p.IdProcesso = mp.IdProcesso
     LEFT JOIN Relator r ON r.codigo = p.codigo_relator
-    WHERE mp.IdMarcador = :marcador AND mp.DataExclusao IS NULL
+    WHERE mp.IdMarcador = :marcador  -- marcador excluído dos 57 em 09/2026: não filtrar DataExclusao
     ORDER BY p.ano_processo, p.numero_processo
 """
 # vw_ata_informacao.IdProcesso vem NULL nas informações novas: filtrar por número/ano
@@ -79,13 +79,15 @@ def carregar() -> list[dict]:
     itens = []
     for processo, proc in processos.iterrows():
         assert proc.relator == RELATOR, f"{processo}: relator {proc.relator}"
-        assert proc.setor == "CCD", f"{processo}: está em {proc.setor}, não na CCD"
+        # DIP_SOBR→CCD em 01/10/2026; o banco atrasa em relação à Área Restrita
+        assert proc.setor in ("CCD", "DIP_SOBR"),f"{processo}: está em {proc.setor}, não na CCD"
 
         ev = eventos[eventos.processo == processo]
         desp = ev[(ev.setor == SETOR_DESPACHO) & (ev.titulo == TITULO_SOBRESTAMENTO)]
         assert len(desp) == 1, f"{processo}: {len(desp)} despachos de sobrestamento, esperava 1"
         desp = desp.iloc[0]
-        ultimo = ev.loc[ev.evento.idxmax()]
+        ev_ccd = ev[ev.setor != "DIP_SOBR"]  # despachos DIP_SOBR de 30/09/2026 vieram depois da instrutiva
+        ultimo = ev_ccd.loc[ev_ccd.evento.idxmax()]
         assert ultimo.setor == "CCD" and str(ultimo.data) == DATA_INSTRUTIVA, (
             f"{processo}: último evento ativo é {ultimo.setor} de {ultimo.data}, não a instrutiva de {DATA_INSTRUTIVA}")
 

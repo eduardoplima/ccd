@@ -51,7 +51,8 @@ Esta skill garante que todos os elementos visuais criados para o trabalho no TCE
 - **Linha de totais/rodapé**: Fundo `#1A3D28` (Verde Escuro), texto `#FFFFFF`, negrito
 - **Destaques de alerta**: Fundo `#C8A84B` (Dourado) com texto escuro `#333333`
 - **Texto do corpo**: `#333333` (Cinza Escuro)
-- **Fonte recomendada**: Arial ou Calibri, tamanho 10-11pt para corpo, 11-12pt para cabeçalho
+- **Legenda de quadro em .docx**: `paragraph_format.keep_with_next = True` para não ficar sozinha no fim da página, separada da tabela
+- **Fonte**: **Times New Roman** (a mesma do `modelo_informacao.docx`), tamanho 10-11pt para corpo, 11-12pt para cabeçalho. Em `.docx` (python-docx), a tabela nova herda a fonte do tema (Calibri): defina a fonte em **cada run** da tabela e da legenda, inclusive `w:rFonts` (`ascii`, `hAnsi`, `cs`, `eastAsia`) — ver exemplo abaixo
 
 ### Gráficos
 
@@ -137,9 +138,9 @@ TCE_COLORS = {
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
 header_fill  = PatternFill("solid", fgColor=TCE_COLORS["verde_principal"])
-header_font  = Font(color=TCE_COLORS["branco"], bold=True, name="Calibri", size=11)
+header_font  = Font(color=TCE_COLORS["branco"], bold=True, name="Times New Roman", size=11)
 total_fill   = PatternFill("solid", fgColor=TCE_COLORS["verde_escuro"])
-total_font   = Font(color=TCE_COLORS["branco"], bold=True, name="Calibri", size=11)
+total_font   = Font(color=TCE_COLORS["branco"], bold=True, name="Times New Roman", size=11)
 alt_fill     = PatternFill("solid", fgColor=TCE_COLORS["cinza_claro"])
 destaque_fill = PatternFill("solid", fgColor=TCE_COLORS["dourado"])
 borda_thin   = Border(
@@ -148,6 +149,18 @@ borda_thin   = Border(
     top=Side(style="thin", color=TCE_COLORS["cinza_borda"]),
     bottom=Side(style="thin", color=TCE_COLORS["cinza_borda"])
 )
+
+# Fonte em run de python-docx (tabela/legenda): sem isso a célula sai em Calibri
+from docx.oxml.ns import qn
+
+def times(run, size_pt=None):
+    run.font.name = "Times New Roman"
+    rfonts = run._element.get_or_add_rPr().get_or_add_rFonts()
+    for attr in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+        rfonts.set(qn(attr), "Times New Roman")
+    if size_pt:
+        from docx.shared import Pt
+        run.font.size = Pt(size_pt)
 ```
 
 ---
@@ -163,7 +176,7 @@ Antes de entregar qualquer elemento visual, verificar:
 - [ ] Bordas em cinza `#CCCCCC`
 - [ ] Texto do corpo em cinza escuro `#333333`
 - [ ] Destaques (irregularidades, alertas) em dourado `#C8A84B`
-- [ ] Fontes: Arial, Calibri ou Times New Roman (documentos jurídicos)
+- [ ] Fonte Times New Roman em tudo, inclusive tabelas e legendas (nada em Calibri)
 - [ ] Gráficos com paleta de cores na sequência: Verde → Dourado → Verde Claro → Dourado Escuro
 
 ---

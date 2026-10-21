@@ -79,7 +79,7 @@ def _pendencias(page) -> list[dict]:
         if name == "checkProcessoTramTodos":  # "marcar todos"
             continue
         value = chk.get_attribute("value") or ""
-        m = re.match(r"CCD_(\d{6})_(\d{4})_", value)
+        m = re.match(r"[A-Z_]+?_(\d{6})_(\d{4})_", value)  # <SETOR>_NNNNNN_YYYY_SSSS.doc
         proc = f"{m.group(1)}/{m.group(2)}" if m else ""
         itens.append({
             "chk": chk,
@@ -172,6 +172,7 @@ def main() -> int:
     ap.add_argument("processos", nargs="*", help="numero/ano a assinar (ex.: 2681/2022)")
     ap.add_argument("--dry-run", action="store_true", help="só lista pendências e certificados")
     ap.add_argument("--cert", default="", help="substring do certificado a usar (nome/CPF)")
+    ap.add_argument("--setor", default="CCD", help="setor ativo cujas pendências assinar (ex.: DIP_SOBR)")
     ap.add_argument("--timeout", type=int, default=300, help="segundos de espera pelo PIN/assinatura")
     ap.add_argument("--pular-arquivo", action="append", default=[], metavar="ARQUIVO",
                     help="não assinar este arquivo pendente (ex.: CCD_002162_2025_0001.doc); "
@@ -196,6 +197,10 @@ def main() -> int:
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
         page.on("dialog", lambda d: (print(f"  [dialog] {d.message}"), d.accept()))
         page.goto(BASE + "telaPrincipalMenu.asp", wait_until="domcontentloaded")  # ASPSESSIONID
+        if args.setor != "CCD":  # pendências são do setor ativo: combo de setor da tela principal
+            page.locator("select#MenuSetor.caixa").select_option(args.setor)
+            page.wait_for_load_state("networkidle")
+            print(f"setor ativo: {args.setor}")
         page.goto(PAGINA_ASSINAR, wait_until="domcontentloaded")
         certs = _certificados(page)
         pend = _pendencias(page)

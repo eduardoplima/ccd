@@ -131,7 +131,7 @@ No painel de entidades, cada candidata é apresentada como um formulário
 específico de sua classe, com os campos estruturados propostos pelo modelo. O
 revisor dispõe de quatro ações: \emph{aprovar} a entidade tal como extraída;
 \emph{corrigir}, editando qualquer campo antes da aprovação;
-\emph{rejeitar}, caso em que uma justificativa textual mínima é obrigatória;
+\emph{rejeitar}, com campo para justificativa textual;
 e \emph{adicionar} entidades que o modelo deixou de identificar, selecionando
 diretamente o trecho correspondente no texto do acórdão e atribuindo-lhe uma
 classe. Entidades adicionadas manualmente são registradas sem vínculo com a
@@ -150,16 +150,72 @@ revisada teve todas as suas entidades explicitamente apreciadas.
 
 O resultado é persistido em tabelas de \emph{staging}, uma linha por entidade,
 contendo os campos validados, o veredito (aprovada ou rejeitada), o revisor, a
-data da revisão, a justificativa de rejeição quando houver e uma cópia do
-conteúdo originalmente proposto pelo modelo. As tabelas finais de extração
+data da revisão, a justificativa de rejeição quando houver e o vínculo com a
+entidade originalmente proposta pelo modelo. As tabelas finais de extração
 nunca são alteradas pela revisão: o desenho é deliberadamente
 \emph{append-only}, de modo que a saída bruta do modelo e a versão validada
 pelo humano coexistem no banco. Essa separação preserva a trilha de auditoria
 --- essencial no contexto de um órgão de controle --- e viabiliza a comparação
 sistemática entre o que o modelo propôs e o que o revisor aprovou. As
 entidades aprovadas alimentam a etapa de consolidação, exposta na própria
-interface como a listagem ``aguardando envio'' e resumida em painéis de
-indicadores (volume revisado, taxa de aprovação, pendências por classe).
+interface como a listagem ``aguardando envio'' e resumida em painéis
+gerenciais por órgão e responsável.
+
+\subsection{Resultados da validação}
+\label{subsec:validacao-resultados}
+
+As revisões foram realizadas entre 31/07/2026 e 09/09/2026, período em que
+640 decisões foram validadas por três revisores. Como o vínculo entre cada
+linha de \emph{staging} e a entidade extraída é preservado, as métricas abaixo
+são obtidas diretamente do banco, tomando o veredito humano como referência:
+a precisão estimada é a razão entre entidades propostas pelo modelo e
+aprovadas e o total de propostas; a cobertura (\emph{recall}) estimada é a
+razão entre as aprovadas propostas pelo modelo e a soma destas com as
+entidades que o revisor precisou adicionar
+(Tabela~\ref{tab:validacao-resultados}). Ficam de fora quatro entidades
+aprovadas em revisões-piloto, entre abril e junho de 2026.
+
+\begin{table}[htbp]
+\centering
+\caption{Resultado da validação humana por classe de entidade (31/07 a 09/09/2026)}
+\label{tab:validacao-resultados}
+\begin{tabular}{lrrrrrrr}
+\hline
+Classe & Propostas & Aprovadas & Rejeitadas & Adicionadas & Precisão & Cobertura & F1 \\
+\hline
+Obrigação     &   595 &   546 &  49 & 72 & 0,918 & 0,883 & 0,900 \\
+Multa         &   189 &   154 &  35 &  0 & 0,815 & 1,000 & 0,898 \\
+Ressarcimento &     6 &     6 &   0 &  1 & 1,000 & 0,857 & 0,923 \\
+Recomendação  &   327 &   307 &  20 & 21 & 0,939 & 0,936 & 0,937 \\
+\hline
+Total         & 1.117 & 1.013 & 104 & 94 & 0,907 & 0,915 & 0,911 \\
+\hline
+\end{tabular}
+\end{table}
+
+Entre as entidades aprovadas, a comparação campo a campo com a saída do
+segundo estágio mostra que 224 de 546 obrigações (41\%) e 36 de 307
+recomendações (12\%) foram corrigidas antes da aprovação. Nas obrigações, a
+correção mais frequente foi o órgão responsável (186 casos, em geral a
+substituição do nome extraído pelo cadastro oficial), seguida da descrição
+(37), da indicação de multa cominatória (23) e do prazo (20); nas
+recomendações, predominou o prazo (23). Multas e ressarcimentos não admitem
+essa medida, pois seus campos estruturados são preenchidos integralmente pelo
+revisor.
+
+Quanto à integridade da gravação, as 1.117 entidades propostas nas decisões
+revisadas receberam, todas, veredito explícito em \emph{staging}, o que
+corrobora o caráter transacional da aprovação. Nessas decisões permanecem
+ainda 142 entidades nas tabelas finais sem linha de \emph{staging} (141
+recomendações e uma obrigação, esta de decisão revisada em 01/09/2026), mas
+todas pertencem a uma rodada de extração anterior, substituída antes da
+revisão --- seus identificadores são menores que os de todas as entidades
+revisadas da mesma decisão ---, e por isso não entram na contagem. Os números devem ser lidos com
+três ressalvas: a cobertura é um limite superior, pois omissões não
+percebidas pelo revisor não são contabilizadas; 71\% das decisões foram
+revisadas por uma única pessoa, sem revisão em duplicidade que permita medir
+concordância; e 99 das 104 rejeições foram registradas sem justificativa
+textual, o que impede uma taxonomia dos erros a partir do banco.
 
 \subsection{Limitações}
 \label{subsec:validacao-limitacoes}

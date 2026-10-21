@@ -1,379 +1,324 @@
-# Processos distribuídos para Eduardo (CCD) — situação em 31/07/2026
+# Processos distribuídos para Eduardo (CCD) — situação em 16/10/2026
 
-Fonte: varredura das 18 páginas da tela "Proc./Doc. Eletrônico no Setor" (setor CCD)
-da Área Restrita em **31/07/2026**, filtrando a coluna "Distribuído para" =
-EDUARDO PEREIRA LIMA. São **32 processos**. Para cada um, o último despacho que o
-trouxe à DIP/CCD e o que fazer.
+Fonte: banco `processo`, que pode estar atrasado em relação à Área Restrita. A lista vem das
+distribuições abertas na CCD (`Lrf_Distribuicao`, `usuario` = CPF, `data_fim_analise IS NULL`).
+Para cada processo foram lidos o último despacho (PDF) e os débitos, considerando a folha da
+cadeia de `Exe_Debito`. São **41 processos**.
 
-> **Saíram desde 27/07** (não estão mais distribuídos, portanto removidos daqui):
-> 001471/2021, 701013/2012 e 003594/2025.
+> **Saíram desde 25/09/2026:**
+> - o lote `nereu_retomada_gcaed` (57 processos), enviado CCD→DIP "ENVIO A GCAED" em 01/10;
+> - 003677/2022 e 000725/2025;
+> - 000407/2025, 003045/2025 e 003665/2025 (desconto em folha finalizado, enviados em 14/10).
+>
+> **Entraram (11):** 701107/2012, 000728/2025, 005210/2018, 012744/2014, 003485/2019,
+> 000473/2024, 003653/2022, 000102/2022, 003678/2022, 002835/2025 e 000924/2020.
 
-> ⚠️ **Bloqueio de tramitação CCD → setor externo** (flag `nao_tramita_setor_externo='S'`):
-> o envio direto a gabinete/DE pelo `requests` é incerto. Na dúvida, tramitar à DIP
-> com providência "ENVIO A &lt;destino&gt;".
+> ⚠️ **Mudança de premissa em relação à versão de 31/07.** O STF, na **SS 5.749**
+> (Min. Alexandre de Moraes, 28/07/2026), suspendeu o acórdão do TJ/RN de 29/06 que anulara
+> as multas do Sr. Nereu. As multas voltaram a ser exigíveis e os relatores estão
+> **levantando os sobrestamentos** (GCCTH em 25 e 31/08; GCAED em 21/09). Por isso, as
+> sugestões de sobrestamento/suspensão feitas pela CCD em julho estão **superadas**.
 
 ---
-
-## 🔴 Alerta transversal — multas do Sr. Nereu Batista Linhares
-
-Em **29/06/2026** o Pleno do TJ/RN, no MS 0807247-93.2025.8.20.0000, concedeu a
-segurança e **anulou as multas do TCE/RN ao Sr. Nereu que tenham pertinência com o
-Processo Judicial 0811707-97.2021.8.20.5001** (vantagens remuneratórias transitórias
-de servidores estaduais **da saúde**).
-
-Isso atinge **14 dos 32 processos** desta lista (grupos A3 e C). O lote de 11
-acórdãos de 10/06/2026 (Ac. 302–312/2026) é **anterior** à decisão do TJ e trata
-exatamente de "percepção de vantagem transitória indevida" em aposentadorias de
-**origem SESAP** — antes de cadastrar qualquer multa desse lote, é preciso decidir
-se está ou não abrangida pela anulação. Precedente útil: no 001390/2023 o relator
-Carlos Thompson examinou o mérito e concluiu que **aquele** caso não guardava
-identidade com o processo judicial, mandando a execução prosseguir. Ou seja: a
-triagem é caso a caso, pelo objeto da determinação descumprida.
 
 ## Índice
 
-| # | Processo | Relator | O que se espera da CCD | Estado | Grupo |
-|---|----------|---------|------------------------|--------|-------|
-| 1 | 008920/2017 | Renato (GCREN) | Multa Ac. 302/2026 cadastrada | Despacho pronto — **falta enviar à DE** | A |
-| 2 | 003380/2024 | Antônio Ed (GCAED) | Repercussão do MS; sugerir sobrestamento | Informação cadastrada — **falta tramitar** | A |
-| 3 | 002564/2024 | Antônio Ed (GCAED) | Idem | Informação cadastrada — **falta tramitar** | A |
-| 4 | 002009/2020 | Ana Paula (GAANA) | Antecedentes de Oriana Rodrigues | Informação 0069 cadastrada — **falta assinar** | A |
-| 5 | 001390/2023 | Carlos Thompson (GCCTH) | Retomar execução (ordem expressa) | Certidão de inscrição emitida 23/07 — falta cumprir o resto | A |
-| 6 | 002014/2020 | Ana Paula (GAANA) | Antecedentes de Carlos Alberto Jácome de Aquino | A fazer | B1 |
-| 7 | 003336/2025 | Ana Paula (GAANA) | Antecedentes de Cletson Rivaldo de Oliveira | A fazer | B1 |
-| 8 | 302904/2023 | Ana Paula (GAANA) | Anotação da decisão (ev. 90) no CGAD | A fazer | B2 |
-| 9 | 005202/2020 | Ana Paula (GAANA) | Anotação do Ac. 73/2025 (ev. 126) no CGAD | A fazer | B2 |
-| 10 | 003325/2024 | Ana Paula (GAANA) | Anotação da decisão (ev. 44) no CGAD | A fazer | B2 |
-| 11 | 008389/2014 | Ana Paula (GAANA) | Anotações do art. 431 RITCE (via SECEX) | A fazer | B2 |
-| 12 | 302014/2021 | Gilberto Jales (GCGIL) | Trânsito + citação art. 117 | A fazer | B3 |
-| 13 | 302645/2021 | Gilberto Jales (GCGIL) | Trânsito + citação art. 117 | A fazer | B3 |
-| 14 | 000237/2026 | Renato (GCREN) | PGE silente — informação ao relator | A fazer | B3 |
-| 15 | 000460/2026 | Paulo Roberto (GCPRO) | PGE silente — informação ao relator | A fazer | B3 |
-| 16 | 002166/2024 | Marco Antônio (GAMAR) | Execução (art. 118 LCE 464/2012) | A fazer | B3 |
-| 17 | 301072/2026 | Gilberto Jales (GCGIL) | Retirar nome da lista de devedores | A fazer | B3 |
-| 18 | 301624/2026 | (sem relator) | Ofício SEAD: desconto em duplicidade? | A fazer | B3 |
-| 19 | 017663/2017 | Gilberto Jales (GCGIL) | **Resposta nova**: conferir OB de 14/12/2017 no FRAP | A fazer | B4 |
-| 20 | 003639/2017 | George (GCGEO) | Apurar descontos SEEC + repasse ao FRAP | A fazer | B4 |
-| 21 | 005352/2017 | George (GCGEO) | Analisar respostas SESAP/SEAD; quitação? | A fazer | B4 |
-| 22 | 001126/2015 | George (GCGEO) | Apurar pagamentos parciais | A fazer | B4 |
-| 23–32 | 10 processos APO | Renato (GCREN) | Cadastrar multa de R$ 1.000 (Ac. 303–312/2026) | **Triagem MS antes** | C |
+| # | Processo | Relator | O que se espera da CCD | Grupo |
+|---|----------|---------|------------------------|-------|
+| 1 | 000099/2023 | Carlos Thompson | Responder aos quesitos b.i–b.iv da Decisão de 31/08 | A |
+| 2 | 001418/2023 | Carlos Thompson | Idem, Decisão de 25/08 | A |
+| 3–6 | 000098, 000107, 000131/2023 e 001446/2023 | Carlos Thompson | Sobrestados; propor a retomada (SS 5.749) | A |
+| 7 | 003380/2024 | Antônio Ed | Instrutiva de 17/07 (sobrestamento) superada; retomada | A |
+| 8–11 | 000473/2024, 003653/2022, 000102/2022, 003678/2022 | Antônio Ed | Monitorar desconto em folha até quitar e devolver | A |
+| 12–13 | 000460/2026, 000237/2026 | Paulo Roberto / Renato | PGE silente após notificação | A |
+| 14 | 002835/2025 | Gilberto Jales | Diligência: desconto 644 do Francisco Erasmo (IPERN) | A |
+| 15 | 000863/2025 | Ana Paula | Desconto via IPERN ("Implementar Nereu") | A |
+| 16 | 005352/2017 | George | Informação **gerada em 04/08, não cadastrada** | B |
+| 17 | 003639/2017 | George | Apurar parcelas SEEC × FRAP (quota MPC) | B |
+| 18 | 005351/2017 | George | Atender às sugestões do MPC (quota de 10/02) | B |
+| 19 | 003267/2023 | Carlos Thompson | Informar se o desconto (PM Itaú) foi implantado | B |
+| 20 | 004883/2024 | Paulo Roberto | Identificar a qual execução corresponde o desconto 3012 (PM Patu) | B |
+| 21 | 003051/2025 | Renato | Analisar resposta à Notificação 460/2026 | B |
+| 22 | 700985/2012 | Renato | Pronunciar-se após certidão (ev. 43) | B |
+| 23 | 002167/2025 | George | Verificar FRAP; 3 débitos em aberto | B |
+| 24 | 002013/2025 | Antônio Ed | "Finalizado", mas retido ≠ notificado | B |
+| 25 | 021694/2016 | Paulo Roberto | Quitado — **só tramitar** | B |
+| 26 | 017663/2017 | Gilberto Jales | Conferir a OB de 14/12/2017 no FRAP | B |
+| 27 | 301624/2026 | (sem relator) | Ofício SEAD: desconto em duplicidade? | B |
+| 28–29 | 701107/2012, 000728/2025 | George (Marco Antônio em subst.) | Explicar a origem do saldo de "atualização automática" | C |
+| 30 | 005824/2019 | Marco Antônio | Execução a instaurar — **parado há 1 ano** | D |
+| 31 | 101053/2022 | Marco Antônio | Art. 118; informação **gerada em 02/09, não cadastrada** | D |
+| 32 | 101227/2022 | Marco Antônio | Obrigação de fazer (ev. 56–57) | D |
+| 33 | 001126/2015 | George | Pagamentos parciais (MPC ev. 35) | D |
+| 34 | 003485/2019 | Paulo Roberto | Débitos 16228/16229 "pago parcialmente" × certidão de quitação | D |
+| 35 | 012744/2014 | Gilberto Jales | Petição do ex-prefeito; informação **gerada em 05/10, não cadastrada** | D |
+| 36 | 004954/2020 | Maria Adélia | Erro de cadastro | D |
+| 37 | 003303/2023 | George | Parcelamento em curso | E |
+| 38 | 000924/2020 | Gilberto Jales | Quitado; falta verificar a obrigação de fazer | E |
+| 39 | 301072/2026 | Gilberto Jales | Retirar nome da lista de devedores | E |
+| 40 | 005210/2018 | Potiguar | Ofício judicial (Apodi) + PM Itaú | E |
+| 41 | 003040/2022 | Antônio Ed | Arquivado desde 30/01/2025; só encerrar a distribuição | E |
 
-**A** = pronto ou quase, falta só cadastrar/assinar/tramitar.
-**B** = exige análise/informação da CCD (B1 antecedentes, B2 anotações CGAD, B3 execução/ofícios, B4 conciliação financeira).
-**C** = lote repetitivo, resolve-se de uma vez.
-
----
-
-# Grupo A — destravar (só falta mexer na Área Restrita)
-
-## 1. 008920/2017 — Aposentadoria, IPERN (Renato)
-
-- **Feito**: a CCD já cadastrou a multa do item "a" do **Acórdão 302/2026** e emitiu
-  despacho de envio à DE (`CCD_008920_2017_0062.pdf`, evento 116).
-- **Fazer**: **enviar à DE**. É o processo-piloto do lote C — o que se decidir aqui
-  vale para os outros 10.
-- ⚠️ Este cadastro foi feito **antes** da leitura do acórdão do TJ de 29/06. Vale
-  reconferir se a multa está ou não abrangida pela anulação antes de mandar cobrar.
-
-## 2. 003380/2024 — Multa ao Sr. Nereu / IPERN (Antônio Ed)
-
-- **Feito**: `CCD_003380_2024_0073.pdf` (evento 79) — informação instrutiva noticiando
-  o acórdão do TJ, com o quadro do débito (R$ 9.829,92 → **R$ 15.061,98** em
-  02/07/2026, suspenso, sem desconto em folha, sem dívida ativa, sem protesto) e
-  sugerindo **suspensão da cobrança + sobrestamento** até o trânsito do MS
-  (arts. 36, III, e 160 da LCE 464/2012).
-- **Fazer**: tramitar à DIP com "ENVIO A GCAED". Nada mais a analisar.
-
-## 3. 002564/2024 — Multa ao Sr. Nereu / IPERN (Antônio Ed)
-
-- Idêntico ao anterior: `CCD_002564_2024_0059.pdf` (evento 69). Débito
-  R$ 9.829,92 → **R$ 13.567,69**, suspenso, **já protestado**.
-- **Fazer**: tramitar à DIP com "ENVIO A GCAED". Atenção: por estar **protestado**,
-  se o relator acolher o sobrestamento haverá ato adicional (sustação/baixa do
-  protesto) — antecipar isso na tramitação evita um segundo ciclo.
-
-## 4. 002009/2020 — Contas de Governo, PM Paraná 2016 (Ana Paula)
-
-- **Despacho**: informar condenações transitadas em julgado contra a
-  **Sra. Oriana Rodrigues** (tipos, valores, datas). Reforçado em 16/07 pela
-  relatora, que **chamou o feito à ordem** e determinou o cumprimento "dentro da
-  necessária brevidade".
-- **Feito**: informação de antecedentes `CCD_002009_2020_0069.doc` **cadastrada**.
-- **Fazer**: assinar (Web PKI) → tramitar à DIP com "ENVIO A GAANA". É o item mais
-  atrasado do grupo A — há cobrança expressa da relatora.
-
-## 5. 001390/2023 — Execução do 007239/2017, multa ao Sr. Nereu (Carlos Thompson)
-
-- **Despacho** (`GCCTH_001390_2023_0088.pdf`, evento 105): o relator afastou a tese
-  da CCD — "a matéria de fundo do processo originário não guarda identidade com a
-  temática dos referidos processos judiciais", a sanção "nunca teve sua exigibilidade
-  suspensa" — e **determinou à CCD que retome imediatamente a execução, cumprindo em
-  todos os seus termos o despacho do evento 97**.
-- **Feito**: `CCD_001390_2023_0089.pdf` — Certidão de Inscrição no Cadastro
-  Informativo nº 600808/2026, de 23/07/2026 (multa Ac. 95/2022, R$ 1.000,00 →
-  **R$ 1.495,88**).
-- **Fazer**: (1) reler o **evento 97** e conferir item a item o que ainda falta
-  (desconto em folha, dívida ativa, protesto); (2) informação certificando o
-  cumprimento integral e devolvendo ao relator. Ordem expressa e "imediata" —
-  prioridade máxima do grupo.
+**A** = Nereu / IPERN · **B** = desconto em folha × FRAP · **C** = saldo residual de correção ·
+**D** = execução e análise · **E** = acompanhamento e encerramento.
 
 ---
 
-# Grupo B1 — antecedentes (runbook `/enviar-antecedentes-gaana`)
+# Grupo A — Nereu Batista Linhares / IPERN
 
-Mesmo despacho-padrão do GAANA, assinado por Sara Kalline: "informe se há condenações
-transitadas em julgado em desfavor de X; em caso positivo, os tipos, valores
-(ressarcimentos e multas) e as datas dos trânsitos".
+## 1–2. 000099/2023 e 001418/2023 (Carlos Thompson) — quesitos do relator
 
-| Processo | Pessoa | Contexto |
-|----------|--------|----------|
-| 002014/2020 | **Carlos Alberto Jácome de Aquino** | Contas de Governo, PM Doutor Severiano 2016. A relatora chamou o feito à ordem (ev. 96), tornou sem efeito a citação de Francisco Neri de Oliveira e **determinou o cumprimento do ev. 93 "dentro da necessária brevidade"** |
-| 003336/2025 | **Cletson Rivaldo de Oliveira** | Contas de Governo, PM Equador 2024. MPjTC já opinou por parecer prévio desfavorável |
+- **Decisões** `GCCTH_000099_2023_0090` (31/08) e `GCCTH_001418_2023_0084` (25/08). Com base
+  na SS 5.749, o relator **levantou o sobrestamento** e não acolheu o arquivamento sugerido
+  pela CCD nas instrutivas de 13/08, porque viu **contradição** entre as manifestações da CCD.
+  Pede à CCD:
+  - **b.i** se a dívida foi efetivamente paga e repassada ao FRAP, com a **data da quitação**;
+  - **b.ii** a origem e a natureza da dívida de **R$ 1.451,80** (000099) / **R$ 1.442,51**
+    (001418), registrada na instrutiva anterior como "Em Aberto / Sem desconto / Protestado",
+    e por que ela sumiu da instrutiva seguinte;
+  - **b.iii** o residual de correção, com **memória de cálculo**;
+  - **b.iv** se há dado errado no sistema que dependa de autorização para cancelar por erro
+    de cadastro.
+- **No banco hoje:**
+  - 000099: R$ 36,67 + R$ 156,12 em aberto;
+  - 001418: R$ 158,58 em aberto (o débito 29053 foi cancelado por erro de cadastro).
+- **Fazer:** uma informação por processo, respondendo item a item. A memória de cálculo deve ir
+  da data da notificação até o crédito no FRAP. Explicar o protesto e indicar se cabe pedir a
+  baixa dele.
 
-- **Fazer (os dois, em lote)**: levantar CPF → `gerar_antecedentes.py` (LLM +
-  `processos_transito_nome.sql`) → distribuir → cadastrar informação digitalizada →
-  assinar → tramitar "ENVIO A GAANA". Junto com o 002009/2020 (item 4), são **três**
-  antecedentes para o mesmo gabinete — vale rodar os três de uma vez.
+## 3–6. 000098, 000107, 000131/2023 e 001446/2023 (Carlos Thompson) — sobrestados
 
----
+- O último ato é o despacho "mantém sobrestamento" de 23/06 (antes da SS 5.749). O débito de
+  R$ 1.000,00 de cada um está **Suspenso**.
+- **Fazer:** informação de retomada para o GCCTH, no modelo `nereu_retomada_gcaed_v2`
+  (SS 5.749, reativar o débito, prosseguir com o art. 118). Pelo que o mesmo relator fez nos
+  itens 1–2, a tendência é deferir. Fazer os quatro de uma vez.
 
-# Grupo B2 — anotações cadastrais (CGAD)
+## 7. 003380/2024 (Antônio Ed) — instrutiva superada
 
-Também despacho-padrão do GAANA: "realizar a anotação determinada na decisão apensada
-no evento N". É o mesmo trabalho já feito no 003594/2025 (registros CGAD 2128–2133 +
-informação certificando).
+- A instrutiva `CCD_003380_2024_0073` (17/07) sugeriu sobrestamento por causa do TJ e ainda
+  não foi tramitada. O débito de R$ 9.829,92 está **Suspenso**. O processo ficou fora do lote
+  GCAED (não tem o marcador 6139).
+- **Fazer:** gerar a versão v2 da retomada, substituir a instrutiva de 17/07 e tramitar
+  "ENVIO A GCAED", como foi feito no lote em 01/10.
 
-| Processo | Decisão a anotar | Observação |
-|----------|------------------|------------|
-| 302904/2023 | evento 90 | A CCD já certificou o trânsito e instaurou a execução **000665/2026** (ev. 126) |
-| 005202/2020 | **Acórdão 73/2025** (evento 126) | A CCD já certificou o trânsito e instaurou a execução **000602/2026** (ev. 180) |
-| 003325/2024 | evento 44 | Contas PM Sítio Novo 2018–2020; intimações efetivas, sem resposta |
-| 008389/2014 | ev. 6, pág. 396–397 (art. 431 RITCE) | Passou pela SECEX, que devolveu à DIP (`SECEX_008389_2014_0086.pdf`). Já tem 2 recomendações inseridas manualmente no CGAD (IdRecomendação 989/990) |
+## 8–11. 000473/2024, 003653/2022, 000102/2022, 003678/2022 (Antônio Ed) — monitorar o desconto
 
-- **Fazer (os quatro em série)**: ler a decisão apensada → anotar obrigações/
-  recomendações no CGAD → gerar informação certificando as anotações (padrão
-  `processos/informacoes/003594_2025/gerar_informacao.py`, com guard nos ids do cadastro) →
-  cadastrar/assinar/tramitar.
-- 302904 e 005202 são os mais rápidos: a execução já foi instaurada, resta a anotação.
+- **Despachos GCAED de 21/09**, todos com o mesmo texto. A PGE ficou silente após a
+  notificação para desconto, mas o Memorando 12/2026-CCD apontou "Desconto em folha
+  implantado". O relator determina que a DIP **monitore o desconto** e devolva os autos
+  **com a informação de quitação ou não**.
+- **Débitos:**
+  - 000473/2024: R$ 9.829,92;
+  - os outros três: R$ 8.864,15 cada (todos Em Aberto).
+- **Fazer:** conciliar SIAI × FRAP (módulo de desconto em folha). Marcar "Verificar
+  transferência FRAP" e devolver só na quitação, ou com a informação de que o desconto não
+  está ocorrendo.
 
----
+## 12–13. 000460/2026 (Paulo Roberto) e 000237/2026 (Renato) — PGE silente
 
-# Grupo B3 — execução, ofícios e providências pontuais
+- A PGE foi notificada em 17/04 para desconto (recebimento tácito em 07/05) e não respondeu
+  (certidão de 20/07). Cada processo tem multa de R$ 1.000,00 em aberto, com marcador
+  "Execução - Nereu".
+- **Fazer:** antes de informar a inércia, verificar no SIAI se o desconto foi implantado
+  mesmo assim (foi o caso dos itens 8–11). Se foi, monitorar. Se não foi, fazer informação
+  gêmea ao relator propondo reiteração, protesto ou dívida ativa.
 
-## 12–13. 302014/2021 (PSDB Goianinha) e 302645/2021 (PM São Gonçalo do Amarante)
+## 14. 002835/2025 (Gilberto Jales) — apuração contra o Nereu, convertida em diligência
 
-- Ambos com **certidão da DE de intimação efetiva** para ciência do acórdão
-  (`DE_EXP_302014_2021_0060.pdf`, 14/07; `DE_EXP_302645_2021_0037.pdf`, 01/06 —
-  este último remetido expressamente "à DIP, para adoção de atos da sua competência").
-- **Fazer**: certificar o **trânsito em julgado**, cadastrar o débito e, não havendo
-  recolhimento, promover a **citação do art. 117 da LCE 464/2012**. Fluxo padrão.
-- O 302645/2021 tem 3 destinatários intimados (PM, controle interno e **Localiza Rent
-  a Car S/A**) — conferir se a condenação alcança a empresa antes de cadastrar.
+- **Despacho** `GCGIL_002835_2025_0013` (24/07). O MPC pediu multa ao Nereu por não ter
+  descontado a dívida do pensionista **Francisco Erasmo de Morais** (Proc. 7682/2013). O
+  relator, porém, viu no SIAI-DP o desconto "644 - FRAP TC" em 06/2026.
+- **Quer saber:**
+  - (a) desde quando o desconto ocorre;
+  - (b) quantas parcelas foram pagas;
+  - (c) o saldo remanescente, inclusive se houve crédito no FRAP.
+- **Fazer:** SIAI (o SIAI cobre pensionista) + FRAP + débito do Francisco Erasmo. Informação
+  curta respondendo (a)–(c). Está parado há 84 dias.
 
-## 14–15. 000237/2026 (Maria do Socorro Lima de Oliveira, Renato) e 000460/2026 (Irene Soares do Nascimento, Paulo Roberto)
+## 15. 000863/2025 (Ana Paula) — "Implementar Nereu"
 
-- Mesmo quadro: a **PGE foi notificada** (Notificações 000869/2026 e 000874/2026,
-  recebimento tácito em 07/05/2026), prazo encerrado em **15/07/2026** e certidão da
-  DE de **"não apresentação de resposta até o fim do prazo"** (16/07).
-- **Fazer**: informação única de gabarito para os dois — noticiar a inércia da PGE,
-  atualizar o débito e sugerir ao relator a providência seguinte (reiteração à PGE,
-  protesto ou inscrição em dívida ativa, conforme o estágio de cada dívida).
-- Vale checar de uma vez se há **outros** processos de execução com o mesmo padrão
-  (notificação à PGE sem resposta em 15/07) — provavelmente foi um lote.
-
-## 16. 002166/2024 — Monitoramento do 1325/2020, CM Olho d'Água do Borges (Marco Antônio)
-
-- **Despacho** (`GAMAR_002166_2024_0020.pdf`, 27/05/2026): citada a Sra. **Jéssica
-  Leite Queiroga Sales** (Citação 001132/2026, prazo final 30/04/2026), sem resposta e
-  sem recolhimento; à DIP para as medidas do **art. 118 da LCE 464/2012**.
-- **Contexto**: a CCD já liquidou a multa cominatória no teto de **R$ 17.728,31**
-  (`CCD_002166_2024_0014.pdf`, 18/03/2026); há ainda a multa original de
-  **R$ 3.000,00** (Ac. 167/2022, trânsito em 24/11/2022).
-- **Fazer**: (1) conferir o cadastro/atualização das duas dívidas; (2) instaurar o
-  processo autônomo de execução (art. 118, I) com certidão de dívida; (3) informação
-  ao relator propondo as medidas executórias (desconto em folha se houver vínculo
-  público; senão protesto/comunicação ao ente credor).
-- Parado desde 27/05 (**65 dias**) — é o mais antigo do grupo B3.
-
-## 17. 301072/2026 — Retirada de nome da lista de devedores (Gilberto Jales)
-
-- **Despacho** (`GCGIL_301072_2026_0008.pdf`, 22/07/2026, publicado em 23/07): o
-  relator **DEFERIU** o pedido de **Ludmila Carlos Amorim de Araújo Rosado**, acolhendo
-  o Parecer 335/2026-CJ, e determinou a retirada do nome da relação de devedores
-  **exclusivamente** quanto aos débitos dos Processos de Execução **002561/2018-TC**
-  (orig. 006546/2008, Ac. 169/2017) e **003524/2019-TC** (orig. 001590/2018,
-  Ac. 54/2019). Fundamento: inexigibilidade reconhecida judicialmente, com trânsito
-  em 22/04/2026 (Proc. 0817911-36.2021.8.20.5106, 2ª Vara Faz. Pública de Mossoró).
-- **Fazer**: (1) localizar as dívidas nos dois processos de execução; (2) **suspender/
-  baixar** o registro com motivo "decisão judicial — inexigibilidade" (não é
-  cancelamento por quitação, e a decisão é expressamente **revisível**); (3) se houver
-  protesto ou inscrição em dívida ativa, providenciar a sustação/baixa; (4) informação
-  certificando o cumprimento nos **dois** processos.
-- Tarefa curta e bem delimitada — bom candidato a fechar já.
-
-## 18. 301624/2026 — Ofício SEAD 3668/2026 (sem relator)
-
-- **Documento** (`DE_301624_2026_0002.pdf`, 20/07/2026): a SEAD questiona possível
-  **desconto em duplicidade** (sigla 644, mai–jun/2026) contra o servidor **José
-  Ribamar Leite Nóbrega** (mat. 162.738-4). Dois descontos, ambos do **Processo
-  000423/2024-TC**: Notificação 000907/2025-DE (**R$ 21.474,79**, SEI
-  03810015.004516/2025-57) e Mandado de Intimação 000593/2026-DE (**R$ 22.688,44**,
-  SEI 00810007.000551/2026-71). A SEAD diz que não lhe cabe presumir que são a mesma
-  obrigação e pede manifestação do TCE.
-- **Hipótese forte**: mesma dívida comunicada duas vezes com valores em datas de
-  atualização diferentes (21.474,79 → 22.688,44 é compatível com correção do mesmo
-  débito).
-- **Fazer**: (1) consultar as dívidas cadastradas do servidor no 000423/2024-TC e o
-  teor das comunicações 907/2025 e 593/2026; (2) confirmar se são a mesma obrigação;
-  (3) informação respondendo o ofício — se duplicado, orientar a SEAD a manter um
-  único desconto (valor atualizado) e apurar o valor retido em excesso para
-  compensação/devolução; (4) verificar a quem distribuir (chegou sem relator,
-  endereçado à Presidência).
+- Notificação para desconto 1375/2025 (AR em 04/10/2025), certidão da DE de 27/11/2025,
+  débito de R$ 2.800,00 em aberto. É o mesmo devedor do 000725/2025, que já saiu da lista.
+- **Fazer:** conferir no SIAI se o desconto foi implantado. Seguir o mesmo encaminhamento
+  dado ao 000725.
 
 ---
 
-# Grupo B4 — conciliação desconto em folha × repasse ao FRAP
+# Grupo B — desconto em folha × FRAP
 
-Os quatro pedem a mesma perícia: cruzar o que foi descontado em folha com o que
-efetivamente entrou no FRAP. Ferramenta já existente:
-`scripts/analise/cruzamento_desconto_folha_frap.py`. **Vale tratar como um único
-mutirão** — a consulta ao extrato/lançamentos do FRAP é a mesma, muda só o período e
-o credor.
+## 16. 005352/2017 (George) — ⏱️ 538 dias desde o despacho
 
-## 19. 017663/2017 — Devolução de valor descontado em folha (Gilberto Jales) 🆕
+- O despacho de 27/04/2025 pede a análise das respostas da SESAP e da SEAD e da quitação. A
+  informação já está **gerada** em `processos/informacoes/005352_2017/` (04/08), mas **não foi
+  cadastrada** (não há evento da CCD depois de 04/2025). Débito de R$ 5.730,00 em aberto.
+- **Fazer:** revisar, cadastrar, assinar e tramitar. É o mais antigo da carteira.
 
-- **Novidade (não constava na versão anterior)**: em 17–20/07/2026 chegaram
-  **duas respostas** (`DE_017663_2017_0039/0040.pdf`, Ofício SEAD 3824/2026). O IPERN
-  localizou o repasse: **Ordem Bancária 2017OB0805737, de 14/12/2017, no valor de
-  R$ 2.947,61**, creditada na conta BB ag. 37958 c/c 6000002 (TCERN-FRAP
-  ARRECADAÇÃO), observação "pagamento das consignações ref. ao mês de outubro/2017 —
-  inativos SEARH". Segundo o órgão, **os R$ 574,54 estão dentro desse montante**.
-- Isso **destrava** o caso: a CCD havia varrido os extratos e não achara o crédito
-  isolado de R$ 574,54 (`CCD_017663_2017_0017.pdf`, 24/11/2025) justamente porque o
-  repasse veio **agregado**.
-- **Fazer**: (1) conferir no FRAP a entrada de **R$ 2.947,61 em 14/12/2017**
-  (`FRAPLancamento`, ValorDC='C'); (2) se confirmada, informação concluindo que o
-  repasse ocorreu de forma agregada e que **não houve** o prejuízo alegado — ou, se o
-  desconto foi indevido na origem, que o valor deve ser devolvido ao servidor pelo
-  órgão; (3) devolver ao relator. **Prioridade alta**: o caso mudou de estado e a
-  resposta já está nos autos.
+## 17. 003639/2017 (George)
 
-## 20. 003639/2017 — Execução do 700689/2010, CM Riacho de Santana (George)
+- A quota do MPC (17/07) e o despacho do relator (21/07) pedem para apurar quantas das 31
+  parcelas da SEEC foram descontadas e repassadas ao FRAP (set/2017–fev/2020). Débitos de
+  R$ 4.150 e R$ 8.010, em aberto.
+- **Fazer:** conciliação no FRAP, esperando crédito **agregado**. Informação com saldo e
+  proposta.
 
-- **Quota do MPjTC** (evento 66) + **despacho do relator** de 21/07/2026 acatando-a:
-  à DIP para apurar o efetivamente adimplido.
-- **Contexto**: Ac. 264/2016-TC, responsável **Francisco Elias Fernandes**. A SEEC
-  informou (Ofício 3953/2017) a implantação do desconto de **R$ 13.307,94 em 31
-  parcelas de R$ 429,18**, a partir de set/2017. O MPjTC viu indícios, pelo Portal da
-  Transparência, de continuidade até **fev/2020** (variação da rubrica "Outros
-  Descontos"), mas reconhece que o método é apenas indiciário; e **não há nos autos
-  comprovação do repasse ao FRAP**.
-- **Fazer**: (1) apurar quantas das 31 parcelas foram efetivamente descontadas;
-  (2) rastrear os repasses da SEEC ao FRAP no período set/2017–fev/2020 (esperar
-  crédito **agregado**, como no 017663 acima); (3) informação com o saldo devedor
-  atualizado e proposta (quitação/prosseguimento da cobrança do resíduo).
+## 18. 005351/2017 (George)
 
-## 21. 005352/2017 — Execução do 009552/2014, CM Parelhas (George)
+- Despacho de 03/06: "atender às sugestões do MPC" da quota de 10/02. Débito de R$ 40.300,00
+  em aberto (PM Espírito Santo).
+- **Fazer:** ler a quota (`PROC_EXE_005351_2017_0035`) e cumprir o que ela pede.
 
-- **Despacho** (`GCGEO_005352_2017_0051.pdf`, 27/04/2025): à DIP para instrução e
-  análise técnica das respostas. Antes, o relator já pedira que se informasse se houve
-  **quitação**.
-- **Contexto**: notificações para desconto em folha — a SESAP respondeu fora do prazo
-  (resposta = processo 001467/2025) e a SEAD no prazo (resposta = 301123/2025).
-- **Fazer**: (1) ler os processos-resposta; (2) verificar implantação dos descontos e
-  repasses ao FRAP; (3) conferir o débito; (4) informação conclusiva sobre quitação.
-- ⏱️ **445 dias parado** — de longe o mais antigo da carteira. Se a análise completa
-  não sair agora, ao menos uma informação parcial devolvendo ao relator evita que
-  continue envelhecendo.
+## 19. 003267/2023 (Carlos Thompson) — ⏱️ 315 dias
 
-## 22. 001126/2015 — Execução do 002274/2008, PM Boa Saúde (George)
+- Despacho de 05/12/2025: informar se o desconto em folha de **Francisco Rogério Melo de
+  Freitas** (PM Itaú) foi implantado, já que a prefeitura não comprovou nada. Débito de
+  R$ 1.000,00.
+- **Fazer:** consultar o SIAI e o FRAP e mandar uma informação curta.
 
-- **Despacho** (`GCGEO_001126_2015_0020.pdf`, 20/03/2026): instrução e análise
-  técnica, e **apreciar supostos pagamentos parciais** levantados pelo MPjTC (ev. 35).
-- **Contexto**: em 2023 o então relator Tarcísio deu por cumprido o objetivo e mandou
-  arquivar; em 08/2025 a CCD devolveu o feito por despacho impreciso
-  (`CCD_001126_2015_0017.pdf` — Provimento 001/2020-CORREG). Há inscrição em dívida
-  ativa (só multa) desde 2018.
-- **Fazer**: (1) levantar os pagamentos vinculados ao débito do Ac. 435/2014
-  (`Exe_Debito`/boletos/FRAP) e o teor do ev. 35; (2) conciliar com a conclusão de
-  cumprimento de 2023; (3) informação conclusiva: quitação total (arquivamento) ou
-  saldo remanescente (cobrança do resíduo).
+## 20. 004883/2024 (Paulo Roberto)
+
+- **Despacho** de 19/08, acolhendo o MPC. Desde 08/2025 há um desconto de R$ 210,63
+  ("3012 – DESCONTO FRAP") na folha de **Rivelino Câmara** (PM Patu). O relator quer saber se
+  ele corresponde a esta execução ou à **004907/2024** e se há repasse. Se não for possível
+  identificar, pede notificação à PM Patu pela DE. Débito de R$ 10.266,67.
+- **Fazer:** cruzar o FRAP (valores e datas) com os dois débitos. Se ficar ambíguo, propor a
+  notificação.
+
+## 21–22. 003051/2025 e 700985/2012 (Renato)
+
+- **003051/2025** (CM Santa Maria): despacho de 13/04. Pede análise da resposta à
+  Notificação 460/2026 (eventos 85–87). Débito de R$ 5.600,00.
+- **700985/2012** (PM São Rafael): despacho de 30/04. Pede pronunciamento após a certidão do
+  ev. 43 e a resposta à Notificação 312/2026. Débito de R$ 27.448,00.
+- Os dois estão parados há cerca de 6 meses.
+
+## 23. 002167/2025 (George)
+
+- As baixas foram lançadas em 30/07, mas restam 3 débitos em aberto: **R$ 1.358.118,14**,
+  R$ 135.811,81 e R$ 634,19.
+- **Fazer:** conferir se os dois débitos grandes são da mesma pessoa do desconto ou de outros
+  responsáveis. O de R$ 634,19 parece ser residual.
+
+## 24. 002013/2025 (Antônio Ed) — "Finalizado" com divergência
+
+- Na conferência de 14/10 (`processos/projetos/desconto_folha_finalizados/resumo.md`), o
+  retido foi de **R$ 21.887,96**, contra R$ 11.968,94 notificados. No FRAP entraram
+  R$ 6.942,87 e na baixa R$ 1.994,82. O débito ainda aparece Em Aberto (R$ 8.052,57).
+- **Fazer:** análise manual. Pode haver desconto a maior (devolução) ou repasse faltando.
+
+## 25. 021694/2016 (Paulo Roberto) — só tramitar
+
+- Quitado: certidão declaratória e "Pagamento integral e Arquivo" em 30/07.
+- **Fazer:** tramitar e trocar o marcador.
+
+## 26. 017663/2017 (Gilberto Jales)
+
+- Continua igual à versão anterior. É preciso conferir no FRAP a **OB 2017OB0805737 de
+  14/12/2017, de R$ 2.947,61**, que inclui os R$ 574,54. Feito isso, a informação conclui o
+  caso.
+
+## 27. 301624/2026 (sem relator)
+
+- Também sem mudança: Ofício SEAD 3668/2026 sobre possível duplicidade no **000423/2024**
+  (R$ 21.474,79 × R$ 22.688,44, José Ribamar Leite Nóbrega).
 
 ---
 
-# Grupo C — lote de 10 aposentadorias (Renato Costa Dias) ⚠️
+# Grupo C — saldo residual de "atualização automática"
 
-Todos chegaram juntos (30/06–02/07) com o mesmo despacho da SECSS: *"devidamente
-publicado no Diário Eletrônico, encaminhe-se à DIP para cumprimento da
-Decisão/Acórdão"*. Todos são acórdãos da **sessão virtual de 10/06/2026**, com
-dispositivo idêntico:
+## 28–29. 701107/2012 (R$ 259,42) e 000728/2025 (R$ 98,34)
 
-- **a)** multa de **R$ 1.000,00** ao Sr. **Nereu Batista Linhares** (art. 107, II,
-  "f", LCE 464/2012), por descumprimento de determinação;
-- **b)** intimação do gestor para eventual recurso;
-- **c)** **renovação da determinação**, prazo de **30 dias úteis após o trânsito** para
-  o IPERN regularizar, sob pena de **multa diária de R$ 50,00** (art. 110 LCE 464/2012).
+- **Despachos GCGEO** de 25/09 (Marco Antônio em substituição), com o mesmo texto. A CCD
+  disse que o saldo vinha de "atualização automática do sistema", mas o relator quer saber
+  **por que** o sistema atualiza.
+- **Fazer:** uma informação gêmea explicando a correção monetária que incide entre a data
+  de atualização da notificação e o crédito efetivo de cada parcela. Juntar a memória de
+  cálculo e propor a cobrança do resíduo ou o cancelamento.
+- É a mesma pergunta dos itens 1–2 (b.iii/b.iv). Vale escrever uma explicação-padrão e
+  reaproveitá-la nos quatro.
 
-| Processo | Acórdão | Interessado | Origem | Decisão descumprida |
-|----------|---------|-------------|--------|---------------------|
-| 008964/2016 | 303/2026 | Maria Josineide de Oliveira | 093871/2015-SESAP | 2285/2020 |
-| 009603/2016 | 304/2026 | Varli Morais Beserra Rocha | 194704/2014-SESAP | 2245/2020 |
-| 010283/2016 | 305/2026 | Ivanize Tibúrcio da Silva | 123067/2014-SESAP | 2197/2020 |
-| 011489/2016 | 306/2026 | Marta Maria dos Santos | 220851/2014-SESAP | 1506/2020 |
-| 015164/2016 | 307/2026 | Maria das Graças de Oliveira | 261898/2015-SESAP | 2024/2020 |
-| 017040/2017 | 308/2026 | Alzeneide Oliveira de Andrade | 425464/2016-SESAP | 1624/2020 |
-| 018127/2017 | 309/2026 | Inês Firmino Alves da Silva | 030096/2017-SESAP | 2033/2020 |
-| 021486/2016 | 310/2026 | Expedito Vieira de Figueiredo | 036417/2014-SESAP | 2629/2020 |
-| 101067/2018 | 311/2026 | Themis Teixeira Geovanine | 2018.4.00092-IPERN | 1164/2020 |
-| 102600/2018 | 312/2026 | Maria Zilma da Silva | 2018.4.01138-IPERN | 1645/2020 |
+---
 
-*(o 11º do lote, **008920/2017** / Ac. 302/2026, já teve a multa cadastrada — item 1.)*
+# Grupo D — execução e análise
 
-## ⚠️ Antes de cadastrar: triagem contra o MS 0807247-93.2025
+## 30. 005824/2019 (Marco Antônio) — ⏱️ 1 ano parado
 
-Oito dos dez têm origem **SESAP** e a ementa de todos é "percepção de vantagem
-transitória indevida" — exatamente o objeto do Proc. Judicial
-0811707-97.2021.8.20.5001, cujas multas o TJ/RN **anulou em 29/06/2026**, 19 dias
-**depois** da sessão que gerou estes acórdãos. Cadastrar as 10 multas sem triagem
-arrisca cobrar dívida anulada; não cadastrar nenhuma arrisca deixar prescrever as que
-não estão abrangidas (o precedente do 001390/2023 mostra que há casos fora do escopo).
+- O despacho "À DIP" de 16/10/2025 veio depois da citação de 5 dias (Mandado 1461/2025, AR
+  de 11/10/2025). O marcador "EXECUÇÃO - Instaurar processo" está lá desde 20/10/2025.
+  Débitos de R$ 5.829,34 e **R$ 1.383.000,00**.
+- **Fazer:** instaurar a execução (art. 118). É o mais urgente do grupo D pelo valor e pelo
+  tempo parado.
 
-**Sequência sugerida:**
+## 31. 101053/2022 (Marco Antônio) — MACAUPREV
 
-1. **Triar** processo a processo: a determinação descumprida (Decisões 1164 a
-   2629/2020) versa sobre **vantagem transitória de servidor da saúde**? Se sim,
-   provável abrangência pela anulação; se não (caso do 001390/2023), segue a execução.
-2. Para os **abrangidos**: informação única, com quadro dos 8–10 processos,
-   noticiando o acórdão do TJ e sugerindo a **não constituição** da multa (ou o
-   sobrestamento) até o trânsito do MS — mesma tese já usada nos 003380/2024 e
-   002564/2024, que aguardam deliberação do GCAED.
-3. Para os **não abrangidos**: cadastrar a multa de R$ 1.000, controlar o prazo dos
-   30 dias úteis do item "c" e a multa diária de R$ 50,00.
-4. Reconferir o **008920/2017**, já cadastrado, sob o mesmo critério.
-5. Convém **aguardar/consultar** o resultado dos 003380 e 002564 no GCAED: se o
-   relator acolher o sobrestamento, o critério para as 10 fica definido sem
-   retrabalho.
+- Despacho de 26/08: medidas do art. 118. A multa é de R$ 1.100 e há obrigação de fazer não
+  cumprida. A informação de liquidação da cominatória já está **gerada** em
+  `processos/informacoes/101053_2022/` (02/09), mas **não foi cadastrada**.
+- **Fazer:** revisar (os valores podem ter mudado desde 02/09), cadastrar, assinar e
+  tramitar.
 
-O lote é repetitivo e mecanizável — um script de cadastro + uma informação com quadro
-resolve os 10 de uma vez, desde que a triagem venha antes.
+## 32. 101227/2022 (Marco Antônio)
+
+- A CCD certificou em 10/09 a instauração da execução **000941/2026**. Ficou pendente a
+  obrigação de fazer, com documentos nos ev. 56–57. Marcador "Monitorar obrigação de fazer"
+  (08/10).
+- **Fazer:** analisar os ev. 56–57 e informar se a obrigação foi cumprida.
+
+## 33. 001126/2015 (George)
+
+- Sem mudança: despacho de 20/03 pedindo análise dos pagamentos parciais apontados pelo MPC
+  (ev. 35). Cerca de R$ 124 mil em aberto (débitos 2826 e 2827).
+
+## 34. 003485/2019 (Paulo Roberto)
+
+- **Despacho** de 17/08. A CCD ratificou a quitação da multa (Certidão 501859/2023), mas no
+  e-Contas os débitos **16228 e 16229** aparecem como "pago parcialmente". Antes disso, o MPC
+  (11/08) opinou pela **prescrição** do ressarcimento e da multa ressarcitória residual.
+- **No banco:** em aberto 16231 (R$ 43.145,98) e 27790 (R$ 3.295,88).
+- **Fazer:** seguir a cadeia dos débitos 16228/16229 até a folha, explicar o status e
+  aproveitar para se manifestar sobre a prescrição.
+
+## 35. 012744/2014 (Gilberto Jales) — PM Tangará
+
+- Despacho de 29/09: petição de Jorge Eduardo de Carvalho Bezerra alegando erro na multa
+  (R$ 36.861,70 × R$ 8.700,00). A informação está **gerada** em
+  `processos/informacoes/012744_2014/` (05/10), mas **não foi cadastrada**.
+- **Fazer:** cadastrar, assinar e tramitar.
+
+## 36. 004954/2020 (Maria Adélia)
+
+- Marcador "DÚVIDAS E ERROS RESOLVER". Último evento em 2023 ("apuração aberta, arquivo").
+  Débitos de R$ 16.054,81 e R$ 0,00 (este certamente é erro), ambos Em Aberto.
+- **Fazer:** identificar o erro, pedir o cancelamento do débito zerado e definir o destino.
+
+---
+
+# Grupo E — acompanhamento e encerramento
+
+- **003303/2023** (George): parcelamento em curso. Atenção: a sequência é estranha — parcela
+  5/20 em 04/08, depois "deferimento / parcela 1/20" em 11/09 e 2/20 em 06/10, o que indica
+  reparcelamento. Conferir se o parcelamento anterior foi cancelado corretamente.
+- **000924/2020** (Gilberto Jales): quitado (33/33, certidão de 06/10). Falta verificar a
+  obrigação de fazer (item "b" do acórdão, Portal da Transparência 2019). Faz parte do
+  projeto `arquivamento_debitos_pagos`.
+- **301072/2026** (Gilberto Jales): retirar o nome de Ludmila Rosado da lista de devedores,
+  só para as execuções 002561/2018 e 003524/2019 (inexigibilidade judicial, decisão
+  revisível). Tarefa curta.
+- **005210/2018** (Potiguar): despacho de 13/09 pedindo providências sobre a documentação do
+  Juízo da 1ª Vara de Apodi e da PM Itaú (apensado 001614/2024).
+- **003040/2022** (Antônio Ed): no ARQUI desde 30/01/2025. Só falta encerrar a distribuição.
 
 ---
 
 # Priorização sugerida
 
-1. **Fechar o grupo A** (5 processos, tudo já pronto): assinar o 002009, tramitar
-   003380/002564/008920 e completar o 001390 — este último tem **ordem expressa de
-   cumprimento imediato** do relator.
-2. **Triagem do lote C** (10 processos de uma vez): decide-se o critério e ganha-se
-   quase um terço da carteira. Depende de definir a extensão do acórdão do TJ.
-3. **Três antecedentes GAANA em lote** (002009 já feito, 002014 e 003336): há cobrança
-   expressa da relatora em dois deles ("dentro da necessária brevidade").
-4. **Quatro anotações CGAD** (302904, 005202, 003325, 008389): trabalho já conhecido,
-   com script pronto.
-5. **Curtos e bem delimitados**: 301072 (retirar nome da lista), 301624 (duplicidade
-   SEAD), 000237+000460 (PGE silente, informação gêmea), 017663 (basta conferir uma OB
-   no FRAP — o caso destravou com a resposta de 20/07).
-6. **Mutirão B4** (003639, 005352, 001126): conciliação folha × FRAP, os mais
-   trabalhosos. O 005352 está **parado há 445 dias** — merece pelo menos uma
-   informação parcial.
-7. **002166/2024**: instauração de execução (art. 118), 65 dias parado.
+1. **Cadastrar o que já está pronto:** 005352/2017 (538 dias parado), 101053/2022,
+   012744/2014, além de tramitar 021694/2016 e encerrar 003040/2022.
+2. **Nereu pós-SS 5.749:** retomada dos 4 sobrestados do GCCTH e do 003380 (GCAED); quesitos
+   do 000099 e do 001418; explicação-padrão do residual, que também resolve 701107 e 000728.
+3. **005824/2019:** instaurar a execução (1 ano parado, R$ 1,38 mi).
+4. **Lote "monitorar desconto"** (000473, 003653, 000102, 003678, 000460, 000237, 000863,
+   002835, 003267): um passe no SIAI × FRAP resolve todos.
+5. **Respostas e análises antigas:** 003051, 700985, 005351, 003639, 004883, 003485, 001126.
+6. **Curtos:** 017663 (conferir uma OB), 301072, 301624, 002013, 002167, 101227, 004954,
+   005210, 003303, 000924.

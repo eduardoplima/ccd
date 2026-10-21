@@ -47,8 +47,8 @@ CACHE = OUTPUT_DIR / "automacao" / "nereu_retomada_gcaed_v2_textos.pkl"
 RELATOR = "Antônio Ed Souza Santana"  # Conselheiro titular
 MS = "Mandado de Segurança Cível nº 0807247-93.2025.8.20.0000"
 DATA = "Natal/RN, data da assinatura eletrônica."
-# multa isolada: (processo) -> (acórdão, evento, valor), conferidos no texto do acórdão
-MULTA_ISOLADA = {"004898/2024": ("Acórdão nº 104/2024-TC", 66, 1000.00)}
+# multa isolada: (processo) -> (acórdão, evento no processo original, valor), conferidos no texto do acórdão
+MULTA_ISOLADA = {"004898/2024": ("Acórdão nº 104/2024-TC", 98, 1000.00)}
 # valor máximo da multa (art. 323 do RI, atualizado por portaria da Presidência) usado pela DE no teto
 VALORES_MAXIMOS = {16054.81, 17728.31, 19659.84}
 
@@ -64,7 +64,7 @@ SQL_DEBITOS = """
     JOIN Processos p ON p.IdProcesso = mp.IdProcesso
     JOIN Exe_Debito d ON d.IdProcessoExecucao = p.IdProcesso AND d.DataCancelamento IS NULL
     LEFT JOIN Exe_Debito_MultaCominatoria mc ON mc.IdDebito = d.IdDebito
-    WHERE mp.IdMarcador = :marcador AND mp.DataExclusao IS NULL
+    WHERE mp.IdMarcador = :marcador  -- marcador excluído dos 57 em 09/2026: não filtrar DataExclusao
       AND NOT EXISTS (SELECT 1 FROM Exe_Debito f WHERE f.IdDebitoAnterior = d.IdDebito)
 """
 
@@ -115,19 +115,25 @@ def textos(processos: list[str]) -> dict[str, list[dict]]:
     return {p: [{**r, "texto": sem_acento(r["texto"] or "")} for r in cache[p]] for p in processos}
 
 
-def multa(processo: str, rows: list[dict], debito) -> dict:
-    """Origem da multa e, quando diária, a prova de que o débito já está no teto."""
+def multa(processo: str, rows: list[dict], rows_origem: list[dict], debito) -> dict:
+    """Origem da multa e, quando diária, a prova de que o débito já está no teto.
+    Os eventos citados são os do processo original (`rows_origem`), não os das cópias na execução."""
     if processo in MULTA_ISOLADA:
         acordao, evento, valor = MULTA_ISOLADA[processo]
-        texto = next(r["texto"] for r in rows if r["evento"] == evento)
+        texto = next(r["texto"] for r in rows_origem if r["evento"] == evento)
         n = re.search(r"(\d+/\d{4})", acordao).group(1)
         assert re.search(rf"ACORDAO N\w*\.? {n}", texto, re.I), f"{processo}: Evento {evento} não é o {acordao}"
         assert float(debito.valor) == valor and not no_teto(debito.valor), f"{processo}: débito {debito.valor}"
         return {"cominatoria": False, "decisao": acordao, "evento_decisao": evento, "valor": brl(valor)}
     rows = sorted(rows, key=lambda r: r["evento"])
-    decisao = next(r for r in rows if CLAUSULA.search(r["texto"]) and DECISAO.search(r["texto"]))
-    despacho = [r for r in rows if DESPACHO_TETO.search(r["texto"])]
-    assert len(despacho) == 1, f"{processo}: {len(despacho)} despachos do Relator com o teto de 50%"
+    rows_origem = sorted(rows_origem, key=lambda r: r["evento"])
+    na_execucao = next(r for r in rows if CLAUSULA.search(r["texto"]) and DECISAO.search(r["texto"]))
+    decisao = next((r for r in rows_origem if CLAUSULA.search(r["texto"]) and DECISAO.search(r["texto"])), None)
+    assert decisao, f"{processo}: decisão da multa diária não achada no processo original"
+    assert DECISAO.search(decisao["texto"]).groups() == DECISAO.search(na_execucao["texto"]).groups(), (
+        f"{processo}: decisão do original ≠ da execução")
+    despacho = [r for r in rows_origem if DESPACHO_TETO.search(r["texto"])]
+    assert len(despacho) == 1, f"{processo}: {len(despacho)} despachos do Relator com o teto de 50% no original"
     assert no_teto(debito.valor), f"{processo}: {debito.valor} não é 50% do valor máximo"
     limites = {float(v.replace(".", "").replace(",", ".")) for r in rows for v in LIMITE_DE.findall(r["texto"])}
     if debito.limite == debito.limite:  # não-NaN: tipo 5
@@ -142,18 +148,19 @@ def paragrafos(c: dict) -> list[tuple[str, list[str]]]:
     """(parágrafo numerado, citações recuadas que vêm logo depois)."""
     nereu = ("ao Sr. Nereu Batista Linhares, na qualidade de gestor do Instituto de Previdência dos "
              "Servidores do Estado do Rio Grande do Norte (IPERN)")
+    no_original = f"do Processo nº {c['origem']}-TC"
     if c["cominatoria"]:
         abertura = (
             f"Trata-se de Processo de Execução instaurado para a cobrança de débito imputado "
-            f"{nereu}, em razão do descumprimento da {c['decisao']} (Evento nº {c['evento_decisao']}), "
-            f"proferida nos autos do Processo nº {c['origem']}-TC, que fixou multa diária de R$ 50,00 "
+            f"{nereu}, em razão do descumprimento da {c['decisao']}, "
+            f"proferida nos autos do Processo nº {c['origem']}-TC (Evento nº {c['evento_decisao']}), que fixou multa diária de R$ 50,00 "
             "(cinquenta reais) por dia de atraso, limitada ao teto previsto no art. 323, inciso II, "
             "alínea “f”, do Regimento Interno.")
     else:
         abertura = (
             f"Trata-se de Processo de Execução instaurado para a cobrança de débito imputado {nereu}, "
-            f"decorrente da multa de R$ {c['valor']} aplicada pelo {c['decisao']} (Evento nº {c['evento_decisao']}), proferido nos autos "
-            f"do Processo nº {c['origem']}-TC, com fundamento no art. 107, inciso II, alínea “f”, da Lei "
+            f"decorrente da multa de R$ {c['valor']} aplicada pelo {c['decisao']}, proferido nos autos "
+            f"do Processo nº {c['origem']}-TC (Evento nº {c['evento_decisao']}), com fundamento no art. 107, inciso II, alínea “f”, da Lei "
             "Complementar Estadual nº 464/2012, em razão do descumprimento de decisão desta Corte.")
     ps: list[tuple[str, list[str]]] = [
         (abertura, []),
@@ -179,8 +186,8 @@ def paragrafos(c: dict) -> list[tuple[str, list[str]]]:
     if c["cominatoria"]:
         ps.append((
             f"No que concerne ao montante devido, registre-se que a multa diária já atingiu o limite máximo "
-            f"fixado. Nos termos da {c['decisao']} (Evento nº {c['evento_decisao']}) e do Despacho da Relatoria "
-            f"(Evento nº {c['evento_despacho']}), que estabeleceu corresponder o teto a 50% (cinquenta por "
+            f"fixado. Nos termos da {c['decisao']} (Evento nº {c['evento_decisao']} {no_original}) e do Despacho da Relatoria "
+            f"(Evento nº {c['evento_despacho']} {no_original}), que estabeleceu corresponder o teto a 50% (cinquenta por "
             "cento) do valor máximo da multa vigente, o débito encontra-se cadastrado em "
             f"R$ {c['valor']}, valor correspondente ao referido limite. Não há, portanto, período adicional "
             "de mora a ser apurado, estando o crédito integralmente quantificado.", []))
@@ -194,9 +201,7 @@ def paragrafos(c: dict) -> list[tuple[str, list[str]]]:
          "reduzida eficácia. Mostra-se oportuno, assim, o "
          "encaminhamento do débito à Procuradoria-Geral do Estado para inscrição em dívida ativa e cobrança, "
          "nos termos do art. 118, inciso II e § 1º, da mesma Lei Complementar.", []),
-        ("Ante o exposto, esta Coordenadoria sugere o encaminhamento dos autos ao Ministério Público junto "
-         "ao Tribunal de Contas (MPC), para manifestação acerca da remessa do débito à Procuradoria-Geral do "
-         "Estado para inscrição em dívida ativa.", []),
+        ("Ante o exposto, encaminham-se os autos ao Exmo. Cons. Relator para deliberação.", []),
     ]
     return ps
 
@@ -266,18 +271,21 @@ if __name__ == "__main__":
     itens = carregar()
     debitos = run_query_df(SQL_DEBITOS, marcador=MARCADOR).set_index("processo")
     assert debitos.index.is_unique, "processo com mais de um débito vivo"
-    pdfs = textos([i["processo"] for i in itens])
+    origens = {}
+    for item in itens:
+        m = re.search(r"PROCESSO N\S* (\d{6}/\d{4})", debitos.loc[item["processo"]].assunto)
+        assert m, f"{item['processo']}: assunto sem processo de origem: {debitos.loc[item['processo']].assunto!r}"
+        origens[item["processo"]] = m.group(1)
+    pdfs = textos([i["processo"] for i in itens] + sorted(set(origens.values())))
 
     com_teto = 0
     for item in itens:
         p = item["processo"]
         numero, ano = p.split("/")
         deb = debitos.loc[p]
-        origem = re.search(r"PROCESSO N\S* (\d{6}/\d{4})", deb.assunto)
-        assert origem, f"{p}: assunto sem processo de origem: {deb.assunto!r}"
-        c = {"processo": p, "arquivo": f"{numero}_{ano}", "assunto": deb.assunto, "origem": origem.group(1),
+        c = {"processo": p, "arquivo": f"{numero}_{ano}", "assunto": deb.assunto, "origem": origens[p],
              "evento_sobrestamento": item["evento"], "data_sobrestamento": item["data"].strftime("%d/%m/%Y"),
-             **multa(p, pdfs[p], deb)}
+             **multa(p, pdfs[p], pdfs[origens[p]], deb)}
         out, ps = gerar(c)
 
         texto = "\n".join(par.text for par in docx.Document(str(out)).paragraphs)
@@ -288,8 +296,8 @@ if __name__ == "__main__":
         assert ("limite máximo fixado" in texto) == c["cominatoria"], p
         assert out.with_suffix(".pdf").is_file(), "PDF não gerado"
         com_teto += c["cominatoria"]
-        print(f'{p}: sobrestamento Ev. {item["evento"]}, {c["decisao"]} Ev. {c["evento_decisao"]}'
-              + (f', despacho Ev. {c["evento_despacho"]}, R$ {c["valor"]} (teto)' if c["cominatoria"]
+        print(f'{p}: sobrestamento Ev. {item["evento"]}, {c["decisao"]} Ev. {c["evento_decisao"]} ({c["origem"]})'
+              + (f', despacho Ev. {c["evento_despacho"]} ({c["origem"]}), R$ {c["valor"]} (teto)' if c["cominatoria"]
                  else f', R$ {c["valor"]} (multa isolada)'))
 
     assert com_teto == len(itens) - len(MULTA_ISOLADA), com_teto
