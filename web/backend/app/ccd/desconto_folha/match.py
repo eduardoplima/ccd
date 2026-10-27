@@ -245,8 +245,9 @@ def match_automatico(session: Session, *, id_cadastro: int) -> int:
     """Vincula cada valor sem match ao seu único candidato. Devolve quantos vinculou.
 
     Parcelas mensais iguais (ex.: 3 x 1.800,00) nunca têm candidato único; quando o
-    grupo de N parcelas de mesmo valor encontra exatamente N créditos a partir da
-    primeira competência, vincula em ordem de data.
+    grupo de N parcelas de mesmo valor encontra N ou mais créditos a partir da
+    primeira competência, vincula os N primeiros em ordem de data; a sobra (repasse
+    de mesmo valor depois do fim da resposta, de outro processo) fica sem vínculo.
     """
     data_resposta = session.execute(
         text("SELECT DataResposta FROM CCDDescontoFolha WHERE IdCCDDescontoFolha = :c"),
@@ -279,9 +280,9 @@ def match_automatico(session: Session, *, id_cadastro: int) -> int:
             float(primeiro["valor"]),
             data_minima(mes=primeiro["mes"], ano=primeiro["ano"], data_resposta=data_resposta),
         )
-        if len(cands) != len(grupo):
+        if len(cands) < len(grupo):
             continue
-        for v, c in zip(grupo, cands):
+        for v, c in zip(grupo, cands):  # zip para no fim do grupo: ignora a sobra
             vincular(
                 session,
                 id_valor=int(v["id_valor"]),

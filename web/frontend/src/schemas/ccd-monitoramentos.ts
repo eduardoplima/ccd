@@ -7,9 +7,12 @@ export type Urgencia = z.infer<typeof urgenciaSchema>;
 // mirrors backend MonitoramentoOut
 export const monitoramentoSchema = z.object({
   processo: z.string(),
+  id_processo: z.number().nullable().optional(),
   tipo: z.string().nullable(),
   relator: z.string().nullable(),
   assunto: z.string().nullable(),
+  distribuido_a: z.string().nullable().optional(),
+  distribuido_em: z.string().nullable().optional(),
   marcadores: z.array(z.string()),
   dias_ccd: z.number().nullable(),
   ultima_peca_evento: z.number().nullable(),

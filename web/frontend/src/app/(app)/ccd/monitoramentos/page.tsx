@@ -6,6 +6,8 @@ import remarkGfm from "remark-gfm";
 
 import { SortableHead, useClientSort } from "@/components/sortable-table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMonitoramentosCCD } from "@/hooks/use-ccd-monitoramentos";
@@ -22,13 +24,24 @@ const URGENCIAS: {
 ];
 const ORDEM_URGENCIA: Record<Urgencia, number> = { alta: 0, media: 1, baixa: 2 };
 
-type Filtro = Urgencia | "todas";
-type SortKey = "processo" | "tipo" | "relator" | "urgencia" | "dias_ccd" | "ultima_peca";
+const TODOS = "__todos__";
+const SEM_DISTRIBUICAO = "__sem__";
+type SortKey =
+  | "processo"
+  | "tipo"
+  | "relator"
+  | "assunto"
+  | "distribuido_a"
+  | "urgencia"
+  | "dias_ccd"
+  | "ultima_peca";
 
 const GETTERS: Record<SortKey, (m: Monitoramento) => string | number | null | undefined> = {
   processo: (m) => m.processo.split("/").reverse().join("/"),
   tipo: (m) => m.tipo,
   relator: (m) => m.relator,
+  assunto: (m) => m.assunto,
+  distribuido_a: (m) => m.distribuido_a,
   urgencia: (m) => (m.urgencia ? ORDEM_URGENCIA[m.urgencia] : 9),
   dias_ccd: (m) => m.dias_ccd,
   ultima_peca: (m) => m.ultima_peca_data,
@@ -47,10 +60,31 @@ function UrgenciaBadge({ urgencia }: { urgencia: Urgencia | null }) {
 
 export default function MonitoramentosPage() {
   const { data, isFetching, isError, error } = useMonitoramentosCCD();
-  const [filtro, setFiltro] = useState<Filtro>("todas");
-  const items = (data?.items ?? []).filter((m) => filtro === "todas" || m.urgencia === filtro);
-  const contar = (u: Filtro) =>
-    (data?.items ?? []).filter((m) => u === "todas" || m.urgencia === u).length;
+  const [servidor, setServidor] = useState<string>(TODOS);
+  const [soSemDistribuicao, setSoSemDistribuicao] = useState(false);
+  const todos = data?.items ?? [];
+  const doServidor = (m: Monitoramento, s: string) =>
+    s === TODOS || (m.distribuido_a ?? SEM_DISTRIBUICAO) === s;
+  const porServidor = todos.filter(
+    (m) => doServidor(m, servidor) && (!soSemDistribuicao || !m.distribuido_a),
+  );
+  const contagemServidor = new Map<string, number>();
+  for (const m of todos) {
+    const k = m.distribuido_a ?? SEM_DISTRIBUICAO;
+    contagemServidor.set(k, (contagemServidor.get(k) ?? 0) + 1);
+  }
+  const servidores = [...contagemServidor.entries()]
+    .filter(([k]) => k !== SEM_DISTRIBUICAO)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const abasServidor = [
+    { valor: TODOS, label: "Todos", n: todos.length },
+    ...servidores.map(([k, n]) => ({ valor: k, label: k, n })),
+    {
+      valor: SEM_DISTRIBUICAO,
+      label: "Não distribuído",
+      n: contagemServidor.get(SEM_DISTRIBUICAO) ?? 0,
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -70,19 +104,27 @@ export default function MonitoramentosPage() {
 
       {data ? (
         <>
-          <Tabs value={filtro} onValueChange={(v) => setFiltro(v as Filtro)}>
-            <TabsList>
-              {[{ valor: "todas" as Filtro, label: "Todas" }, ...URGENCIAS].map((u) => (
-                <TabsTrigger key={u.valor} value={u.valor}>
-                  {u.label}
+          <Tabs value={servidor} onValueChange={setServidor}>
+            <TabsList className="h-auto flex-wrap justify-start">
+              {abasServidor.map((a) => (
+                <TabsTrigger key={a.valor} value={a.valor}>
+                  {a.label}
                   <Badge variant="outline" className="ml-2">
-                    {contar(u.valor)}
+                    {a.n}
                   </Badge>
                 </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
-          <MonitoramentosTabela items={items} />
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="sem-distribuicao"
+              checked={soSemDistribuicao}
+              onCheckedChange={(v) => setSoSemDistribuicao(v === true)}
+            />
+            <Label htmlFor="sem-distribuicao">Somente processos sem distribuição</Label>
+          </div>
+          <MonitoramentosTabela items={porServidor} />
         </>
       ) : null}
     </div>
@@ -101,6 +143,8 @@ function MonitoramentosTabela({ items }: { items: Monitoramento[] }) {
             <SortableHead label="Processo" col="processo" sort={sort} onClick={toggle} />
             <SortableHead label="Tipo" col="tipo" sort={sort} onClick={toggle} />
             <SortableHead label="Relator" col="relator" sort={sort} onClick={toggle} />
+            <SortableHead label="Assunto" col="assunto" sort={sort} onClick={toggle} />
+            <SortableHead label="Distribuído a" col="distribuido_a" sort={sort} onClick={toggle} />
             <TableCell className="font-medium">Jurisdicionado · natureza</TableCell>
             <TableCell className="font-medium">Próximo passo</TableCell>
             <SortableHead label="Urgência" col="urgencia" sort={sort} onClick={toggle} />
@@ -117,7 +161,7 @@ function MonitoramentosTabela({ items }: { items: Monitoramento[] }) {
         <TableBody>
           {sorted.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
                 Nenhum processo.
               </TableCell>
             </TableRow>
@@ -129,12 +173,33 @@ function MonitoramentosTabela({ items }: { items: Monitoramento[] }) {
                   onClick={() => setAberto(aberto === m.processo ? null : m.processo)}
                 >
                   <TableCell className="whitespace-nowrap font-mono text-xs font-medium">
-                    {m.processo}
+                    {m.id_processo ? (
+                      <a
+                        className="text-primary underline"
+                        href={`https://processos.tce.rn.gov.br/#/dashboard/processos/${m.id_processo}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {m.processo}
+                      </a>
+                    ) : (
+                      m.processo
+                    )}
                   </TableCell>
                   <TableCell>{m.tipo ?? "—"}</TableCell>
                   <TableCell className="max-w-40 text-xs">{m.relator ?? "—"}</TableCell>
+                  <TableCell className="max-w-56 text-xs">{m.assunto ?? "—"}</TableCell>
+                  <TableCell className="max-w-40 text-xs">
+                    {m.distribuido_a ?? "—"}
+                    {m.distribuido_em ? (
+                      <div className="text-muted-foreground">
+                        desde {formatarData(m.distribuido_em)}
+                      </div>
+                    ) : null}
+                  </TableCell>
                   <TableCell className="max-w-md text-xs">
-                    <div className="font-medium">{m.jurisdicionado ?? m.assunto ?? "—"}</div>
+                    <div className="font-medium">{m.jurisdicionado ?? "—"}</div>
                     <div className="text-muted-foreground">{m.natureza ?? "Sem análise."}</div>
                   </TableCell>
                   <TableCell className="max-w-md text-xs">
@@ -156,7 +221,7 @@ function MonitoramentosTabela({ items }: { items: Monitoramento[] }) {
                 </TableRow>
                 {aberto === m.processo ? (
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableCell colSpan={8} className="whitespace-normal">
+                    <TableCell colSpan={10} className="whitespace-normal">
                       <div className="flex flex-col gap-3 p-2">
                         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                           <span>

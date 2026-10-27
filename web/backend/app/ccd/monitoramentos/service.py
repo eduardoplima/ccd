@@ -47,10 +47,20 @@ SELECT p.IdProcesso AS id_processo,
        RTRIM(p.numero_processo) AS numero, RTRIM(p.ano_processo) AS ano,
        RTRIM(p.codigo_tipo_processo) AS tipo, RTRIM(r.nome) AS relator,
        RTRIM(p.assunto) AS assunto,
-       DATEDIFF(DAY, ent.recebido_em, GETDATE()) AS dias_ccd
+       DATEDIFF(DAY, ent.recebido_em, GETDATE()) AS dias_ccd,
+       dist.distribuido_a, dist.distribuido_em
 FROM dbo.Processos p
 LEFT JOIN dbo.Relator r ON r.codigo = p.codigo_relator
 LEFT JOIN entrada ent ON ent.IdProcesso = p.IdProcesso
+-- distribuição aberta (sem fim de análise) a um servidor da CCD; nome pelo CPF em GenPessoa
+OUTER APPLY (
+    SELECT TOP 1 COALESCE(RTRIM(gp.Nome), RTRIM(d.usuario)) AS distribuido_a,
+           d.data_inicio_analise AS distribuido_em
+    FROM dbo.Lrf_Distribuicao d
+    OUTER APPLY (SELECT TOP 1 g.Nome FROM dbo.GenPessoa g WHERE g.Documento = d.usuario) gp
+    WHERE d.idProcesso = p.IdProcesso AND d.setor = 'CCD' AND d.data_fim_analise IS NULL
+    ORDER BY d.data_inicio_analise DESC
+) dist
 WHERE p.setor_atual = 'CCD' AND p.IdProcessoApensador IS NULL
   AND (p.codigo_tipo_processo = 'MON' OR EXISTS (
         SELECT 1 FROM dbo.Pro_MarcadorProcesso mp
@@ -221,9 +231,12 @@ def montar(
         items.append(
             MonitoramentoOut(
                 processo=proc,
+                id_processo=row.get("id_processo"),
                 tipo=row["tipo"],
                 relator=row["relator"],
                 assunto=row["assunto"],
+                distribuido_a=row.get("distribuido_a"),
+                distribuido_em=row.get("distribuido_em"),
                 marcadores=row["marcadores"],
                 dias_ccd=row["dias_ccd"],
                 ultima_peca_evento=ev,

@@ -34,9 +34,12 @@ class Analise(AnaliseLLM):
 
 class MonitoramentoOut(BaseModel):
     processo: str
+    id_processo: int | None = None  # link ao e-Contas
     tipo: str | None
     relator: str | None
     assunto: str | None
+    distribuido_a: str | None = None  # servidor da CCD com distribuição aberta
+    distribuido_em: datetime | None = None
     marcadores: list[str]
     dias_ccd: int | None
     ultima_peca_evento: int | None
