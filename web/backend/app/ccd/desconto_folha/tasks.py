@@ -129,7 +129,10 @@ _PGE_DO = (
 
 # ponytail: match pelo IdDebito exato; envio feito no filho de cadeia desdobrada não é visto.
 _WHERE_ENVIADOS_PGE = f"""
-WHERE c.Ativo = 1 AND (
+WHERE c.Ativo = 1
+  -- ponytail: exceção manual pela observação (ex.: 002031/2024); coluna própria se virar rotina
+  AND COALESCE(c.Observacoes, '') NOT LIKE '%PGE indevido%'
+  AND (
     (c.IdDebito IS NOT NULL AND {_PGE_DO.format(deb="c.IdDebito", vivo=_PGE_VIVO)})
     OR (c.IdDebito IS NULL AND c.IdPessoa IS NOT NULL
         AND EXISTS (SELECT 1 {_DEBITOS_DA_PESSOA}
