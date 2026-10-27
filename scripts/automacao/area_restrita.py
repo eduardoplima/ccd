@@ -8,6 +8,7 @@ Uso:
     python -m scripts.automacao.area_restrita cancelar-distribuicao 12345/2024 [--setor DIP] [--dry-run]
     python -m scripts.automacao.area_restrita excluir-informacao 12345/2024 [--dry-run]
     python -m scripts.automacao.area_restrita tramitar 12345/2024 [--destino DIP] --relator ana [--dry-run]
+    python -m scripts.automacao.area_restrita excluir-suspensao 3053/2022 --observacao "..." [--debito 23051] [--dry-run]
 """
 
 from __future__ import annotations
@@ -88,7 +89,46 @@ def main() -> int:
     p_tram.add_argument("--providencia", help='providência explícita, ex.: "ENVIO A GAANA"')
     p_tram.add_argument("--dry-run", action="store_true", help="vai até o form; não confirma")
 
+    p_susp = sub.add_parser(
+        "excluir-suspensao",
+        help="Gerenciar Dívidas: excluir a suspensão do débito (volta a 'Dívidas em Aberto')",
+    )
+    p_susp.add_argument("processos", nargs="+", help="processo de EXECUÇÃO numero/ano")
+    p_susp.add_argument("--observacao", required=True, help="campo Observações (máx. 300)")
+    p_susp.add_argument("--debito", type=int,
+                        help="IdDebito (só com 1 processo); sem ele, o débito vigente do banco")
+    p_susp.add_argument("--dry-run", action="store_true", help="mostra a suspensão; não exclui")
+
     args = parser.parse_args()
+
+    if args.tarefa == "excluir-suspensao":
+        if args.debito and len(args.processos) > 1:
+            print("--debito só com um processo")
+            return 1
+        from ccd.db import run_query_df
+        ar = AreaRestrita()
+        falhas = 0
+        for proc in args.processos:
+            try:
+                numero, ano = parse_processo(proc)
+                debito = args.debito
+                if not debito:  # débito vigente = folha da cadeia
+                    deb = run_query_df(
+                        "SELECT d.IdDebito FROM Exe_Debito d JOIN Processos p "
+                        "ON p.IdProcesso = d.IdProcessoExecucao "
+                        "WHERE p.numero_processo = :n AND p.ano_processo = :a "
+                        "AND d.DataCancelamento IS NULL AND NOT EXISTS "
+                        "(SELECT 1 FROM Exe_Debito f WHERE f.IdDebitoAnterior = d.IdDebito)",
+                        n=f"{numero:06d}", a=ano)
+                    if len(deb) != 1:
+                        raise RuntimeError(f"{len(deb)} débitos vigentes; informe --debito")
+                    debito = int(deb.IdDebito.iloc[0])
+                print(f"{numero:06d}/{ano} (débito {debito}):")
+                ar.excluir_suspensao(numero, ano, debito, args.observacao, dry_run=args.dry_run)
+            except Exception as e:  # segue para o próximo do lote
+                print(f"  ERRO: {e}")
+                falhas += 1
+        return 1 if falhas else 0
 
     if args.tarefa == "substituir":
         ar = AreaRestrita()

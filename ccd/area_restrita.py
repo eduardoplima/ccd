@@ -39,6 +39,11 @@ PAGINA_DIGITAR = (
     BASE + "SISTEMAS/Informacoes/MovDigitarInformacaoPIN.asp"
     "?tcenet_Sistema=Administrativo&tcenet_Modulo=Informacoes"
 )
+# Administrativo > Acompanhamento de Decisões > Gerenciar Dívidas (Multas e Devoluções)
+PAGINA_DIVIDAS = (
+    BASE + "SISTEMAS/EXECUCOES/DebitoPessoa.asp"
+    "?tcenet_Sistema=Administrativo&tcenet_Modulo=EXECUCOES"
+)
 MOTIVO_INFORMACAO_INCOMPLETA = "4"  # cmbMotivoExclusao
 MODELO_TITULO = "InformacaoInstrutiva"
 MODELO_RESUMO = "Informação instrutiva...."
@@ -493,6 +498,53 @@ class AreaRestrita:
         if dry_run:
             print(f"  [dry-run] {len(alvos)} exclusão(ões) NÃO enviada(s)")
         return excluidas
+
+    def _consultar_dividas(self, numero: int, ano: int, id_debito: int) -> tuple[str, dict, str, list[str]]:
+        """Consulta o processo de EXECUÇÃO em Gerenciar Dívidas. Retorna (action, campos,
+        aba do débito, args de ajaxSuspensaoDebito). A aba é a última "Dívidas ..." antes
+        do botão "Débito com Suspensao Cadastrada" do débito."""
+        r = self._get(PAGINA_DIVIDAS)
+        action, campos = self._form(r)
+        r = self._post(action, {**campos, "txtNumeroProcessoExecucao": f"{numero:06d}",
+                                "txtAnoProcessoExecucao": str(ano), "oculto": "C"})
+        m = re.search(rf"ajaxSuspensaoDebito\(('{id_debito}'[^)]*)\)", r.text)
+        if not m:
+            raise LookupError(f"débito {id_debito} não aparece na consulta de {numero:06d}/{ano}")
+        abas = re.findall(r"Titulo_tabela[^>]*>(?:\s*<[^>]+>)*\s*(D[ií]vidas [^<]{3,60})", r.text[:m.start()])
+        aba = abas[-1].strip() if abas else "?"
+        args = [a.strip(" '\"") for a in m.group(1).split(",")]
+        action, campos = self._form(r)
+        return action, campos, aba, args
+
+    def excluir_suspensao(self, numero: int, ano: int, id_debito: int, observacao: str,
+                          dry_run: bool = False) -> None:
+        """Gerenciar Dívidas > aba Dívidas Suspensas > 'Débito com Suspensao Cadastrada' >
+        Manutenção (EditarSuspensao) > Observações > 'Excluir Suspensão' (oculto=ES).
+        O débito volta para Dívidas em Aberto (status 1) — verificado com nova consulta."""
+        action, campos, aba, args = self._consultar_dividas(numero, ano, id_debito)
+        if aba != "Dívidas Suspensas":
+            raise LookupError(f"débito {id_debito} está em {aba!r}, não em 'Dívidas Suspensas'")
+        q, q2, q3, q4 = args
+        r = self._get(BASE + f"SISTEMAS/EXECUCOES/ajaxSuspensao.asp?q={q}&q2={q2}&q3={q3}&q4={q4}")
+        edits = re.findall(r"EditarSuspensao\(([^)]*)\)", r.text)
+        if len(edits) != 1:
+            raise RuntimeError(f"débito {id_debito}: {len(edits)} suspensões cadastradas (esperado 1)")
+        id_susp, inicio, fim, motivo, judicial, obs = re.findall(r"'([^']*)'", edits[0])
+        print(f"  suspensão {id_susp}: início {inicio}, fim {fim or '-'}, motivo {motivo}, "
+              f"proc. judicial {judicial or '-'}, obs. {obs or '-'}")
+        payload = {**campos, "idDebito": str(id_debito), "txtIdSuspensaoDebito": id_susp,
+                   "txtDataInicioSuspensao": inicio, "txtDataFinalSuspensao": fim,
+                   "txtMotivoSuspensao": motivo, "txtNumeroProcessoJudicial": judicial,
+                   "txtObservacaoSuspensao": observacao[:300]}
+        if dry_run:
+            print(f"  [dry-run] observação={observacao[:300]!r}; oculto=ES NÃO enviado")
+            return
+        r = self._post(action, {**payload, "oculto": "ES"})
+        print(f"  enviado: {self._mensagem(r)}")
+        _, _, aba, _ = self._consultar_dividas(numero, ano, id_debito)
+        if aba != "Dívidas em Aberto":
+            raise RuntimeError(f"débito {id_debito} ficou em {aba!r} (suspensão NÃO excluída?)")
+        print(f"  verificado: débito {id_debito} em 'Dívidas em Aberto'")
 
     def tramitar(self, processos: list[tuple[int, int]], destino: str, providencia: str,
                  dry_run: bool = False) -> None:
