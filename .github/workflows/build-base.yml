@@ -32,4 +32,5 @@ jobs:
         run: docker build -f Dockerfile.base -t ccd-backend-base:latest .
 
       - name: Confirmar tamanho
-        run: docker image inspect ccd-backend-base:latest --format '{{.Size}}' | awk '{printf "Tamanho: %.0f MB\n", $1/1024/1024}'
+        run: |
+          docker image inspect ccd-backend-base:latest --format '{{.Size}}' | awk '{printf "Tamanho: %.0f MB\n", $1/1024/1024}'
