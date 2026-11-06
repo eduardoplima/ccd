@@ -19,6 +19,7 @@ MODULOS: tuple[str, ...] = (
     "ccd.painel",
     "ccd.inicio",
     "ccd.monitoramentos",
+    "ccd.tags",
     "ccd.desconto-folha",
     "ccd.beneficios",
     "ccd.automacao",

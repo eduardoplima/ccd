@@ -13,6 +13,7 @@ export const MODULOS = [
     label: "Monitoramentos",
     href: "/ccd/monitoramentos",
   },
+  { key: "ccd.tags", grupo: "ccd", label: "TAGs", href: "/ccd/tags" },
   {
     key: "ccd.desconto-folha",
     grupo: "ccd",
