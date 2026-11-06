@@ -915,6 +915,7 @@ def list_awaiting_dispatch(
     page: int,
     page_size: int,
     current_user: UserORM,
+    processo: Optional[str] = None,
 ) -> schemas.AwaitingDispatchPage:
     """Entidades aprovadas/enviadas das quatro ``*Staging``, agrupadas por
     processo e ordenadas pela revisão mais recente."""
@@ -960,6 +961,9 @@ def list_awaiting_dispatch(
             if data and (g["reviewed_at"] is None or data > g["reviewed_at"]):
                 g["reviewed_at"] = data
 
+    if processo and processo.strip():
+        ids = set(_resolve_processo_ids(processo))
+        grupos = {idp: g for idp, g in grupos.items() if idp in ids}
     ordenados = sorted(
         grupos.items(), key=lambda kv: kv[1]["reviewed_at"] or datetime.min, reverse=True
     )

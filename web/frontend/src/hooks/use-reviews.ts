@@ -35,7 +35,7 @@ export const reviewKeys = {
   }) => ["reviews", "decisoes", args] as const,
   detail: (id: number) => ["reviews", "decisao", id] as const,
   texto: (id: number) => ["reviews", "decisao-texto", id] as const,
-  awaitingDispatch: (args: { page: number; pageSize: number }) =>
+  awaitingDispatch: (args: { page: number; pageSize: number; processo?: string }) =>
     ["reviews", "awaiting-dispatch", args] as const,
   orgaos: ["reviews", "orgaos"] as const,
   reservas: ["reviews", "reservas"] as const,
@@ -94,15 +94,17 @@ export function useDecisoes({
 export function useAwaitingDispatch({
   page = 1,
   pageSize = 20,
+  processo,
   enabled = true,
 }: {
   page?: number;
   pageSize?: number;
+  processo?: string;
   enabled?: boolean;
 } = {}) {
   return useQuery({
-    queryKey: reviewKeys.awaitingDispatch({ page, pageSize }),
-    queryFn: () => listAwaitingDispatch({ page, pageSize }),
+    queryKey: reviewKeys.awaitingDispatch({ page, pageSize, processo }),
+    queryFn: () => listAwaitingDispatch({ page, pageSize, processo }),
     enabled,
   });
 }

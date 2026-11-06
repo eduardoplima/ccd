@@ -7,7 +7,7 @@ come from ``HTTPException`` — FastAPI serializes them as ``{"detail": "..."}``
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -29,6 +29,7 @@ router = APIRouter(
 def list_awaiting_dispatch(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    processo: Optional[str] = Query(None),
     session: Session = Depends(get_db_session),
     current_user: UserORM = Depends(get_current_user),
 ) -> schemas.AwaitingDispatchPage:
@@ -36,6 +37,7 @@ def list_awaiting_dispatch(
         session,
         page=page,
         page_size=page_size,
+        processo=processo,
         current_user=current_user,
     )
 

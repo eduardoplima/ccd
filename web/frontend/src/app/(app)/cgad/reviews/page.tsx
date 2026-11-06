@@ -149,6 +149,7 @@ export default function ReviewsPage() {
   const awaiting = useAwaitingDispatch({
     page,
     pageSize: PAGE_SIZE,
+    processo,
     enabled: isAwaiting,
   });
 
@@ -220,58 +221,56 @@ export default function ReviewsPage() {
         </div>
       )}
 
-      {!isAwaiting && (
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setProcesso(processoInput.trim());
-            setPage(1);
-          }}
-        >
-          <Input
-            value={processoInput}
-            onChange={(e) => setProcessoInput(e.target.value)}
-            placeholder="Buscar por processo (ex.: 123/2026)"
-            className="max-w-xs"
-            inputMode="numeric"
-          />
-          <Button type="submit" variant="outline">
-            Buscar
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setProcesso(processoInput.trim());
+          setPage(1);
+        }}
+      >
+        <Input
+          value={processoInput}
+          onChange={(e) => setProcessoInput(e.target.value)}
+          placeholder="Buscar por processo (ex.: 123/2026)"
+          className="max-w-xs"
+          inputMode="numeric"
+        />
+        <Button type="submit" variant="outline">
+          Buscar
+        </Button>
+        {processo && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setProcessoInput("");
+              setProcesso("");
+              setPage(1);
+            }}
+          >
+            Limpar
           </Button>
-          {processo && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setProcessoInput("");
-                setProcesso("");
-                setPage(1);
-              }}
-            >
-              Limpar
-            </Button>
-          )}
-          {isRealizadas && (
-            <SelectNative
-              aria-label="Revisor"
-              className="w-auto"
-              value={revisor}
-              onChange={(e) => {
-                setRevisor(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">Todos ({totalRealizadas})</option>
-              {listaRevisores.map((r) => (
-                <option key={r.usuario} value={r.usuario}>
-                  {r.usuario} ({r.total})
-                </option>
-              ))}
-            </SelectNative>
-          )}
-        </form>
-      )}
+        )}
+        {isRealizadas && (
+          <SelectNative
+            aria-label="Revisor"
+            className="w-auto"
+            value={revisor}
+            onChange={(e) => {
+              setRevisor(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">Todos ({totalRealizadas})</option>
+            {listaRevisores.map((r) => (
+              <option key={r.usuario} value={r.usuario}>
+                {r.usuario} ({r.total})
+              </option>
+            ))}
+          </SelectNative>
+        )}
+      </form>
 
       {tab === "pendentes" && (
         <div className="flex items-center justify-between gap-2">

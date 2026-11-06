@@ -100,12 +100,14 @@ export async function approveDecisao(
 export async function listAwaitingDispatch({
   page = 1,
   pageSize = 20,
+  processo,
 }: {
   page?: number;
   pageSize?: number;
+  processo?: string;
 } = {}): Promise<AwaitingDispatchPage> {
   const response = await apiClient.get("/api/v1/cgad/reviews/awaiting-dispatch", {
-    params: { page, page_size: pageSize },
+    params: { page, page_size: pageSize, processo: processo || undefined },
   });
   return awaitingDispatchPageSchema.parse(response.data);
 }
