@@ -48,6 +48,8 @@ class ReviewStatus(str, enum.Enum):
     approved = "approved"
     rejected = "rejected"
     dispatched = "dispatched"
+    # tirado do acervo por acórdão posterior (desconstituição etc.); ver colunas *Remocao
+    removed = "removed"
 
 
 _REVIEW_STATUS_ENUM = Enum(
@@ -113,6 +115,10 @@ class ObrigacaoStagingORM(Base):
     PayloadOriginal = Column(JSON, nullable=True)
     ObservacoesRevisao = Column(Text, nullable=True)
     DataEnvio = Column(DateTime, nullable=True)
+    IdComposicaoPautaRemocao = Column(Integer, nullable=True)
+    JustificativaRemocao = Column(Text, nullable=True)
+    RemovidoPor = Column(String(255), nullable=True)
+    DataRemocao = Column(DateTime, nullable=True)
 
 
 class MultaStagingORM(Base):
@@ -245,3 +251,7 @@ class RecomendacaoStagingORM(Base):
     PayloadOriginal = Column(JSON, nullable=True)
     ObservacoesRevisao = Column(Text, nullable=True)
     DataEnvio = Column(DateTime, nullable=True)
+    IdComposicaoPautaRemocao = Column(Integer, nullable=True)
+    JustificativaRemocao = Column(Text, nullable=True)
+    RemovidoPor = Column(String(255), nullable=True)
+    DataRemocao = Column(DateTime, nullable=True)

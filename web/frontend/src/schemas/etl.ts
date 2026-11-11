@@ -96,7 +96,7 @@ export type ExtracaoEventoListPage = z.infer<typeof extracaoEventoListPageSchema
 export const decisaoItemRowSchema = z.object({
   id: z.number().int(),
   descricao: z.string(),
-  status: z.enum(["pending", "approved", "rejected"]),
+  status: z.enum(["pending", "approved", "rejected", "dispatched", "removed"]),
 });
 export type DecisaoItemRow = z.infer<typeof decisaoItemRowSchema>;
 

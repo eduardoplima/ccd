@@ -7,7 +7,7 @@ import { z } from "zod";
 export const tipoEntidadeSchema = z.enum(["multa", "obrigacao", "recomendacao", "ressarcimento"]);
 export type TipoEntidade = z.infer<typeof tipoEntidadeSchema>;
 
-export const reviewStatusSchema = z.enum(["pending", "approved", "rejected", "dispatched"]);
+export const reviewStatusSchema = z.enum(["pending", "approved", "rejected", "dispatched", "removed"]);
 export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 
 export const spanMatchStatusSchema = z.enum(["exact", "fuzzy", "not_found"]);

@@ -113,7 +113,7 @@ class DecisaoExtraidaItem(BaseModel):
 class DecisaoItemRow(BaseModel):
     id: int  # IdObrigacao or IdRecomendacao on the final table
     descricao: str
-    status: Literal["pending", "approved", "rejected", "dispatched"]
+    status: Literal["pending", "approved", "rejected", "dispatched", "removed"]
 
 
 class DecisaoExtraidaListPage(BaseModel):

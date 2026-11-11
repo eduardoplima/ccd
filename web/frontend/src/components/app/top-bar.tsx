@@ -40,6 +40,7 @@ const SUBNAV: Record<string, NavItem[]> = {
       label: "Multas não cominadas",
       modulo: "cgad.multas-nao-cominadas",
     },
+    { href: "/cgad/remocoes", label: "Remoções", modulo: "cgad.reviews", editar: true },
     { href: "/cgad/dataset", label: "Conjunto de Dados", modulo: "cgad.dataset" },
   ],
   frap: [

@@ -74,12 +74,16 @@ const ITEM_STATUS_LABEL: Record<DecisaoItemRow["status"], string> = {
   pending: "pendente",
   approved: "aprovado",
   rejected: "rejeitado",
+  dispatched: "enviado",
+  removed: "removido",
 };
 
 const ITEM_STATUS_TONE: Record<DecisaoItemRow["status"], string> = {
   pending: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   approved: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   rejected: "bg-red-500/15 text-red-700 dark:text-red-300",
+  dispatched: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  removed: "bg-muted text-muted-foreground line-through",
 };
 
 function ItemStatusBadge({ status }: { status: DecisaoItemRow["status"] }) {

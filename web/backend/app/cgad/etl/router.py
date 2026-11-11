@@ -430,7 +430,7 @@ def _decisao_to_item(session: Session, decisao: NERDecisaoORM) -> schemas.Decisa
     )
 
 
-def _status_from_staging(raw) -> Literal["pending", "approved", "rejected", "dispatched"]:
+def _status_from_staging(raw) -> Literal["pending", "approved", "rejected", "dispatched", "removed"]:
     if raw is None:
         return "pending"
     return raw.value if isinstance(raw, ReviewStatus) else str(raw)

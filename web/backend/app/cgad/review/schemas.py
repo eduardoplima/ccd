@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_valid
 
 
 Tipo = Literal["multa", "obrigacao", "recomendacao", "ressarcimento"]
-ReviewStatusStr = Literal["pending", "approved", "rejected", "dispatched"]
+ReviewStatusStr = Literal["pending", "approved", "rejected", "dispatched", "removed"]
 SpanMatchStatusStr = Literal["exact", "fuzzy", "not_found"]
 
 
