@@ -36,7 +36,7 @@ function rotuloAcordao(a: Acordao | undefined, id?: number | null): string {
   if (!a) return id ? `#${id}` : "—";
   const tipo = a.tipo === "D" ? "Decisão" : "Acórdão";
   const num = a.numero ? `${Number(a.numero)}/${a.ano ?? ""}` : `#${a.id_composicao_pauta}`;
-  const data = a.data_sessao ? ` (${new Date(a.data_sessao).toLocaleDateString("pt-BR")})` : "";
+  const data = a.data_sessao ? ` (${a.data_sessao.split("-").reverse().join("/")})` : "";
   return `${tipo} ${num}${data}`;
 }
 
