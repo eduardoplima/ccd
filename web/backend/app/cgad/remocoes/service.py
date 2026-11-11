@@ -87,12 +87,13 @@ def _item(tipo: str, x: Any, id_: int, descricao: str | None) -> schemas.ItemCur
 
 def _itens(session: Session, id_processo: int) -> list[schemas.ItemCurado]:
     o, r = ObrigacaoStagingORM, RecomendacaoStagingORM
+    # .all(): sem MARS o MSSQL não aceita dois cursores abertos na mesma conexão
     obrigacoes = session.scalars(
         select(o).where(o.IdProcesso == id_processo, o.Status.in_(_VISIVEIS))
-    )
+    ).all()
     recomendacoes = session.scalars(
         select(r).where(r.IdProcesso == id_processo, r.Status.in_(_VISIVEIS))
-    )
+    ).all()
     return [
         _item("obrigacao", x, x.IdObrigacaoStaging, x.DescricaoObrigacao) for x in obrigacoes
     ] + [
