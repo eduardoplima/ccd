@@ -10,7 +10,7 @@ arquivamento vai ao colegiado após manifestação da DIP e parecer do MPC.
 | a | assessoria GCAED | apensar as 78 da Tabela 1 ao 96/2022 | pendente no gabinete (96/2022 ainda no GCAED) |
 | b | DIP | juntar cópia do despacho na APR + certidão dos 19 originários da Tabela 2 | **certidão gerada** com o despacho apensado (`apr_3474_2021/certidao_003474_2021.pdf`), não juntada — APR está na DAP |
 | c | DIP | revisar o levantamento pelo Ev. 103 e reunir remanescentes | **feito**: único remanescente 003380/2024 (apontado na informação; está no GCAED) |
-| d | DIP | manifestar-se sobre o arquivamento | **informação gerada**, favorável (`000096_2022/`), não cadastrada |
+| d | DIP | manifestar-se sobre o arquivamento | **informação gerada**, favorável, com fluxograma do levantamento (`000096_2022/`), não cadastrada |
 | e | DIP | encaminhar ao MPC | pendente: quando o 96/2022 chegar à CCD → ciclo e-Contas, tramitar DIP "ENVIO AO MPC" |
 
 ## Rodar

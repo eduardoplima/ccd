@@ -20,7 +20,7 @@ import docx
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Pt, RGBColor
+from docx.shared import Cm, Pt, RGBColor
 from docxtpl import DocxTemplate
 
 from ccd.config import REPO_ROOT
@@ -93,8 +93,92 @@ def _tabela_apos(d, ancora_texto: str, legenda: str, cabecalho: list[str], linha
     cap._p.addnext(t._tbl)
 
 
+def _figura_apos(d, ancora_texto: str, legenda: str, png: Path) -> None:
+    """Insere legenda "Figura N – título" + imagem após o parágrafo-âncora."""
+    ancora = next(p for p in d.paragraphs if ancora_texto in p.text)
+    cap = d.add_paragraph()
+    cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    cap.paragraph_format.keep_with_next = True
+    run_cap = cap.add_run(legenda)
+    run_cap.bold = True
+    run_cap.font.color.rgb = RGBColor.from_string(TCE["verde_escuro"])
+    fig = d.add_paragraph()
+    fig.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    fig.add_run().add_picture(str(png), width=Cm(15.5))
+    ancora._p.addnext(cap._p)
+    cap._p.addnext(fig._p)
+
+
+def fluxograma() -> Path:
+    """Fluxograma do levantamento do item "c" (matplotlib, paleta TCE)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import FancyBboxPatch
+
+    V, E, C, T = (f"#{TCE[k]}" for k in ("verde_principal", "verde_escuro", "cinza_claro", "cinza_texto"))
+    fig, ax = plt.subplots(figsize=(8, 7), dpi=220)
+    ax.set_xlim(0, 118)
+    ax.set_ylim(0, 100)
+    ax.axis("off")
+
+    def box(x, y, w, h, txt, kind="proc"):
+        fc, ec, cor = {"proc": ("white", V, T), "dec": (C, V, T), "fim": (V, E, "white")}[kind]
+        ax.add_patch(FancyBboxPatch((x - w / 2, y - h / 2), w, h, boxstyle="round,pad=0,rounding_size=1.5",
+                                    fc=fc, ec=ec, lw=1.2))
+        ax.text(x, y, txt, ha="center", va="center", fontsize=7.3, color=cor,
+                fontweight="bold" if kind == "fim" else "normal", linespacing=1.35)
+
+    def seta(p, q, lbl="", dx=0, dy=0):
+        ax.annotate("", xy=q, xytext=p, arrowprops=dict(arrowstyle="-|>", color=E, lw=1, shrinkA=0, shrinkB=0))
+        if lbl:
+            ax.text((p[0] + q[0]) / 2 + dx, (p[1] + q[1]) / 2 + dy, lbl, fontsize=7, color=E, ha="center",
+                    va="center", bbox=dict(fc="white", ec="none", pad=1))
+
+    n1 = L["execucoes_nereu"]
+    LX, MX, RX = 18, 54, 90  # colunas
+    box(MX, 94, 66, 9, f"{n1} execuções de multa em face do Sr. Nereu Batista Linhares\n"
+                       "(débitos vigentes no sistema de execução)")
+    box(MX, 79, 32, 9, "Relatoria do Conselheiro\nAntonio Ed Souza Santana?", "dec")
+    box(RX, 79, 32, 11, f"{n1 - L['gcaed']} de outros relatores\n({L['outros_relatores_na_apr']} com originário na APR)\n"
+                        "não alcançadas pelo Despacho")
+    box(MX, 63, 32, 10, "Originário consta da\nplanilha do Evento 103\nda APR nº 003474/2021?", "dec")
+    box(RX, 63, 32, 9, f"{L['gcaed_fora_apr']} fora da APR\ntrâmite regular")
+    box(MX, 46, 32, 9, "Relacionada no\nDespacho do Evento 63?", "dec")
+    box(LX, 30, 35, 13, "Conferida: relatoria GCAED,\noriginário igual ao do sistema,\nsem desconto em folha nem PGE\n"
+                        f"({L['protestadas_t1']} protestadas, {L['suspensas_t1']} suspensas)")
+    box(MX, 30, 35, 13, "Com ato efetivo de cobrança:\n17 no MPC, 000117/2022\ndevolvida ao Gabinete e\n"
+                        "000134/2022 com\ndesconto em folha")
+    box(RX, 30, 32, 10, "Ato efetivo de cobrança?\n(desconto em folha / PGE)", "dec")
+    box(LX, 11, 34, 11, "Reunião ao 000096/2022\ne arquivamento\n(itens “a” e “d”)", "fim")
+    box(MX, 11, 34, 11, "Certidão à APR:\ndesconsiderar na multa\ndiária global (item “b”)", "fim")
+    box(RX, 11, 32, 11, "Remanescente a reunir:\n003380/2024\n(Quadro 1 – item “c”)", "fim")
+
+    seta((MX, 89.5), (MX, 83.5))
+    seta((MX + 16, 79), (RX - 16, 79), "não", dy=2.2)
+    seta((MX, 74.5), (MX, 68), f"sim ({L['gcaed']})", dx=7)
+    seta((MX + 16, 63), (RX - 16, 63), "não", dy=2.2)
+    seta((MX, 58), (MX, 50.5), f"sim ({L['gcaed_na_apr']})", dx=7)
+    seta((MX - 16, 46), (LX, 46))
+    seta((LX, 46), (LX, 36.5), f"Tabela 1 ({len(L['tabela1'])})", dx=-9)
+    seta((MX, 41.5), (MX, 36.5), f"Tabela 2 ({len(L['tabela2'])})", dx=9)
+    seta((MX + 16, 46), (RX, 46))
+    seta((RX, 46), (RX, 35), "não relacionada", dx=9)
+    seta((LX, 23.5), (LX, 16.5))
+    seta((MX, 23.5), (MX, 16.5))
+    seta((RX, 25), (RX, 16.5), "não", dx=4)
+    ax.text(RX + 16.5, 30, "sim:\nnenhuma", fontsize=7, color=E, ha="left", va="center")
+    ax.text(1, 2, f"Nota: {len(L['divergencias'])} processos originários das Tabelas 1 e 2 não foram localizados "
+                  "na planilha do Evento 103 (Quadro 2).", fontsize=7, color=T, style="italic", ha="left")
+    out = BASE / "000096_2022" / "fluxograma_levantamento.png"
+    fig.savefig(out, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return out
+
+
 def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
-           quadros: list[tuple[str, str, list[str], list[list[str]]]]) -> None:
+           quadros: list[tuple[str, str, list[str], list[list[str]]]],
+           figuras: list[tuple[str, str, Path]] = ()) -> None:
     doc = DocxTemplate(TEMPLATE)
     doc.render({"processo": f"{processo} - TC", "assunto": assunto, "relator": RELATOR, "parágrafos": ps})
     d = doc.docx  # pós-processamento (get_docx() descartaria o render)
@@ -107,6 +191,8 @@ def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
         nxt.getparent().remove(nxt)
     for q in quadros:
         _tabela_apos(d, *q)
+    for f in figuras:
+        _figura_apos(d, *f)
     # data antes do bloco de assinatura (sem parágrafos vazios), assinatura presa à data
     assinado = next(p for p in d.paragraphs if "assinado digitalmente" in p.text)
     prev = assinado._p.getprevious()
@@ -136,7 +222,7 @@ def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
     dd = docx.Document(str(out))
     texto = "\n".join(p.text for p in dd.paragraphs)
     assert "{{" not in texto and "}}" not in texto, "placeholder não substituído"
-    for trecho in (*ps, DATA, f"{processo} - TC", RELATOR, f"\n{titulo}\n", *(q[1] for q in quadros)):
+    for trecho in (*ps, DATA, f"{processo} - TC", RELATOR, f"\n{titulo}\n", *(q[1] for q in quadros), *(f[1] for f in figuras)):
         assert trecho in texto, f"faltou {trecho[:60]!r}"
     for proibido in ("É a informação.", "Substituto", "INFORMAÇÃO INSTRUTIVA" if titulo != "INFORMAÇÃO INSTRUTIVA" else "\x00"):
         assert proibido not in texto, f"termo proibido {proibido}"
@@ -222,7 +308,8 @@ def informacao() -> Path:
         f"processos originários do Evento 103 da APR nº 003474/2021-TC ({L['originarios_ev103']} processos "
         "identificados na planilha), cotejada com a totalidade das execuções de multa em face do Sr. Nereu Batista "
         f"Linhares registradas no sistema desta Corte ({L['execucoes_nereu']} execuções, das quais {L['gcaed']} sob a "
-        "relatoria do Conselheiro Antonio Ed Souza Santana). O resultado completo consta da planilha anexa.",
+        "relatoria do Conselheiro Antonio Ed Souza Santana). O roteiro do cotejo está sintetizado na figura a "
+        "seguir e o resultado completo consta da planilha anexa.",
 
         f"Identificaram-se {L['gcaed_na_apr']} execuções sob essa relatoria cujos processos originários integram o "
         f"escopo da APR. Dentre elas, as {n_t1} relacionadas na Tabela 1 do Despacho foram confirmadas: todas "
@@ -296,8 +383,10 @@ def informacao() -> Path:
          ["Tabela do Despacho", "Processo de Execução", "Processo Originário"],
          [[f"Tabela {t}", TC(e), TC(o)] for t, e, o in L["divergencias"]]),
     ]
+    figuras = [("O roteiro do cotejo está sintetizado na figura",
+                "Figura 1 – Fluxograma do levantamento (item “c”)", fluxograma())]
     out = BASE / "000096_2022" / "informacao_000096_2022.docx"
-    montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros)
+    montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros, figuras)
     return out
 
 
