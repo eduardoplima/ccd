@@ -8,7 +8,7 @@ arquivamento vai ao colegiado após manifestação da DIP e parecer do MPC.
 | Item | Quem | O quê | Estado (12/11/2026) |
 |---|---|---|---|
 | a | assessoria GCAED | apensar as 78 da Tabela 1 ao 96/2022 | pendente no gabinete (96/2022 ainda no GCAED) |
-| b | DIP | juntar cópia do despacho na APR + certidão dos 19 originários da Tabela 2 | **certidão gerada** (`apr_3474_2021/`), não juntada — APR está na DAP |
+| b | DIP | juntar cópia do despacho na APR + certidão dos 19 originários da Tabela 2 | **certidão gerada** com o despacho apensado (`apr_3474_2021/certidao_003474_2021.pdf`), não juntada — APR está na DAP |
 | c | DIP | revisar o levantamento pelo Ev. 103 e reunir remanescentes | **feito**: único remanescente 003380/2024 (apontado na informação; está no GCAED) |
 | d | DIP | manifestar-se sobre o arquivamento | **informação gerada**, favorável (`000096_2022/`), não cadastrada |
 | e | DIP | encaminhar ao MPC | pendente: quando o 96/2022 chegar à CCD → ciclo e-Contas, tramitar DIP "ENVIO AO MPC" |
@@ -32,4 +32,4 @@ arquivamento vai ao colegiado após manifestação da DIP e parecer do MPC.
 1. Conferir `setor_atual` do 96/2022 = CCD e os 78 com `IdProcessoApensador` = 96/2022.
 2. Skill `enviar-informacao`: distribuir → cadastrar `000096_2022/informacao_000096_2022.pdf` com anexo
    `levantamento_96_2022.xlsx` → assinar → publicar → tramitar DIP, movimentação "ENVIO AO MPC".
-3. Item b: decidir a juntada na APR (DAP tramita à DIP, ou DAP junta `apr_3474_2021/envio_apr.pdf`).
+3. Item b: decidir a juntada na APR (DAP tramita à DIP, ou DAP junta `apr_3474_2021/certidao_003474_2021.pdf`, que já traz a cópia do despacho)).

@@ -3,7 +3,7 @@ do Despacho do Evento 63 do 000096/2022. Lê levantamento.json (rodar levantamen
 
 Saídas (nada é cadastrado):
   apr_3474_2021/certidao_003474_2021.docx/.pdf + anexos/despacho_ev63_000096_2022.pdf
-  apr_3474_2021/envio_apr.pdf (certidão + cópia do despacho)
+  (o PDF da certidão já sai com a cópia do despacho apensada ao final)
   000096_2022/informacao_000096_2022.docx/.pdf (anexo: ../levantamento_96_2022.xlsx)
 Modelo: scripts/automacao/templates/modelo_informacao.docx (numera os parágrafos); quadros no
 padrão de processos/utils/gerar_informacoes_nereu_resposta_sead.py.
@@ -182,7 +182,9 @@ def certidao() -> Path:
     anexos.mkdir(exist_ok=True)
     despacho = anexos / "despacho_ev63_000096_2022.pdf"
     shutil.copy2(get_info_file_path(DESPACHO_PDF), despacho)
-    merge_pdfs([out.with_suffix(".pdf"), despacho], out.parent / "envio_apr.pdf")
+    pdf = out.with_suffix(".pdf")  # certidão + cópia do despacho num só PDF (o que vai para a APR)
+    merge_pdfs([pdf, despacho], pdf.with_suffix(".tmp.pdf"))
+    pdf.with_suffix(".tmp.pdf").replace(pdf)
     return out
 
 
