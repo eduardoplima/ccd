@@ -318,9 +318,10 @@ def informacao() -> Path:
 
         f"Quanto ao item “b”, esta Coordenadoria elaborou a certidão de que os {n_t2} processos originários "
         "relacionados na Tabela 2 do Despacho deverão ser desconsiderados na contabilização da multa diária global "
-        "cominada no Acórdão nº 162/2022-TC, mantida a apuração do dano ao erário a eles relativo, a qual será "
-        "juntada, acompanhada de cópia do Despacho do Evento 63, aos autos da APR nº 003474/2021-TC, que atualmente "
-        "tramitam na Diretoria de Atos de Pessoal.",
+        "cominada no Acórdão nº 162/2022-TC, mantida a apuração do dano ao erário a eles relativo. Como os autos da "
+        "APR nº 003474/2021-TC tramitam na Diretoria de Atos de Pessoal desde o Despacho do Evento 115 daquele feito, "
+        "a certidão, acompanhada de cópia do Despacho do Evento 63, foi encaminhada àquela Diretoria por memorando, "
+        "para juntada aos autos e consideração na contabilização da multa diária global.",
 
         "Em cumprimento ao item “c”, esta Coordenadoria refez o levantamento adotando como critério a relação de "
         f"processos originários do Evento 103 da APR nº 003474/2021-TC ({L['originarios_ev103']} processos "
