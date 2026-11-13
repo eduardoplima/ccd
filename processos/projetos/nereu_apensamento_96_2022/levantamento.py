@@ -26,7 +26,8 @@ PRINCIPAL = "000096/2022"
 APR = "003474/2021"
 EV_DESPACHO, EV_PLANILHA = 63, 103
 CPF = cpf("NEREU")
-PROC = re.compile(r"(\d{6})\s*/\s*(\d{4})")  # a planilha mistura "N / A" e "N/A"
+# nº do processo ocupa uma linha só; a planilha mistura "N / A" e "N/A" e nem sempre tem zeros à esquerda
+PROC = re.compile(r"^\s*(\d{1,7})\s*/\s*(\d{4})\s*$", re.M)
 
 SQL_UNIVERSO = """
 SELECT e.IdDebito, e.CodigoTipoDebito tipo, e.valorOriginalDebito valor,
@@ -67,7 +68,7 @@ def tabelas_despacho(t: str) -> tuple[list, list]:
 
 
 if __name__ == "__main__":
-    orig103 = {f"{n}/{a}" for n, a in PROC.findall(texto_evento(APR, EV_PLANILHA))}
+    orig103 = {f"{int(n):06d}/{a}" for n, a in PROC.findall(texto_evento(APR, EV_PLANILHA))}
     tab1, tab2 = tabelas_despacho(texto_evento(PRINCIPAL, EV_DESPACHO))
     d1, d2 = dict(tab1), dict(tab2)
 
@@ -89,6 +90,7 @@ if __name__ == "__main__":
 
     divergencias = [(n, e, o) for n, tab in (("1", d1), ("2", d2)) for e, o in tab.items()
                     if o not in orig103]
+    assert not divergencias, f"originários do despacho fora do Ev. 103: {divergencias}"
     remanescentes = ex[ex.gcaed & ex.no_ev103 & (ex.tabela == "") & (ex.execucao != PRINCIPAL)]
     reuniao = ex[ex.execucao.isin(set(d1) | {PRINCIPAL})]
     com_ato = reuniao[reuniao.ato_efetivo]
@@ -110,8 +112,6 @@ if __name__ == "__main__":
         quadro(reuniao).to_excel(xw, sheet_name="Tabela 1 (reunião)", index=False)
         quadro(ex[ex.tabela == "2"]).to_excel(xw, sheet_name="Tabela 2 (desconsiderar)", index=False)
         quadro(remanescentes).to_excel(xw, sheet_name="Remanescentes (item c)", index=False)
-        pd.DataFrame(divergencias, columns=["Tabela", "Processo de execução", "Originário não localizado no Ev. 103"]
-                     ).to_excel(xw, sheet_name="Divergências", index=False)
         quadro(fora_apr).to_excel(xw, sheet_name="GCAED fora da APR", index=False)
         quadro(outros).to_excel(xw, sheet_name="Outros relatores na APR", index=False)
 
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         "remanescentes": remanescentes.execucao.tolist(),
         "remanescentes_detalhe": remanescentes[["execucao", "origem", "setor", "situacao", "tipo", "valor"]]
         .astype(str).to_dict("records"),
-        "divergencias": divergencias, "gcaed_fora_apr": int(len(fora_apr)),
+        "gcaed_fora_apr": int(len(fora_apr)),
         "outros_relatores_na_apr": int(len(outros)),
         "protestadas_t1": int((reuniao.protesto == "Protestada").sum()),
         "suspensas_t1": int((reuniao.situacao == "Suspenso").sum()),
@@ -138,7 +138,6 @@ if __name__ == "__main__":
           f"suspensas {resumo['suspensas_t1']}, protestadas {resumo['protestadas_t1']}",
           f"- Tabela 2: {len(d2)} conferidas",
           f"- Remanescentes (item c): {resumo['remanescentes']}",
-          f"- Divergências (originário não localizado no Ev. 103): {divergencias}",
           f"- GCAED fora da APR (trâmite regular): {len(fora_apr)}; outros relatores com origem na APR: {len(outros)}",
           f"- Setor atual: {PRINCIPAL} = {resumo['setor_principal']}; {APR} = {resumo['setor_apr']}"]
     (BASE / "levantamento.md").write_text("\n".join(md), encoding="utf-8")

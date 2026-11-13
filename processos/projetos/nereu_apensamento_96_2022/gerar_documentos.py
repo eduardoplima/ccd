@@ -104,7 +104,7 @@ def _figura_apos(d, ancora_texto: str, legenda: str, png: Path) -> None:
     run_cap.font.color.rgb = RGBColor.from_string(TCE["verde_escuro"])
     fig = d.add_paragraph()
     fig.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    fig.add_run().add_picture(str(png), width=Cm(13))
+    fig.add_run().add_picture(str(png), width=Cm(15))
     ancora._p.addnext(cap._p)
     cap._p.addnext(fig._p)
 
@@ -119,7 +119,7 @@ def _itens_apos(d, ancora_texto: str, itens: list[str]) -> None:
             novo.pPr.remove(num)
         ind = novo.pPr.find(qn("w:ind"))
         ind.set(qn("w:left"), "1134")  # 2 cm
-        ind.set(qn("w:firstLine"), "0")
+        del ind.attrib[qn("w:firstLine")]
         runs = [r for r in novo if r.tag == qn("w:r")]
         for r in runs[1:]:
             novo.remove(r)
@@ -137,9 +137,9 @@ def fluxograma() -> Path:
     from matplotlib.patches import FancyBboxPatch
 
     V, E, C, T = (f"#{TCE[k]}" for k in ("verde_principal", "verde_escuro", "cinza_claro", "cinza_texto"))
-    fig, ax = plt.subplots(figsize=(8, 7), dpi=220)
+    fig, ax = plt.subplots(figsize=(8, 6.4), dpi=220)
     ax.set_xlim(0, 118)
-    ax.set_ylim(0, 100)
+    ax.set_ylim(4, 100)
     ax.axis("off")
 
     def box(x, y, w, h, txt, kind="proc"):
@@ -188,8 +188,6 @@ def fluxograma() -> Path:
     seta((MX, 23.5), (MX, 16.5))
     seta((RX, 25), (RX, 16.5), "não", dx=4)
     ax.text(RX + 16.5, 30, "sim:\nnenhuma", fontsize=7, color=E, ha="left", va="center")
-    ax.text(1, 2, f"Nota: {len(L['divergencias'])} processos originários das Tabelas 1 e 2 não foram localizados "
-                  "na planilha do Evento 103 (Quadro 2).", fontsize=7, color=T, style="italic", ha="left")
     out = BASE / "000096_2022" / "fluxograma_levantamento.png"
     fig.savefig(out, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -259,7 +257,6 @@ SITUACAO = {"000134/2022": "Desconto em folha implantado"}
 
 def certidao() -> Path:
     tab2 = L["tabela2"]
-    div2 = [(e, o) for t, e, o in L["divergencias"] if t == "2"]
     ps = [
         "Certifico, para os fins do item “b)” das determinações do Despacho proferido pelo Conselheiro Relator "
         "no Evento 63 do Processo nº 000096/2022-TC (Execução da Decisão nº 745/2020-TC), em 11/11/2026, cuja "
@@ -274,11 +271,6 @@ def certidao() -> Path:
         "Certifico, ainda, conforme consignado no referido Despacho, que fica mantida nestes autos a apuração do "
         "dano ao erário relativo aos processos originários acima relacionados, prosseguindo as respectivas "
         "execuções em seu trâmite regular.",
-
-        "Registro, por fim, para a devida apreciação pelo Relator, que os processos originários nº "
-        + " e nº ".join(f"{TC(o)} (Processo de Execução nº {TC(e)})" for e, o in div2)
-        + ", embora relacionados na Tabela 2 do Despacho, não foram localizados por esta Coordenadoria na planilha "
-        "consolidada do Evento 103 destes autos.",
     ]
     linhas = [[str(i), TC(e), TC(o), SITUACAO.get(e, "Remetida ao MPC (dívida ativa – PGE/RN)")]
               for i, (e, o) in enumerate(tab2, 1)]
@@ -319,8 +311,10 @@ def informacao() -> Path:
         "cobrança (desconto em folha de pagamento implantado ou remessa ao Ministério Público de Contas para "
         "inscrição em dívida ativa), por vislumbrar, em juízo preliminar, a incidência do non bis in idem entre a "
         "multa diária individual e a responsabilização concentrada na referida apuração, inclusive a multa diária "
-        f"cominada no Acórdão nº 162/2022-TC. Coube à assessoria do Gabinete o apensamento das {n_t1} execuções da "
-        "Tabela 1 (item “a”) e, a esta Diretoria:",
+        "cominada no Acórdão nº 162/2022-TC.",
+
+        f"Coube à assessoria do Gabinete o apensamento das {n_t1} execuções da Tabela 1 (item “a”, parágrafo 50 do "
+        "Despacho Evento 63) e a esta Diretoria:",
 
         f"Quanto ao item “b”, esta Coordenadoria elaborou a certidão de que os {n_t2} processos originários "
         "relacionados na Tabela 2 do Despacho deverão ser desconsiderados na contabilização da multa diária global "
@@ -332,8 +326,8 @@ def informacao() -> Path:
         f"processos originários do Evento 103 da APR nº 003474/2021-TC ({L['originarios_ev103']} processos "
         "identificados na planilha), cotejada com a totalidade das execuções de multa em face do Sr. Nereu Batista "
         f"Linhares registradas no sistema desta Corte ({L['execucoes_nereu']} execuções, das quais {L['gcaed']} sob a "
-        "relatoria do Conselheiro Antonio Ed Souza Santana). O roteiro do cotejo está sintetizado na figura a "
-        "seguir e o resultado completo consta da planilha anexa.",
+        "relatoria do Conselheiro Antonio Ed Souza Santana). O roteiro do cotejo está sintetizado na Figura 1 e o "
+        "resultado completo consta da planilha anexa.",
 
         f"Identificaram-se {L['gcaed_na_apr']} execuções sob essa relatoria cujos processos originários integram o "
         f"escopo da APR. Dentre elas, as {n_t1} relacionadas na Tabela 1 do Despacho foram confirmadas: todas "
@@ -354,11 +348,6 @@ def informacao() -> Path:
         "possível a esta Diretoria promover o seu apensamento. Sugere-se, assim, que o Gabinete o inclua na reunião "
         "determinada no item “a”. Não foram identificadas execuções remanescentes com desconto em folha implantado "
         "ou remessa ao Ministério Público de Contas que devessem ser acrescidas à certidão do item “b”.",
-
-        "Registra-se, para a devida apreciação pelo Relator, que três processos originários relacionados no "
-        "Despacho não foram localizados por esta Coordenadoria na planilha do Evento 103 da APR, conforme o quadro "
-        "seguinte, de modo que as execuções correspondentes talvez não devam integrar a reunião (Tabela 1) ou a "
-        "certidão (Tabela 2):",
 
         f"As demais {L['gcaed_fora_apr']} execuções sob a mesma relatoria cujos processos originários não integram "
         f"a APR, bem como as {L['outros_relatores_na_apr']} execuções de outros relatores com processo originário no "
@@ -396,22 +385,18 @@ def informacao() -> Path:
         ("preenche o critério fixado", "Quadro 1 – Execução remanescente a reunir a estes autos (item “c”)",
          ["Processo de Execução", "Processo Originário", "Setor atual", "Situação do débito", "Valor original (R$)"],
          [[TC(r["execucao"]), TC(r["origem"]), r["setor"], r["situacao"], valor]]),
-        ("não foram localizados por esta Coordenadoria na planilha",
-         "Quadro 2 – Processos originários do Despacho não localizados no Evento 103 da APR",
-         ["Tabela do Despacho", "Processo de Execução", "Processo Originário"],
-         [[f"Tabela {t}", TC(e), TC(o)] for t, e, o in L["divergencias"]]),
     ]
-    itens = [("e, a esta Diretoria:", [
-        "(b) viabilizar a juntada de cópia do Despacho à APR, certificando que os "
+    itens = [("e a esta Diretoria:", [
+        "b) viabilizar a juntada de cópia do Despacho à APR, certificando que os "
         f"{n_t2} processos originários da Tabela 2 deverão ser desconsiderados na contabilização da multa diária "
         "global;",
-        "(c) revisar o levantamento anexo ao Evento 60 à luz do critério fixado e reunir eventuais execuções "
+        "c) revisar o levantamento anexo ao Evento 60 à luz do critério fixado e reunir eventuais execuções "
         "remanescentes;",
-        "(d) manifestar-se sobre a possibilidade de arquivamento destes autos e dos apensados em situação "
+        "d) manifestar-se sobre a possibilidade de arquivamento destes autos e dos apensados em situação "
         "idêntica; e",
-        "(e) encaminhar o feito ao Ministério Público de Contas, sem retorno ao Gabinete.",
+        "e) encaminhar o feito ao Ministério Público de Contas, sem retorno ao Gabinete.",
     ])]
-    figuras = [("O roteiro do cotejo está sintetizado na figura",
+    figuras = [("execuções da Tabela 2 também foram confirmadas",
                 "Figura 1 – Fluxograma do levantamento (item “c”)", fluxograma())]
     out = BASE / "000096_2022" / "informacao_000096_2022.docx"
     montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros, figuras, itens)
