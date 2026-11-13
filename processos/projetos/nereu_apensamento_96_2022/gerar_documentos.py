@@ -1,9 +1,9 @@
-"""Certidão (APR 003474/2021, item "b") e Informação Instrutiva (000096/2022, itens "c"/"d"/"e")
-do Despacho do Evento 63 do 000096/2022. Lê levantamento.json (rodar levantamento.py antes).
+"""Informação Instrutiva do 000096/2022 (itens "c"/"d"/"e" do Despacho do Evento 63) e cópia do
+Despacho para o memorando à DAP (item "b" — a APR 003474/2021 está na DAP; sem certidão).
+Lê levantamento.json (rodar levantamento.py antes).
 
 Saídas (nada é cadastrado):
-  apr_3474_2021/certidao_003474_2021.docx/.pdf + anexos/despacho_ev63_000096_2022.pdf
-  (o PDF da certidão já sai com a cópia do despacho apensada ao final)
+  apr_3474_2021/anexos/despacho_ev63_000096_2022.pdf (anexo do memorando à DAP)
   000096_2022/informacao_000096_2022.docx/.pdf (anexo: ../levantamento_96_2022.xlsx)
 Modelo: scripts/automacao/templates/modelo_informacao.docx (numera os parágrafos); quadros no
 padrão de processos/utils/gerar_informacoes_nereu_resposta_sead.py.
@@ -25,7 +25,6 @@ from docxtpl import DocxTemplate
 
 from ccd.config import REPO_ROOT
 from ccd.docs import docx_to_pdf
-from ccd.pdf import merge_pdfs
 from ccd.processo import get_info_file_path
 
 BASE = Path(__file__).resolve().parent
@@ -33,9 +32,6 @@ TEMPLATE = str(REPO_ROOT / "scripts" / "automacao" / "templates" / "modelo_infor
 RELATOR = "Antonio Ed Souza Santana"  # Conselheiro titular
 DESPACHO_PDF = {"setor": "GCAED", "arquivo": "GCAED_000096_2022_0054.pdf"}  # Evento 63
 ASSUNTO_96 = "EXECUÇÃO DA DECISÃO PROFERIDA NOS AUTOS DO PROCESSO Nº 019291/2017 - TC"
-ASSUNTO_APR = ("APURAÇÃO DE RESPONSABILIDADE DANO ERÁRIO PERPETRADO PELO IPERN EM FACE DESCUMPRIMENTO "
-               "REITERADO DECISÕES TCE/RN RELATIVAS A BENEFÍCIOS PREVID., CONFORME DETERMINADO NO "
-               "ACÓRDÃO Nº 189/2021 (PROC: 102523/2018)")
 TCE = {"verde_principal": "2E5B3C", "verde_escuro": "1A3D28",
        "cinza_claro": "F2F2F2", "cinza_borda": "CCCCCC", "cinza_texto": "333333"}
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
@@ -251,42 +247,13 @@ def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
     assert out.with_suffix(".pdf").is_file(), "PDF não gerado"
 
 
-# ---------- Certidão na APR (item "b") ----------
-SITUACAO = {"000134/2022": "Desconto em folha implantado"}
-
-
-def certidao() -> Path:
-    tab2 = L["tabela2"]
-    ps = [
-        "Certifico, para os fins do item “b)” das determinações do Despacho proferido pelo Conselheiro Relator "
-        "no Evento 63 do Processo nº 000096/2022-TC (Execução da Decisão nº 745/2020-TC), em 11/11/2026, cuja "
-        "cópia acompanha esta certidão, que os processos originários relacionados no quadro a seguir — vinculados "
-        "a execuções de multa em face do Sr. Nereu Batista Linhares nas quais já foram praticados atos efetivos de "
-        "cobrança, a saber, desconto em folha de pagamento implantado ou remessa ao Ministério Público de Contas para "
-        "inscrição do crédito em dívida ativa e cobrança judicial, nos termos do art. 118, incisos I e II, da Lei "
-        "Complementar Estadual nº 464/2012 — deverão ser desconsiderados na contabilização da multa diária global "
-        "cominada no Acórdão nº 162/2022-TC, por já terem sido objeto de cobrança individual, ponto a ser enfrentado "
-        "por ocasião do julgamento de mérito desta Apuração de Responsabilidade.",
-
-        "Certifico, ainda, conforme consignado no referido Despacho, que fica mantida nestes autos a apuração do "
-        "dano ao erário relativo aos processos originários acima relacionados, prosseguindo as respectivas "
-        "execuções em seu trâmite regular.",
-    ]
-    linhas = [[str(i), TC(e), TC(o), SITUACAO.get(e, "Remetida ao MPC (dívida ativa – PGE/RN)")]
-              for i, (e, o) in enumerate(tab2, 1)]
-    out = BASE / "apr_3474_2021" / "certidao_003474_2021.docx"
-    montar(out, "003474/2021", ASSUNTO_APR, "CERTIDÃO", ps, [(
-        "cuja cópia acompanha esta certidão",
-        "Quadro 1 – Processos originários a desconsiderar na contabilização da multa diária da APR (Tabela 2 do Despacho)",
-        ["Nº", "Processo de Execução", "Processo Originário", "Situação da execução"], linhas)])
-    anexos = out.parent / "anexos"
-    anexos.mkdir(exist_ok=True)
+# ---------- Item "b": cópia do Despacho do Ev. 63 para o memorando à DAP ----------
+def despacho_para_memorando() -> Path:
+    anexos = BASE / "apr_3474_2021" / "anexos"
+    anexos.mkdir(parents=True, exist_ok=True)
     despacho = anexos / "despacho_ev63_000096_2022.pdf"
     shutil.copy2(get_info_file_path(DESPACHO_PDF), despacho)
-    pdf = out.with_suffix(".pdf")  # certidão + cópia do despacho num só PDF (o que vai para a APR)
-    merge_pdfs([pdf, despacho], pdf.with_suffix(".tmp.pdf"))
-    pdf.with_suffix(".tmp.pdf").replace(pdf)
-    return out
+    return despacho
 
 
 # ---------- Informação no 000096/2022 (itens "c", "d", "e") ----------
@@ -316,12 +283,11 @@ def informacao() -> Path:
         f"Coube à assessoria do Gabinete o apensamento das {n_t1} execuções da Tabela 1 (item “a”, parágrafo 50 do "
         "Despacho Evento 63) e a esta Diretoria:",
 
-        f"Quanto ao item “b”, esta Coordenadoria elaborou a certidão de que os {n_t2} processos originários "
-        "relacionados na Tabela 2 do Despacho deverão ser desconsiderados na contabilização da multa diária global "
-        "cominada no Acórdão nº 162/2022-TC, mantida a apuração do dano ao erário a eles relativo. Como os autos da "
-        "APR nº 003474/2021-TC tramitam na Diretoria de Atos de Pessoal desde o Despacho do Evento 115 daquele feito, "
-        "a certidão, acompanhada de cópia do Despacho do Evento 63, foi encaminhada àquela Diretoria por memorando, "
-        "para juntada aos autos e consideração na contabilização da multa diária global.",
+        "Quanto ao item “b”, como os autos da APR nº 003474/2021-TC tramitam na Diretoria de Atos de Pessoal "
+        "desde o Despacho do Evento 115 daquele feito, esta Diretoria encaminhou àquela Diretoria, por memorando, "
+        f"cópia do Despacho do Evento 63, para juntada aos autos da APR e para que os {n_t2} processos originários "
+        "relacionados na Tabela 2 sejam desconsiderados na contabilização da multa diária global cominada no "
+        "Acórdão nº 162/2022-TC, mantida a apuração do dano ao erário a eles relativo.",
 
         "Em cumprimento ao item “c”, esta Coordenadoria refez o levantamento adotando como critério a relação de "
         f"processos originários do Evento 103 da APR nº 003474/2021-TC ({L['originarios_ev103']} processos "
@@ -348,7 +314,7 @@ def informacao() -> Path:
         "desta Coordenadoria de 29/10/2026, que sugeriu a retomada da marcha processual), razão pela qual não é "
         "possível a esta Diretoria promover o seu apensamento. Sugere-se, assim, que o Gabinete o inclua na reunião "
         "determinada no item “a”. Não foram identificadas execuções remanescentes com desconto em folha implantado "
-        "ou remessa ao Ministério Público de Contas que devessem ser acrescidas à certidão do item “b”.",
+        "ou remessa ao Ministério Público de Contas que devessem ser acrescidas à relação do item “b”.",
 
         f"As demais {L['gcaed_fora_apr']} execuções sob a mesma relatoria cujos processos originários não integram "
         f"a APR, bem como as {L['outros_relatores_na_apr']} execuções de outros relatores com processo originário no "
@@ -405,5 +371,5 @@ def informacao() -> Path:
 
 
 if __name__ == "__main__":
-    print("certidão  ->", certidao())
+    print("despacho  ->", despacho_para_memorando())
     print("informação ->", informacao())

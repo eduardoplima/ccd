@@ -8,7 +8,7 @@ arquivamento vai ao colegiado após manifestação da DIP e parecer do MPC.
 | Item | Quem | O quê | Estado (13/11/2026) |
 |---|---|---|---|
 | a | assessoria GCAED | apensar as 78 da Tabela 1 ao 96/2022 | pendente: 96/2022 já está na **CCD** (13/11) sem os apensos — conferir `IdProcessoApensador` |
-| b | DIP | juntar cópia do despacho na APR + certidão dos 19 originários da Tabela 2 | **certidão gerada** com o despacho apensado (`apr_3474_2021/certidao_003474_2021.pdf`); APR na DAP desde o Despacho Ev. 115 (04/10/2024): **enviar por memorando à DAP** (a informação já diz que foi enviada) |
+| b | DIP | juntar cópia do despacho na APR, desconsiderando os 19 originários da Tabela 2 | APR na DAP desde o Despacho Ev. 115 (04/10/2024): **memorando à DAP** com `apr_3474_2021/anexos/despacho_ev63_000096_2022.pdf` cumpre o item (sem certidão; a informação já diz que foi enviado) |
 | c | DIP | revisar o levantamento pelo Ev. 103 e reunir remanescentes | **feito**: único remanescente 003380/2024 (apontado na informação; está no GCAED) |
 | d | DIP | manifestar-se sobre o arquivamento | **informação gerada** (13/11, levantamento corrigido), favorável, com fluxograma (`000096_2022/`), não cadastrada |
 | e | DIP | encaminhar ao MPC | pendente: 96/2022 na CCD → ciclo e-Contas, tramitar DIP "ENVIO AO MPC" |
@@ -16,14 +16,14 @@ arquivamento vai ao colegiado após manifestação da DIP e parecer do MPC.
 ## Rodar
 ```
 .venv/Scripts/python.exe processos/projetos/nereu_apensamento_96_2022/levantamento.py      # xlsx + json + md
-.venv/Scripts/python.exe processos/projetos/nereu_apensamento_96_2022/gerar_documentos.py  # certidão + informação
+.venv/Scripts/python.exe processos/projetos/nereu_apensamento_96_2022/gerar_documentos.py  # cópia do despacho + informação
 ```
 
 ## Levantamento (13/11/2026)
 - 489 originários no Ev. 103; 477 execuções do Nereu (178 GCAED; 99 GCAED com originário na APR).
   A planilha do Ev. 103 escreve alguns números sem zeros à esquerda (`9621/2016`) ou com sete dígitos
   (`0003499 / 2017`): o parser lê a linha inteira e normaliza para 6 dígitos — a versão de 12/11 (469) perdia 20
-  originários e apontava 3 falsas "divergências" (parágrafo e Quadro 2 removidos da informação e da certidão).
+  originários e apontava 3 falsas "divergências" (parágrafo e Quadro 2 removidos da informação).
 - Tabela 1 (78) e Tabela 2 (19) conferidas: existem, relator GCAED, origem = banco; nenhuma com
   `Exe_DescontoFolha`/`PGE_Processo`; 33 protestadas, 52 suspensas (MS 0807247-93).
 - Remanescente (c): **003380/2024** (origem 101636/2019; GCAED; suspenso; R$ 9.829,92).
@@ -34,4 +34,4 @@ arquivamento vai ao colegiado após manifestação da DIP e parecer do MPC.
 1. Conferir `setor_atual` do 96/2022 = CCD e os 78 com `IdProcessoApensador` = 96/2022.
 2. Skill `enviar-informacao`: distribuir → cadastrar `000096_2022/informacao_000096_2022.pdf` com anexo
    `levantamento_96_2022.xlsx` → assinar → publicar → tramitar DIP, movimentação "ENVIO AO MPC".
-3. Item b: decidir a juntada na APR (DAP tramita à DIP, ou DAP junta `apr_3474_2021/certidao_003474_2021.pdf`, que já traz a cópia do despacho)).
+3. Item b: memorando à DAP com a cópia do despacho, **antes** de cadastrar a informação.
