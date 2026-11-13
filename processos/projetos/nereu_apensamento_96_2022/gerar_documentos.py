@@ -104,9 +104,29 @@ def _figura_apos(d, ancora_texto: str, legenda: str, png: Path) -> None:
     run_cap.font.color.rgb = RGBColor.from_string(TCE["verde_escuro"])
     fig = d.add_paragraph()
     fig.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    fig.add_run().add_picture(str(png), width=Cm(15.5))
+    fig.add_run().add_picture(str(png), width=Cm(13))
     ancora._p.addnext(cap._p)
     cap._p.addnext(fig._p)
+
+
+def _itens_apos(d, ancora_texto: str, itens: list[str]) -> None:
+    """Insere itens recuados (sem numeração, mesma fonte) após o parágrafo-âncora."""
+    ancora = next(p for p in d.paragraphs if ancora_texto in p.text)
+    ultimo = ancora._p
+    for texto in itens:
+        novo = deepcopy(ancora._p)
+        for num in novo.pPr.findall(qn("w:numPr")):
+            novo.pPr.remove(num)
+        ind = novo.pPr.find(qn("w:ind"))
+        ind.set(qn("w:left"), "1134")  # 2 cm
+        ind.set(qn("w:firstLine"), "0")
+        runs = [r for r in novo if r.tag == qn("w:r")]
+        for r in runs[1:]:
+            novo.remove(r)
+        for t in runs[0].findall(qn("w:t")):
+            t.text = texto
+        ultimo.addnext(novo)
+        ultimo = novo
 
 
 def fluxograma() -> Path:
@@ -178,7 +198,7 @@ def fluxograma() -> Path:
 
 def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
            quadros: list[tuple[str, str, list[str], list[list[str]]]],
-           figuras: list[tuple[str, str, Path]] = ()) -> None:
+           figuras: list[tuple[str, str, Path]] = (), itens: list[tuple[str, list[str]]] = ()) -> None:
     doc = DocxTemplate(TEMPLATE)
     doc.render({"processo": f"{processo} - TC", "assunto": assunto, "relator": RELATOR, "parágrafos": ps})
     d = doc.docx  # pós-processamento (get_docx() descartaria o render)
@@ -193,6 +213,8 @@ def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
         _tabela_apos(d, *q)
     for f in figuras:
         _figura_apos(d, *f)
+    for it in itens:
+        _itens_apos(d, *it)
     # data antes do bloco de assinatura (sem parágrafos vazios), assinatura presa à data
     assinado = next(p for p in d.paragraphs if "assinado digitalmente" in p.text)
     prev = assinado._p.getprevious()
@@ -222,7 +244,8 @@ def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
     dd = docx.Document(str(out))
     texto = "\n".join(p.text for p in dd.paragraphs)
     assert "{{" not in texto and "}}" not in texto, "placeholder não substituído"
-    for trecho in (*ps, DATA, f"{processo} - TC", RELATOR, f"\n{titulo}\n", *(q[1] for q in quadros), *(f[1] for f in figuras)):
+    for trecho in (*ps, DATA, f"{processo} - TC", RELATOR, f"\n{titulo}\n", *(q[1] for q in quadros), *(f[1] for f in figuras),
+                   *(t for it in itens for t in it[1])):
         assert trecho in texto, f"faltou {trecho[:60]!r}"
     for proibido in ("É a informação.", "Substituto", "INFORMAÇÃO INSTRUTIVA" if titulo != "INFORMAÇÃO INSTRUTIVA" else "\x00"):
         assert proibido not in texto, f"termo proibido {proibido}"
@@ -297,12 +320,13 @@ def informacao() -> Path:
         "inscrição em dívida ativa), por vislumbrar, em juízo preliminar, a incidência do non bis in idem entre a "
         "multa diária individual e a responsabilização concentrada na referida apuração, inclusive a multa diária "
         f"cominada no Acórdão nº 162/2022-TC. Coube à assessoria do Gabinete o apensamento das {n_t1} execuções da "
-        "Tabela 1 (item “a”) e, a esta Diretoria: (b) viabilizar a juntada de cópia do Despacho à APR, certificando "
-        f"que os {n_t2} processos originários da Tabela 2 deverão ser desconsiderados na contabilização da multa "
-        "diária global; (c) revisar o levantamento anexo ao Evento 60 à luz do critério fixado e reunir eventuais "
-        "execuções remanescentes; (d) manifestar-se sobre a possibilidade de arquivamento destes autos e dos "
-        "apensados em situação idêntica; e (e) encaminhar o feito ao Ministério Público de Contas, sem retorno ao "
-        "Gabinete.",
+        "Tabela 1 (item “a”) e, a esta Diretoria:",
+
+        f"Quanto ao item “b”, esta Coordenadoria elaborou a certidão de que os {n_t2} processos originários "
+        "relacionados na Tabela 2 do Despacho deverão ser desconsiderados na contabilização da multa diária global "
+        "cominada no Acórdão nº 162/2022-TC, mantida a apuração do dano ao erário a eles relativo, a qual será "
+        "juntada, acompanhada de cópia do Despacho do Evento 63, aos autos da APR nº 003474/2021-TC, que atualmente "
+        "tramitam na Diretoria de Atos de Pessoal.",
 
         "Em cumprimento ao item “c”, esta Coordenadoria refez o levantamento adotando como critério a relação de "
         f"processos originários do Evento 103 da APR nº 003474/2021-TC ({L['originarios_ev103']} processos "
@@ -339,12 +363,6 @@ def informacao() -> Path:
         f"As demais {L['gcaed_fora_apr']} execuções sob a mesma relatoria cujos processos originários não integram "
         f"a APR, bem como as {L['outros_relatores_na_apr']} execuções de outros relatores com processo originário no "
         "Evento 103, não foram alcançadas pelo Despacho e prosseguem em seu trâmite regular.",
-
-        f"Quanto ao item “b”, esta Coordenadoria elaborou a certidão de que os {n_t2} processos originários "
-        "relacionados na Tabela 2 do Despacho deverão ser desconsiderados na contabilização da multa diária global "
-        "cominada no Acórdão nº 162/2022-TC, mantida a apuração do dano ao erário a eles relativo, a qual será "
-        "juntada, acompanhada de cópia do Despacho do Evento 63, aos autos da APR nº 003474/2021-TC, que atualmente "
-        "tramitam na Diretoria de Atos de Pessoal.",
 
         "No tocante ao item “d”, esta Coordenadoria manifesta-se favoravelmente ao arquivamento destes autos e das "
         "execuções a ele apensadas em situação idêntica. A multa diária prevista no art. 110 da Lei Complementar "
@@ -383,10 +401,20 @@ def informacao() -> Path:
          ["Tabela do Despacho", "Processo de Execução", "Processo Originário"],
          [[f"Tabela {t}", TC(e), TC(o)] for t, e, o in L["divergencias"]]),
     ]
+    itens = [("e, a esta Diretoria:", [
+        "(b) viabilizar a juntada de cópia do Despacho à APR, certificando que os "
+        f"{n_t2} processos originários da Tabela 2 deverão ser desconsiderados na contabilização da multa diária "
+        "global;",
+        "(c) revisar o levantamento anexo ao Evento 60 à luz do critério fixado e reunir eventuais execuções "
+        "remanescentes;",
+        "(d) manifestar-se sobre a possibilidade de arquivamento destes autos e dos apensados em situação "
+        "idêntica; e",
+        "(e) encaminhar o feito ao Ministério Público de Contas, sem retorno ao Gabinete.",
+    ])]
     figuras = [("O roteiro do cotejo está sintetizado na figura",
                 "Figura 1 – Fluxograma do levantamento (item “c”)", fluxograma())]
     out = BASE / "000096_2022" / "informacao_000096_2022.docx"
-    montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros, figuras)
+    montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros, figuras, itens)
     return out
 
 
