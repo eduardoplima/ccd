@@ -375,8 +375,8 @@ def informacao() -> Path:
 
         f"Identificaram-se {L['gcaed_na_apr']} execuções sob essa relatoria cujos processos originários integram o "
         f"escopo da APR. Dentre elas, as {n_t1} relacionadas na Tabela 1 do Despacho foram confirmadas: todas "
-        "já se encontram apensadas a estes autos, têm o processo originário correspondente ao registrado no sistema e não "
-        "registram desconto em folha implantado nem envio à Procuradoria-Geral do Estado, tendo a cobrança se "
+        "já se encontram apensadas a estes autos e não registram desconto em folha implantado nem envio à "
+        "Procuradoria-Geral do Estado, tendo a cobrança se "
         f"limitado ao protesto cartorial ({L['protestadas_t1']} com a dívida protestada); {L['suspensas_t1']} delas "
         "têm o débito atualmente na situação “suspenso”, em razão da liminar outrora deferida no Mandado de "
         f"Segurança nº 0807247-93.2025.8.20.0000. As {n_t2} execuções da Tabela 2 também foram confirmadas (17 em "
