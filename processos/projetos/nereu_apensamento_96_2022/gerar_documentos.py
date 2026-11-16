@@ -4,7 +4,8 @@ Lê levantamento.json (rodar levantamento.py antes).
 
 Saídas (nada é cadastrado):
   apr_3474_2021/anexos/despacho_ev63_000096_2022.pdf (anexo do memorando à DAP)
-  000096_2022/informacao_000096_2022.docx/.pdf (anexo: ../levantamento_96_2022.xlsx)
+  000096_2022/informacao_000096_2022.docx/.pdf
+    (anexos: ../levantamento_96_2022.xlsx e ../anexo_ev103_fluxograma.xlsx)
 Modelo: scripts/automacao/templates/modelo_informacao.docx (numera os parágrafos); quadros no
 padrão de processos/utils/gerar_informacoes_nereu_resposta_sead.py.
 
@@ -125,6 +126,28 @@ def _itens_apos(d, ancora_texto: str, itens: list[str]) -> None:
         ultimo = novo
 
 
+def _italico(d, ancora_texto: str, termo: str) -> None:
+    """Põe em itálico a primeira ocorrência de `termo` no parágrafo-âncora (divide o run em três)."""
+    par = next(p for p in d.paragraphs if ancora_texto in p.text)
+    run = next(r for r in par.runs if termo in r.text)
+    antes, depois = run.text.split(termo, 1)
+    meio = deepcopy(run._r)
+    run._r.addnext(meio)
+    fim = deepcopy(run._r)
+    meio.addnext(fim)
+    for r, txt in ((run._r, antes), (meio, termo), (fim, depois)):
+        ts = r.findall(qn("w:t"))
+        ts[0].text = txt
+        ts[0].set(qn("xml:space"), "preserve")
+        for t in ts[1:]:
+            r.remove(t)
+    rpr = meio.find(qn("w:rPr"))
+    if rpr is None:
+        rpr = OxmlElement("w:rPr")
+        meio.insert(0, rpr)
+    rpr.append(OxmlElement("w:i"))
+
+
 def fluxograma() -> Path:
     """Fluxograma do levantamento do item "c" (matplotlib, paleta TCE)."""
     import matplotlib
@@ -167,7 +190,7 @@ def fluxograma() -> Path:
                         "000134/2022 com\ndesconto em folha")
     box(RX, 30, 32, 10, "Ato efetivo de cobrança?\n(desconto em folha / PGE)", "dec")
     box(LX, 11, 34, 11, "Reunião ao 000096/2022\ne arquivamento\n(itens “a” e “d”)", "fim")
-    box(MX, 11, 34, 11, "Certidão à APR:\ndesconsiderar na multa\ndiária global (item “b”)", "fim")
+    box(MX, 11, 34, 11, "Memorando à DAP:\ndesconsiderar na multa\ndiária global (item “b”)", "fim")
     box(RX, 11, 32, 11, "Remanescente a reunir:\n003380/2024\n(Quadro 1 – item “c”)", "fim")
 
     seta((MX, 89.5), (MX, 83.5))
@@ -192,7 +215,8 @@ def fluxograma() -> Path:
 
 def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
            quadros: list[tuple[str, str, list[str], list[list[str]]]],
-           figuras: list[tuple[str, str, Path]] = (), itens: list[tuple[str, list[str]]] = ()) -> None:
+           figuras: list[tuple[str, str, Path]] = (), itens: list[tuple[str, list[str]]] = (),
+           italicos: list[tuple[str, str]] = ()) -> None:
     doc = DocxTemplate(TEMPLATE)
     doc.render({"processo": f"{processo} - TC", "assunto": assunto, "relator": RELATOR, "parágrafos": ps})
     d = doc.docx  # pós-processamento (get_docx() descartaria o render)
@@ -209,6 +233,8 @@ def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
         _figura_apos(d, *f)
     for it in itens:
         _itens_apos(d, *it)
+    for it in italicos:
+        _italico(d, *it)
     # data antes do bloco de assinatura (sem parágrafos vazios), assinatura presa à data
     assinado = next(p for p in d.paragraphs if "assinado digitalmente" in p.text)
     prev = assinado._p.getprevious()
@@ -244,6 +270,8 @@ def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
     for proibido in ("É a informação.", "Substituto", "INFORMAÇÃO INSTRUTIVA" if titulo != "INFORMAÇÃO INSTRUTIVA" else "\x00"):
         assert proibido not in texto, f"termo proibido {proibido}"
     assert len(dd.tables) == len(quadros), "quadros não inseridos"
+    for _, termo in italicos:
+        assert any(r.italic and r.text == termo for p in dd.paragraphs for r in p.runs), f"sem itálico {termo}"
     assert out.with_suffix(".pdf").is_file(), "PDF não gerado"
 
 
@@ -266,26 +294,26 @@ def informacao() -> Path:
     ps = [
         "Trata-se de Processo de Execução da Decisão nº 745/2020-TC (Processo nº 019291/2017-TC) em face do Sr. "
         "Nereu Batista Linhares, Presidente do Instituto de Previdência dos Servidores do Estado do Rio Grande do "
-        "Norte – IPERN, no qual esta Coordenadoria, por meio da Informação Instrutiva do Evento 60, propôs a reunião, "
-        "mediante apensamento a estes autos, de todas as execuções de multa do referido responsável sob a relatoria "
+        "Norte – IPERN, no qual esta Coordenadoria propôs a reunião (Evento 60), mediante apensamento a estes autos, de todas as execuções de multa do referido responsável sob a relatoria "
         "do Conselheiro Antonio Ed Souza Santana, à exceção das abrangidas pela Apuração de Responsabilidade nº "
         "003474/2021-TC.",
 
-        "Pelo Despacho do Evento 63, de 11/11/2026, o Conselheiro Relator acolheu parcialmente a proposta e "
-        "determinou a reunião apenas das execuções cujos processos originários integram o escopo da APR nº "
+        "O Conselheiro Relator acolheu parcialmente a proposta (Evento 63) e determinou a reunião apenas das execuções cujos processos originários integram o escopo da APR nº "
         "003474/2021-TC — definido pela relação consolidada pela Diretoria de Atos de Pessoal no Evento 103 daquele "
         "feito, e não pela lista formal de apensados — e nas quais não tenham sido praticados atos efetivos de "
         "cobrança (desconto em folha de pagamento implantado ou remessa ao Ministério Público de Contas para "
-        "inscrição em dívida ativa), por vislumbrar, em juízo preliminar, a incidência do non bis in idem entre a "
+        "inscrição em dívida ativa), por vislumbrar, em juízo preliminar, a incidência de potencial non bis in idem "
+        "entre a "
         "multa diária individual e a responsabilização concentrada na referida apuração, inclusive a multa diária "
         "cominada no Acórdão nº 162/2022-TC.",
 
         f"Coube à assessoria do Gabinete o apensamento das {n_t1} execuções da Tabela 1 (item “a”, parágrafo 50 do "
-        "Despacho Evento 63) e a esta Diretoria:",
+        "Despacho Evento 63) e a esta Diretoria as seguintes determinações:",
 
         "Quanto ao item “b”, como os autos da APR nº 003474/2021-TC tramitam na Diretoria de Atos de Pessoal "
-        "desde o Despacho do Evento 115 daquele feito, esta Diretoria encaminhou àquela Diretoria, por memorando, "
-        f"cópia do Despacho do Evento 63, para juntada aos autos da APR e para que os {n_t2} processos originários "
+        "desde o Despacho do Evento 115 daquele feito, a DIP encaminhou àquela Diretoria, por memorando, "
+        f"cópia do Despacho do Evento 63, para juntada aos autos da APR, no sentido de que os {n_t2} processos "
+        "originários "
         "relacionados na Tabela 2 sejam desconsiderados na contabilização da multa diária global cominada no "
         "Acórdão nº 162/2022-TC, mantida a apuração do dano ao erário a eles relativo.",
 
@@ -294,11 +322,12 @@ def informacao() -> Path:
         "identificados na planilha), cotejada com a totalidade das execuções de multa em face do Sr. Nereu Batista "
         f"Linhares registradas no sistema desta Corte ({L['execucoes_nereu']} execuções, das quais {L['gcaed']} sob a "
         "relatoria do Conselheiro Antonio Ed Souza Santana). O roteiro do cotejo está sintetizado na Figura 1 e o "
-        "resultado completo consta da planilha anexa.",
+        "resultado completo consta das planilhas anexas (uma por processo originário do Evento 103, com as etapas da "
+        "Figura 1, e outra por execução).",
 
         f"Identificaram-se {L['gcaed_na_apr']} execuções sob essa relatoria cujos processos originários integram o "
         f"escopo da APR. Dentre elas, as {n_t1} relacionadas na Tabela 1 do Despacho foram confirmadas: todas "
-        "tramitam no Gabinete do Relator, têm o processo originário correspondente ao registrado no sistema e não "
+        "já se encontram apensadas a estes autos, têm o processo originário correspondente ao registrado no sistema e não "
         "registram desconto em folha implantado nem envio à Procuradoria-Geral do Estado, tendo a cobrança se "
         f"limitado ao protesto cartorial ({L['protestadas_t1']} com a dívida protestada); {L['suspensas_t1']} delas "
         "têm o débito atualmente na situação “suspenso”, em razão da liminar outrora deferida no Mandado de "
@@ -353,7 +382,7 @@ def informacao() -> Path:
          ["Processo de Execução", "Processo Originário", "Setor atual", "Situação do débito", "Valor original (R$)"],
          [[TC(r["execucao"]), TC(r["origem"]), r["setor"], r["situacao"], valor]]),
     ]
-    itens = [("e a esta Diretoria:", [
+    itens = [("e a esta Diretoria as seguintes determinações:", [
         "b) viabilizar a juntada de cópia do Despacho à APR, certificando que os "
         f"{n_t2} processos originários da Tabela 2 deverão ser desconsiderados na contabilização da multa diária "
         "global;",
@@ -366,7 +395,8 @@ def informacao() -> Path:
     figuras = [("execuções da Tabela 2 também foram confirmadas",
                 "Figura 1 – Fluxograma do levantamento (item “c”)", fluxograma())]
     out = BASE / "000096_2022" / "informacao_000096_2022.docx"
-    montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros, figuras, itens)
+    montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros, figuras, itens,
+           italicos=[("acolheu parcialmente a proposta (Evento 63)", "non bis in idem")])
     return out
 
 

@@ -5,8 +5,9 @@ Cruza, somente leitura:
   - Tabelas 1 (78 execuções a apensar) e 2 (19 originários a desconsiderar) do Despacho;
   - todas as execuções do Nereu no banco `processo` (relator, setor, situação do débito,
     protesto, desconto em folha, PGE).
-Produz levantamento_96_2022.xlsx (anexo da informação), levantamento.json (entrada de
-gerar_documentos.py) e levantamento.md (resumo).
+Produz levantamento_96_2022.xlsx (anexo: uma aba por grupo de execuções),
+anexo_ev103_fluxograma.xlsx (anexo: uma linha por originário do Ev. 103, colunas = etapas da
+Figura 1), levantamento.json (entrada de gerar_documentos.py) e levantamento.md (resumo).
 
 Rodar: .venv/Scripts/python.exe processos/projetos/nereu_apensamento_96_2022/levantamento.py
 """
@@ -115,6 +116,47 @@ if __name__ == "__main__":
         quadro(fora_apr).to_excel(xw, sheet_name="GCAED fora da APR", index=False)
         quadro(outros).to_excel(xw, sheet_name="Outros relatores na APR", index=False)
 
+    # anexo por originário do Ev. 103: cada linha percorre as decisões do fluxograma (Figura 1)
+    assert not ex[ex.no_ev103].origem.duplicated().any(), "originário com mais de uma execução"
+    sn = {True: "Sim", False: "Não"}
+    ev = pd.DataFrame({"origem": sorted(orig103)}).merge(ex, on="origem", how="left")
+    tem = ev.execucao.notna()
+
+    def destino(r) -> str:
+        if pd.isna(r.execucao):
+            return "Sem execução de multa em face do responsável"
+        if not r.gcaed:
+            return "Outro relator – não alcançada pelo Despacho"
+        if r.tabela == "1" or r.execucao == PRINCIPAL:
+            return "Reunião ao 000096/2022 e arquivamento (itens a e d)"
+        if r.tabela == "2":
+            return "Memorando à DAP: desconsiderar na multa diária global (item b)"
+        return "Ato efetivo de cobrança – não reunir" if r.ato_efetivo else "Remanescente a reunir (item c)"
+
+    anexo = pd.DataFrame({
+        "Processo originário (Ev. 103)": ev.origem,
+        "Execução de multa em face do responsável": ev.execucao.fillna("Não"),
+        "Relator": ev.relator.fillna(""),
+        "Relatoria do Cons. Antonio Ed?": ev.gcaed.map(sn).where(tem, ""),
+        "Relacionada no Despacho Ev. 63": ev.tabela.map({"1": "Tabela 1", "2": "Tabela 2", "": "Não relacionada"})
+        .mask(ev.execucao == PRINCIPAL, "Processo principal").where(tem, ""),
+        "Desconto em folha": (ev.desconto > 0).map(sn).where(tem, ""),
+        "PGE / MPC": ((ev.pge > 0) | ev.setor.isin(["PROC_EXE", "PGE"])).map(sn).where(tem, ""),
+        "Ato efetivo de cobrança": ev.ato_efetivo.map(sn).where(tem, ""),
+        "Setor atual": ev.setor.fillna(""), "Apensado a": ev.apensado_a.fillna(""),
+        "Situação do débito": ev.situacao.fillna(""), "Protesto": ev.protesto.fillna(""),
+        "Valor original (R$)": ev.valor,
+        "Destino": ev.apply(destino, axis=1),
+    })
+    anexo.to_excel(BASE / "anexo_ev103_fluxograma.xlsx", sheet_name="Ev. 103 x fluxograma", index=False)
+    por_destino = anexo.Destino.value_counts().to_dict()
+    assert len(anexo) == len(orig103)
+    assert por_destino.get("Ato efetivo de cobrança – não reunir", 0) == 0, por_destino  # Figura 1: "sim: nenhuma"
+    assert por_destino["Reunião ao 000096/2022 e arquivamento (itens a e d)"] == len(reuniao)
+    assert por_destino["Memorando à DAP: desconsiderar na multa diária global (item b)"] == len(d2)
+    assert por_destino["Remanescente a reunir (item c)"] == len(remanescentes)
+    assert por_destino["Outro relator – não alcançada pelo Despacho"] == len(outros)
+
     resumo = {
         "originarios_ev103": len(orig103), "execucoes_nereu": int(ex.execucao.nunique()),
         "gcaed": int(ex.gcaed.sum()), "gcaed_na_apr": int((ex.gcaed & ex.no_ev103).sum()),
@@ -139,6 +181,7 @@ if __name__ == "__main__":
           f"- Tabela 2: {len(d2)} conferidas",
           f"- Remanescentes (item c): {resumo['remanescentes']}",
           f"- GCAED fora da APR (trâmite regular): {len(fora_apr)}; outros relatores com origem na APR: {len(outros)}",
-          f"- Setor atual: {PRINCIPAL} = {resumo['setor_principal']}; {APR} = {resumo['setor_apr']}"]
+          f"- Setor atual: {PRINCIPAL} = {resumo['setor_principal']}; {APR} = {resumo['setor_apr']}",
+          "- Anexo por originário do Ev. 103 (Destino): " + "; ".join(f"{k} = {v}" for k, v in por_destino.items())]
     (BASE / "levantamento.md").write_text("\n".join(md), encoding="utf-8")
     print("\n".join(md))
