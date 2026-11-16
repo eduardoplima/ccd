@@ -394,10 +394,6 @@ def informacao() -> Path:
         "determinada no item “a”. Não foram identificadas execuções remanescentes com desconto em folha implantado "
         "ou remessa ao Ministério Público de Contas que devessem ser acrescidas à relação do item “b”.",
 
-        f"As demais {L['gcaed_fora_apr']} execuções sob a mesma relatoria cujos processos originários não integram "
-        f"a APR, bem como as {L['outros_relatores_na_apr']} execuções de outros relatores com processo originário no "
-        "Evento 103, não foram alcançadas pelo Despacho e prosseguem em seu trâmite regular.",
-
         "No tocante ao item “d”, esta Coordenadoria manifesta-se favoravelmente ao arquivamento destes autos e das "
         "execuções a ele apensadas em situação idêntica. A multa diária prevista no art. 110 da Lei Complementar "
         "Estadual nº 464/2012 e no art. 34 da Resolução nº 028/2012-TCE tem natureza coercitiva, acessória à "
