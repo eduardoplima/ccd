@@ -4,8 +4,9 @@ Lê levantamento.json (rodar levantamento.py antes).
 
 Saídas (nada é cadastrado):
   apr_3474_2021/anexos/despacho_ev63_000096_2022.pdf (anexo do memorando à DAP)
-  000096_2022/informacao_000096_2022.docx/.pdf — o PDF já traz o Anexo Único (planilha
-    ../anexo_ev103_fluxograma.xlsx em paisagem, 000096_2022/anexo_unico_ev103.docx/.pdf) ao final
+  000096_2022/informacao_000096_2022.docx/.pdf (sem o anexo embutido)
+  000096_2022/anexo_unico_ev103.docx/.pdf — Anexo Único (../anexo_ev103_fluxograma.xlsx em paisagem),
+    anexado à parte na interface do e-Contas
 Modelo: scripts/automacao/templates/modelo_informacao.docx (numera os parágrafos); quadros no
 padrão de processos/utils/gerar_informacoes_nereu_resposta_sead.py.
 
@@ -27,7 +28,6 @@ from docxtpl import DocxTemplate
 
 from ccd.config import REPO_ROOT
 from ccd.docs import docx_to_pdf
-from ccd.pdf import merge_pdfs
 from ccd.processo import get_info_file_path
 
 BASE = Path(__file__).resolve().parent
@@ -445,9 +445,7 @@ def informacao() -> Path:
     out = BASE / "000096_2022" / "informacao_000096_2022.docx"
     montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros, figuras, itens,
            italicos=[("acolheu parcialmente a proposta (Evento 63)", "non bis in idem")])
-    pdf, tmp = out.with_suffix(".pdf"), out.with_suffix(".tmp.pdf")
-    merge_pdfs([pdf, anexo_unico()], tmp)  # Anexo Único ao final do PDF da informação
-    tmp.replace(pdf)
+    print("anexo único ->", anexo_unico())  # PDF separado: o usuário anexa na interface do e-Contas
     return out
 
 
