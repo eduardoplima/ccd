@@ -378,19 +378,17 @@ def informacao() -> Path:
         "Tabela 1 do Despacho foram confirmadas: todas "
         "já se encontram apensadas a estes autos e não registram desconto em folha implantado nem envio à "
         "Procuradoria-Geral do Estado, tendo a cobrança se "
-        f"limitado ao protesto cartorial ({L['protestadas_t1']} com a dívida protestada); {L['suspensas_t1']} delas "
-        "têm o débito atualmente na situação “suspenso”, em razão da liminar outrora deferida no Mandado de "
-        f"Segurança nº 0807247-93.2025.8.20.0000. As {n_t2} execuções da Tabela 2 também foram confirmadas (17 em "
-        "tramitação no Ministério Público de Contas, a de nº 000117/2022-TC já devolvida ao Gabinete e a de nº "
-        "000134/2022-TC com desconto em folha em acompanhamento nesta Coordenadoria).",
+        f"limitado ao protesto cartorial ({L['protestadas_t1']} com a dívida protestada). Ressalta-se que "
+        f"{L['suspensas_t1']} delas têm o débito atualmente na situação “suspenso”, em razão da liminar outrora "
+        "deferida no Mandado de Segurança nº 0807247-93.2025.8.20.0000.",
 
         "Além das execuções já relacionadas no Despacho, o cotejo revelou uma única execução remanescente que "
         "preenche o critério fixado — processo originário constante do Evento 103 da APR, relatoria do Conselheiro "
         "Antonio Ed Souza Santana e ausência de atos efetivos de cobrança —, conforme o quadro a seguir:",
 
-        f"O Processo nº {TC(r['execucao'])} encontra-se no Gabinete do Relator (última peça: Informação Instrutiva "
-        "desta Coordenadoria de 29/10/2026, que sugeriu a retomada da marcha processual), razão pela qual não é "
-        "possível a esta Diretoria promover o seu apensamento. Sugere-se, assim, que o Gabinete o inclua na reunião "
+        f"O Processo nº {TC(r['execucao'])} encontra-se no Gabinete do Relator. Sua última peça é uma informação "
+        "instrutiva desta Coordenadoria, de 29/10/2026, que sugeriu a retomada da marcha processual. Desse modo, não "
+        "é possível a esta Diretoria promover o seu apensamento. Assim, sugere-se que o Gabinete o inclua na reunião "
         "determinada no item “a”. Não foram identificadas execuções remanescentes com desconto em folha implantado "
         "ou remessa ao Ministério Público de Contas que devessem ser acrescidas à relação do item “b”.",
 
@@ -437,7 +435,7 @@ def informacao() -> Path:
         "idêntica; e",
         "e) encaminhar o feito ao Ministério Público de Contas, sem retorno ao Gabinete.",
     ])]
-    figuras = [("execuções da Tabela 2 também foram confirmadas",
+    figuras = [("liminar outrora deferida no Mandado de Segurança",
                 "Figura 1 – Fluxograma do levantamento (item “c”)", fluxograma())]
     out = BASE / "000096_2022" / "informacao_000096_2022.docx"
     montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros, figuras, itens,
