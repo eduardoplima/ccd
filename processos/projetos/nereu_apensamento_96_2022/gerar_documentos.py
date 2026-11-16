@@ -201,9 +201,9 @@ def fluxograma() -> Path:
     seta((MX + 16, 79), (RX - 16, 79), "não", dy=2.2)
     seta((MX, 74.5), (MX, 68), f"sim ({L['gcaed']})", dx=7)
     seta((MX + 16, 63), (RX - 16, 63), "não", dy=2.2)
-    seta((MX, 58), (MX, 50.5), f"sim ({L['gcaed_na_apr']})", dx=7)
+    seta((MX, 58), (MX, 50.5), f"sim ({L['gcaed_na_apr']}, inclusive\nestes autos)", dx=10)
     seta((MX - 16, 46), (LX, 46))
-    seta((LX, 46), (LX, 36.5), f"Tabela 1 ({len(L['tabela1'])})", dx=-9)
+    seta((LX, 46), (LX, 36.5), f"Tabela 1 ({len(L['tabela1'])})\n+ 000096/2022", dx=-10)
     seta((MX, 41.5), (MX, 36.5), f"Tabela 2 ({len(L['tabela2'])})", dx=9)
     seta((MX + 16, 46), (RX, 46))
     seta((RX, 46), (RX, 35), "não relacionada", dx=9)
@@ -374,7 +374,8 @@ def informacao() -> Path:
         "correspondente.",
 
         f"Identificaram-se {L['gcaed_na_apr']} execuções sob essa relatoria cujos processos originários integram o "
-        f"escopo da APR. Dentre elas, as {n_t1} relacionadas na Tabela 1 do Despacho foram confirmadas: todas "
+        f"escopo da APR, inclusive estes autos. Dentre as demais {L['gcaed_na_apr'] - 1}, as {n_t1} relacionadas na "
+        "Tabela 1 do Despacho foram confirmadas: todas "
         "já se encontram apensadas a estes autos e não registram desconto em folha implantado nem envio à "
         "Procuradoria-Geral do Estado, tendo a cobrança se "
         f"limitado ao protesto cartorial ({L['protestadas_t1']} com a dívida protestada); {L['suspensas_t1']} delas "
