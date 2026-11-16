@@ -388,12 +388,14 @@ def informacao() -> Path:
 
         f"O Processo nº {TC(r['execucao'])} encontra-se no Gabinete do Relator. Sua última peça é uma informação "
         "instrutiva desta Coordenadoria, de 29/10/2026, que sugeriu a retomada da marcha processual. Desse modo, não "
-        "é possível a esta Diretoria promover o seu apensamento. Assim, sugere-se que o Gabinete o inclua na reunião "
-        "determinada no item “a”. Não foram identificadas execuções remanescentes com desconto em folha implantado "
+        "é possível a esta Diretoria promover o seu apensamento, que pressupõe a tramitação de ambos os feitos no "
+        "mesmo setor. Sugere-se, assim, que o Gabinete do Relator o reúna a estes autos quando do seu retorno do "
+        "Ministério Público de Contas, estendendo-se-lhe, desde já, a manifestação favorável ao arquivamento constante "
+        "dos itens seguintes e, se assim entender o Parquet de Contas, o respectivo parecer. Não foram identificadas execuções remanescentes com desconto em folha implantado "
         "ou remessa ao Ministério Público de Contas que devessem ser acrescidas à relação do item “b”.",
 
-        "No tocante ao item “d”, esta Coordenadoria manifesta-se favoravelmente ao arquivamento destes autos e das "
-        "execuções a ele apensadas em situação idêntica. A multa diária prevista no art. 110 da Lei Complementar "
+        "No tocante ao item “d”, esta Coordenadoria manifesta-se favoravelmente ao arquivamento destes autos, das "
+        f"execuções a ele apensadas e do Processo nº {TC(r['execucao'])}, em situação idêntica. A multa diária prevista no art. 110 da Lei Complementar "
         "Estadual nº 464/2012 e no art. 34 da Resolução nº 028/2012-TCE tem natureza coercitiva, acessória à "
         "obrigação de fazer imposta nas decisões denegatórias de registro. Com a medida cautelar deferida no "
         "Acórdão nº 162/2022-TC, o Tribunal Pleno concentrou em um único comando a exigência de cumprimento de todas "
