@@ -136,8 +136,7 @@ if __name__ == "__main__":
     anexo = pd.DataFrame({
         "Processo originário (Ev. 103)": ev.origem,
         "Execução de multa em face do responsável": ev.execucao.fillna("Não"),
-        "Relator": ev.relator.fillna(""),
-        "Relatoria do Cons. Antonio Ed?": ev.gcaed.map(sn).where(tem, ""),
+        "Relator do processo de execução": ev.relator.fillna(""),
         "Relacionada no Despacho Ev. 63": ev.tabela.map({"1": "Tabela 1", "2": "Tabela 2", "": "Não relacionada"})
         .mask(ev.execucao == PRINCIPAL, "Processo principal").where(tem, ""),
         "Desconto em folha": (ev.desconto > 0).map(sn).where(tem, ""),
