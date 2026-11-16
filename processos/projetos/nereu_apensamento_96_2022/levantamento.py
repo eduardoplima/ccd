@@ -140,7 +140,7 @@ if __name__ == "__main__":
         "Relacionada no Despacho Ev. 63": ev.tabela.map({"1": "Tabela 1", "2": "Tabela 2", "": "Não relacionada"})
         .mask(ev.execucao == PRINCIPAL, "Processo principal").where(tem, ""),
         "Desconto em folha": (ev.desconto > 0).map(sn).where(tem, ""),
-        "PGE / MPC": ((ev.pge > 0) | ev.setor.isin(["PROC_EXE", "PGE"])).map(sn).where(tem, ""),
+        "Dívida ativa": ((ev.pge > 0) | ev.setor.isin(["PROC_EXE", "PGE"])).map(sn).where(tem, ""),
         "Ato efetivo de cobrança": ev.ato_efetivo.map(sn).where(tem, ""),
         "Setor atual": ev.setor.fillna(""), "Apensado a": ev.apensado_a.fillna(""),
         "Situação do débito": ev.situacao.fillna(""), "Protesto": ev.protesto.fillna(""),

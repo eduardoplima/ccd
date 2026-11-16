@@ -293,7 +293,7 @@ def anexo_unico() -> Path:
         "Remanescente a reunir (item c)": "Remanescente (item c)"})
     assert not df["Destino"].isna().any(), "destino sem rótulo curto"
     cab = ["Originário (Ev. 103)", "Execução", "Relator Processo Execução", "Despacho Ev. 63", "Desc. folha",
-           "PGE/MPC", "Ato efetivo", "Setor", "Apensado a", "Situação", "Protesto", "Valor (R$)", "Destino"]
+           "Dívida ativa", "Ato efetivo", "Setor", "Apensado a", "Situação", "Protesto", "Valor (R$)", "Destino"]
     larguras = [1.9, 1.9, 5.0, 2.1, 1.2, 1.4, 1.2, 1.6, 1.9, 1.7, 1.7, 1.6, 3.6]  # cm, soma 26.8
     assert len(cab) == len(df.columns) == len(larguras), df.columns.tolist()
     d = docx.Document()
