@@ -389,9 +389,8 @@ def informacao() -> Path:
         f"O Processo nº {TC(r['execucao'])} encontra-se no Gabinete do Relator. Sua última peça é uma informação "
         "instrutiva desta Coordenadoria, de 29/10/2026, que sugeriu a retomada da marcha processual. Desse modo, não "
         "é possível a esta Diretoria promover o seu apensamento, que pressupõe a tramitação de ambos os feitos no "
-        "mesmo setor. Sugere-se, assim, que o Gabinete do Relator o reúna a estes autos quando do seu retorno do "
-        "Ministério Público de Contas, estendendo-se-lhe, desde já, a manifestação favorável ao arquivamento constante "
-        "dos itens seguintes e, se assim entender o Parquet de Contas, o respectivo parecer. Não foram identificadas execuções remanescentes com desconto em folha implantado "
+        "mesmo setor, razão pela qual se propõe, ao final, a remessa prévia destes autos ao Gabinete do Relator para a "
+        "reunião. Não foram identificadas execuções remanescentes com desconto em folha implantado "
         "ou remessa ao Ministério Público de Contas que devessem ser acrescidas à relação do item “b”.",
 
         "No tocante ao item “d”, esta Coordenadoria manifesta-se favoravelmente ao arquivamento destes autos, das "
@@ -418,9 +417,9 @@ def informacao() -> Path:
         "prejuízo da responsabilização do Sr. Nereu Batista Linhares no âmbito da APR nº 003474/2021-TC, na qual a "
         "mesma conduta continuará a ser apreciada de forma integral, inclusive quanto ao dano ao erário.",
 
-        "Ante o exposto, em cumprimento ao item “e” do Despacho do Evento 63, encaminham-se os autos ao Ministério "
-        "Público de Contas, para emissão de parecer conclusivo sobre o arquivamento proposto, sem necessidade de "
-        "retorno ao Gabinete do Relator.",
+        "Ante o exposto, sugere-se o encaminhamento destes autos ao Gabinete do Relator, para que a sua assessoria "
+        f"promova a reunião do Processo nº {TC(r['execucao'])} a estes autos (item “c”), e, em seguida, a remessa ao "
+        "Ministério Público de Contas, para emissão de parecer conclusivo sobre o arquivamento proposto (item “e”).",
     ]
     quadros = [
         ("preenche o critério fixado", "Quadro 1 – Execução remanescente a reunir a estes autos (item “c”)",

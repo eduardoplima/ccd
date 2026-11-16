@@ -9,9 +9,9 @@ arquivamento vai ao colegiado após manifestação da DIP e parecer do MPC.
 |---|---|---|---|
 | a | assessoria GCAED | apensar as 78 da Tabela 1 ao 96/2022 | pendente: 96/2022 já está na **CCD** (13/11) sem os apensos — conferir `IdProcessoApensador` |
 | b | DIP | juntar cópia do despacho na APR, desconsiderando os 19 originários da Tabela 2 | APR na DAP desde o Despacho Ev. 115 (04/10/2024): **memorando à DAP** com `apr_3474_2021/anexos/despacho_ev63_000096_2022.pdf` cumpre o item (sem certidão; a informação já diz que foi enviado) |
-| c | DIP | revisar o levantamento pelo Ev. 103 e reunir remanescentes | **feito**: único remanescente 003380/2024 (no GCAED). Apensamento exige o mesmo setor_atual, então a informação pede que o Gabinete o reúna **no retorno do MPC** e já o inclui na manifestação do item d |
+| c | DIP | revisar o levantamento pelo Ev. 103 e reunir remanescentes | **feito**: único remanescente 003380/2024 (no GCAED). Apensamento exige o mesmo setor_atual, então a informação propõe **ir antes ao Gabinete** para a assessoria apensá-lo e só depois ao MPC; o item d já o inclui |
 | d | DIP | manifestar-se sobre o arquivamento | **informação regenerada 16/11** (edições do Word no script; Tabela 1 "já apensada a estes autos"; Figura 1 com "Memorando à DAP"), favorável, não cadastrada. PDF de 5 págs. **sem** o anexo; o **Anexo Único** (`000096_2022/anexo_unico_ev103.pdf`, 14 págs. = `anexo_ev103_fluxograma.xlsx` em paisagem) é citado no parágrafo do item c e vai anexado à parte, pelo usuário, na interface do e-Contas |
-| e | DIP | encaminhar ao MPC | pendente: 96/2022 na CCD → ciclo e-Contas, tramitar DIP "ENVIO AO MPC" |
+| e | DIP | encaminhar ao MPC | pendente: 96/2022 na CCD → ciclo e-Contas, tramitar DIP **ao GCAED** (apensa o 003380/2024 e remete ao MPC) |
 
 ## Rodar
 ```
@@ -35,6 +35,7 @@ arquivamento vai ao colegiado após manifestação da DIP e parecer do MPC.
 ## Próximo ciclo (quando o usuário mandar)
 1. Conferir `setor_atual` do 96/2022 = CCD e os 78 com `IdProcessoApensador` = 96/2022.
 2. Skill `enviar-informacao`: distribuir → cadastrar `000096_2022/informacao_000096_2022.pdf`; o usuário anexa
-   `000096_2022/anexo_unico_ev103.pdf` manualmente na interface do e-Contas (decisão de 16/11) → assinar → publicar → tramitar DIP, movimentação
-   "ENVIO AO MPC".
+   `000096_2022/anexo_unico_ev103.pdf` manualmente na interface do e-Contas (decisão de 16/11) → assinar → publicar → tramitar DIP com movimentação de **envio ao GCAED**
+   (decisão de 16/11: Gabinete apensa o 003380/2024 e depois remete ao MPC; o "sem retorno ao Gabinete" do item e
+   fica justificado no parágrafo final).
 3. Item b: memorando à DAP com a cópia do despacho, **antes** de cadastrar a informação.
