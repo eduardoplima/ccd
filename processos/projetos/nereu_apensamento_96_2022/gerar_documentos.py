@@ -4,8 +4,8 @@ Lê levantamento.json (rodar levantamento.py antes).
 
 Saídas (nada é cadastrado):
   apr_3474_2021/anexos/despacho_ev63_000096_2022.pdf (anexo do memorando à DAP)
-  000096_2022/informacao_000096_2022.docx/.pdf
-    (anexos: ../levantamento_96_2022.xlsx e ../anexo_ev103_fluxograma.xlsx)
+  000096_2022/informacao_000096_2022.docx/.pdf — o PDF já traz o Anexo Único (planilha
+    ../anexo_ev103_fluxograma.xlsx em paisagem, 000096_2022/anexo_unico_ev103.docx/.pdf) ao final
 Modelo: scripts/automacao/templates/modelo_informacao.docx (numera os parágrafos); quadros no
 padrão de processos/utils/gerar_informacoes_nereu_resposta_sead.py.
 
@@ -18,6 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 import docx
+from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -26,6 +27,7 @@ from docxtpl import DocxTemplate
 
 from ccd.config import REPO_ROOT
 from ccd.docs import docx_to_pdf
+from ccd.pdf import merge_pdfs
 from ccd.processo import get_info_file_path
 
 BASE = Path(__file__).resolve().parent
@@ -55,7 +57,8 @@ def _shade(cell, hex_cor: str) -> None:
     cell._tc.get_or_add_tcPr().append(shd)
 
 
-def _tabela_apos(d, ancora_texto: str, legenda: str, cabecalho: list[str], linhas: list[list[str]]) -> None:
+def _tabela_apos(d, ancora_texto: str, legenda: str, cabecalho: list[str], linhas: list[list[str]],
+                 fonte: int = 9) -> None:
     """Insere legenda "Quadro N – título" + tabela após o parágrafo-âncora."""
     ancora = next(p for p in d.paragraphs if ancora_texto in p.text)
     cap = d.add_paragraph()
@@ -85,8 +88,9 @@ def _tabela_apos(d, ancora_texto: str, legenda: str, cabecalho: list[str], linha
             par.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = par.add_run(texto)
             run.bold = i == 0
-            run.font.size = Pt(9)
+            run.font.size = Pt(fonte)
             run.font.color.rgb = RGBColor.from_string("FFFFFF" if i == 0 else TCE["cinza_texto"])
+    t.rows[0]._tr.get_or_add_trPr().append(OxmlElement("w:tblHeader"))  # repete o cabeçalho a cada página
     cap._p.addnext(t._tbl)
 
 
@@ -275,6 +279,49 @@ def montar(out: Path, processo: str, assunto: str, titulo: str, ps: list[str],
     assert out.with_suffix(".pdf").is_file(), "PDF não gerado"
 
 
+def anexo_unico() -> Path:
+    """Anexo Único: a planilha anexo_ev103_fluxograma.xlsx (levantamento.py) em PDF paisagem."""
+    import pandas as pd
+    df = pd.read_excel(BASE / "anexo_ev103_fluxograma.xlsx").fillna("")
+    df["Valor original (R$)"] = df["Valor original (R$)"].map(
+        lambda v: f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if v != "" else "")
+    df["Destino"] = df["Destino"].map({  # rótulos curtos para caber na página
+        "Sem execução de multa em face do responsável": "Sem execução de multa",
+        "Outro relator – não alcançada pelo Despacho": "Outro relator",
+        "Reunião ao 000096/2022 e arquivamento (itens a e d)": "Reunião (itens a e d)",
+        "Memorando à DAP: desconsiderar na multa diária global (item b)": "Memorando à DAP (item b)",
+        "Remanescente a reunir (item c)": "Remanescente (item c)"})
+    assert not df["Destino"].isna().any(), "destino sem rótulo curto"
+    cab = ["Originário (Ev. 103)", "Execução", "Relator", "Rel. Antonio Ed?", "Despacho Ev. 63", "Desc. folha",
+           "PGE/MPC", "Ato efetivo", "Setor", "Apensado a", "Situação", "Protesto", "Valor (R$)", "Destino"]
+    larguras = [1.9, 1.9, 4.1, 1.4, 2.1, 1.2, 1.4, 1.2, 1.6, 1.9, 1.7, 1.7, 1.6, 3.1]  # cm, soma 26.8
+    assert len(cab) == len(df.columns) == len(larguras), df.columns.tolist()
+    d = docx.Document()
+    sec = d.sections[0]
+    sec.orientation = WD_ORIENT.LANDSCAPE
+    sec.page_width, sec.page_height = sec.page_height, sec.page_width
+    sec.left_margin = sec.right_margin = Cm(1.0)
+    sec.top_margin = sec.bottom_margin = Cm(1.5)
+    d.styles["Normal"].font.size = Pt(9)
+    d.styles["Normal"].paragraph_format.space_after = Pt(0)
+    titulo = d.add_paragraph()
+    titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    titulo.add_run("ANEXO ÚNICO – Processo nº 000096/2022-TC").bold = True
+    sub = d.add_paragraph("Processos originários relacionados no Evento 103 da APR nº 003474/2021-TC "
+                          f"({len(df)}), com as etapas do levantamento (Figura 1) e o destino de cada um.")
+    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _tabela_apos(d, "com as etapas do levantamento", "", cab, df.astype(str).values.tolist(), fonte=7)
+    t = d.tables[0]
+    t.autofit = False
+    for row in t.rows:
+        for cell, w in zip(row.cells, larguras, strict=True):
+            cell.width = Cm(w)
+    out = BASE / "000096_2022" / "anexo_unico_ev103.docx"
+    d.save(str(out))
+    docx_to_pdf(str(out), str(out.parent))
+    return out.with_suffix(".pdf")
+
+
 # ---------- Item "b": cópia do Despacho do Ev. 63 para o memorando à DAP ----------
 def despacho_para_memorando() -> Path:
     anexos = BASE / "apr_3474_2021" / "anexos"
@@ -322,8 +369,9 @@ def informacao() -> Path:
         "identificados na planilha), cotejada com a totalidade das execuções de multa em face do Sr. Nereu Batista "
         f"Linhares registradas no sistema desta Corte ({L['execucoes_nereu']} execuções, das quais {L['gcaed']} sob a "
         "relatoria do Conselheiro Antonio Ed Souza Santana). O roteiro do cotejo está sintetizado na Figura 1 e o "
-        "resultado completo consta das planilhas anexas (uma por processo originário do Evento 103, com as etapas da "
-        "Figura 1, e outra por execução).",
+        "resultado completo consta do Anexo Único desta informação, que relaciona, para cada um dos "
+        f"{L['originarios_ev103']} processos originários do Evento 103, as etapas da Figura 1 percorridas e o destino "
+        "correspondente.",
 
         f"Identificaram-se {L['gcaed_na_apr']} execuções sob essa relatoria cujos processos originários integram o "
         f"escopo da APR. Dentre elas, as {n_t1} relacionadas na Tabela 1 do Despacho foram confirmadas: todas "
@@ -397,6 +445,9 @@ def informacao() -> Path:
     out = BASE / "000096_2022" / "informacao_000096_2022.docx"
     montar(out, "000096/2022", ASSUNTO_96, "INFORMAÇÃO INSTRUTIVA", ps, quadros, figuras, itens,
            italicos=[("acolheu parcialmente a proposta (Evento 63)", "non bis in idem")])
+    pdf, tmp = out.with_suffix(".pdf"), out.with_suffix(".tmp.pdf")
+    merge_pdfs([pdf, anexo_unico()], tmp)  # Anexo Único ao final do PDF da informação
+    tmp.replace(pdf)
     return out
 
 
