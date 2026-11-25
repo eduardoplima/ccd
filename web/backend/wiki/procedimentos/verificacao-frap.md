@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-011 |
-| **Versão** | 1.0 |
-| **Data de emissão** | 20/08/2026 |
+| **Versão** | 1.1 |
+| **Data de emissão** | 25/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
-| **Próxima revisão** | 08/2027 |
+| **Próxima revisão** | 11/2027 |
 
 ## 1. Objetivo
 
@@ -25,7 +25,7 @@ Processos de execução com desconto em folha implementado ([POP-CCD-004](descon
 
 - **FRAP**: Fundo de Reaparelhamento do TCE/RN.
 - **Quadro de descontos**: descontos registrados na folha do órgão (SIAI Pessoal, rubrica TCE/FRAP).
-- **Quadro de repasses**: créditos no extrato bancário do FRAP (por CPF do depositante) ou baixas de parcela registradas no controle de desconto em folha (`FRAPDescontoFolhaParcela`).
+- **Quadro de repasses**: créditos no extrato bancário do FRAP conciliados às parcelas no módulo **Desconto em Folha** da webapp da CCD ([POP-CCD-004](desconto-em-folha)).
 
 ## 5. Responsabilidades
 
@@ -35,7 +35,7 @@ Processos de execução com desconto em folha implementado ([POP-CCD-004](descon
 ## 6. Recursos e sistemas
 
 - SIAI Pessoal (folha dos órgãos — quadro de descontos).
-- Módulo FRAP da webapp da CCD / extrato bancário do FRAP (quadro de repasses).
+- Módulo Desconto em Folha da webapp da CCD (parcelas da resposta do órgão, retenções do SIAI Pessoal e conciliação com os créditos do FRAP — quadro de repasses).
 - Rastreio automatizado no repositório da CCD (`rastreio_verificar_frap` + geração das informações de conciliação por processo).
 - Área Restrita (marcador 5953, informações).
 
@@ -44,7 +44,7 @@ Processos de execução com desconto em folha implementado ([POP-CCD-004](descon
 1. Identificar os processos com desconto em folha implementado e sem conciliação (rastreio; aplicar o marcador **"Verificar transferência FRAP" (5953)**).
 2. Para cada processo, levantar:
    1. **Quadro de descontos em folha** — SIAI Pessoal, rubrica TCE/FRAP, por competência;
-   2. **Quadro de repasses** — extrato do FRAP por CPF do depositante ou baixas em `FRAPDescontoFolhaParcela`.
+   2. **Quadro de repasses** — créditos do FRAP conciliados no detalhe do cadastro ("Valores e conciliação com o FRAP"); crédito ainda não vinculado é localizado no painel "Créditos no FRAP".
 3. **Confrontar os totais** dos dois quadros.
 4. Elaborar a **informação de conciliação** nos autos: "Trata-se de…" com processo, assunto, responsáveis e valor atualizado da multa; os dois quadros com o confronto; ou parágrafo explicativo da **ausência de registros**, quando nada foi localizado.
 5. Conforme o resultado:
@@ -62,7 +62,7 @@ Processos de execução com desconto em folha implementado ([POP-CCD-004](descon
 ## 9. Pontos de controle e exceções
 
 - O desconto pode ser feito **em pares de processos** com uma única transferência ao FRAP cobrindo os dois — conciliar o par junto, não cada processo isolado.
-- O campo de CPF do depositante no extrato pode vir vazio na grande maioria dos lançamentos — usar as vias alternativas (documento da OB, `FRAPDescontoFolhaParcela`).
+- O campo de CPF do depositante no extrato pode vir vazio na grande maioria dos lançamentos — localizar o crédito pelo valor, pela data e pelo documento da OB, no painel "Créditos no FRAP".
 - O pagamento por desconto em folha **não** aparece nos retornos de boleto — a conciliação é a única comprovação.
 - Descontos cessados há meses sem quitação do débito indicam pendência a investigar junto ao órgão.
 
@@ -71,3 +71,4 @@ Processos de execução com desconto em folha implementado ([POP-CCD-004](descon
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — POP novo (ISO 10013:2021), a partir do rastreio e das informações de conciliação em uso. |
+| 1.1 | 25/11/2026 | Quadro de repasses passa a ser levantado no módulo Desconto em Folha da webapp (alinhamento ao POP-CCD-004 v2.0). |
