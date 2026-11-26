@@ -8,10 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WikiMarkdown } from "@/components/wiki/markdown";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useWikiPage, useWikiPages, useWikiSearch } from "@/hooks/use-wiki";
+import { podeEditar } from "@/lib/permissoes";
 
 export default function WikiHomePage() {
   const router = useRouter();
+  const { data: me } = useCurrentUser();
+  const canEdit = podeEditar(me, "wiki");
   const [q, setQ] = useState("");
   const [novoSlug, setNovoSlug] = useState("");
   const { data: index, isPending } = useWikiPage("index");
@@ -38,18 +42,20 @@ export default function WikiHomePage() {
           onChange={(e) => setQ(e.target.value)}
           className="max-w-sm"
         />
-        <div className="ml-auto flex items-center gap-2">
-          <Input
-            placeholder="nova-pagina ou procedimentos/nova"
-            value={novoSlug}
-            onChange={(e) => setNovoSlug(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && criarPagina()}
-            className="w-64"
-          />
-          <Button variant="outline" size="sm" onClick={criarPagina} disabled={!novoSlug.trim()}>
-            Nova página
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="ml-auto flex items-center gap-2">
+            <Input
+              placeholder="nova-pagina ou procedimentos/nova"
+              value={novoSlug}
+              onChange={(e) => setNovoSlug(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && criarPagina()}
+              className="w-64"
+            />
+            <Button variant="outline" size="sm" onClick={criarPagina} disabled={!novoSlug.trim()}>
+              Nova página
+            </Button>
+          </div>
+        )}
       </div>
 
       {buscando ? (
@@ -77,9 +83,14 @@ export default function WikiHomePage() {
           <div className="border-t pt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-muted-foreground">Todas as páginas</h2>
-              <Link href="/wiki/index" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-                Editar página inicial
-              </Link>
+              {canEdit && (
+                <Link
+                  href="/wiki/index"
+                  className={buttonVariants({ variant: "ghost", size: "sm" })}
+                >
+                  Editar página inicial
+                </Link>
+              )}
             </div>
             <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
               {pages

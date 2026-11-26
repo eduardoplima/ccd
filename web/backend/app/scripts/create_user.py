@@ -3,7 +3,7 @@
 Uso (requer rede TCE para chegar no BdDIP):
 
     uv run --package ccd-web-backend python -m app.scripts.create_user \
-        --login eduardo --email eplima.cc@gmail.com --nome "Eduardo Lima" --papel admin
+        --login fulano --email fulano@exemplo.gov.br --nome "Fulano de Tal" --papel admin
 
 Pede a senha via getpass, valida o limite de 72 bytes do bcrypt e faz UPSERT por login.
 `Usuarios` não tem nome completo separado; `--nome` é aceito por compatibilidade

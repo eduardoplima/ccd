@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-013 |
-| **Versão** | 0.1 (minuta) |
-| **Data de emissão** | 04/09/2026 |
+| **Versão** | 0.2 (minuta) |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
 | **Próxima revisão** | 03/2027 |
@@ -79,7 +79,7 @@ _Pendência desta minuta: o número do item da seção "Monitoramento" na NBASP 
 
 - `scripts/analise/monitoramento_obrigacoes.py` — rotina de triagem, varredura e geração das fichas.
 - `BdDIP` — `ObrigacaoStaging`, `RecomendacaoStaging` (acervo curado); `processo` — `Processos`, `Processo_TransitoJulgado`, `vw_ata_informacao`, `Obg_Obrigacao` (CGR).
-- Área Restrita / e-Contas — conferência da tramitação e das comunicações recentes, que o banco reflete com atraso.
+- e-Contas — conferência da tramitação e das comunicações recentes, que o banco reflete com atraso.
 - Modelo de linguagem: exclusivamente o DeepSeek do Azure AI Foundry do SERPRO, por exigência de LGPD.
 
 ## 7. Descrição das atividades
@@ -123,7 +123,7 @@ _Pendência desta minuta: o número do item da seção "Monitoramento" na NBASP 
 - **Varredura parcial.** Processos com muitas peças não cabem em uma só leitura. A ficha e o JSON informam quantas peças foram lidas de quantas existem; quando a varredura for parcial em caso relevante, reexecutar com `--orcamento` maior.
 - **Prazo em dias úteis** é contado sem calendário de feriados. Em caso concreto que dependa da diferença, conferir manualmente.
 - **Prazo contado da cientificação** não é calculado: o script não dispõe dessa data e classifica o item como `PRAZO_INDETERMINADO` em vez de estimar. Nesses casos vale a advertência do levantamento de obrigações sem citação — sem cientificação do responsável, o prazo não corre e a obrigação é inexigível.
-- **O banco atrasa em relação à Área Restrita.** Para tramitação e comunicações recentes, a Área Restrita é autoritativa.
+- **O banco atrasa em relação ao e-Contas.** Para tramitação e comunicações recentes, o e-Contas é autoritativo.
 - **Cobertura temporal.** O acervo curado cobre apenas as decisões já revisadas no CGAD, e cresce a cada revisão. É um piso, não o universo das obrigações do Tribunal.
 - **Situação do CGR na emissão desta minuta (04/09/2026).** Dos 813 itens curados, apenas 16 pertenciam a processo com algum registro em `Obg_Obrigacao`, e a última inclusão no cadastro datava de 07/02/2025. O cadastro que o art. 299 manda manter estava sem alimentação, e esse é o principal achado que motivou este procedimento.
 
@@ -132,3 +132,4 @@ _Pendência desta minuta: o número do item da seção "Monitoramento" na NBASP 
 | Versão | Data | Alteração |
 |---|---|---|
 | 0.1 | 04/09/2026 | Minuta inicial — monitoramento do acervo curado do CGAD, ancorado na NBASP 100. |
+| 0.2 | 26/11/2026 | Conferência de tramitação e comunicações passa ao e-Contas. |

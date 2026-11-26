@@ -10,9 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { WikiMarkdown } from "@/components/wiki/markdown";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDeleteWikiOverride, useSaveWikiPage, useWikiPage } from "@/hooks/use-wiki";
+import { podeEditar } from "@/lib/permissoes";
 
 export default function WikiPageView() {
+  const { data: me } = useCurrentUser();
+  const canEdit = podeEditar(me, "wiki");
   const params = useParams<{ slug: string[] }>();
   const slug = (params.slug ?? []).join("/");
   const { data: page, isPending, error } = useWikiPage(slug);
@@ -50,9 +54,11 @@ export default function WikiPageView() {
           A página <code>{slug}</code> ainda não existe.
         </p>
         <div className="flex gap-2">
-          <Button onClick={() => setDraft(`# ${slug.split("/").pop()}\n\n`)}>
-            Criar esta página
-          </Button>
+          {canEdit && (
+            <Button onClick={() => setDraft(`# ${slug.split("/").pop()}\n\n`)}>
+              Criar esta página
+            </Button>
+          )}
           <Link
             href={slug.startsWith("procedimentos/") ? "/wiki/procedimentos" : "/wiki"}
             className={buttonVariants({ variant: "outline" })}
@@ -98,7 +104,7 @@ export default function WikiPageView() {
                 {salvar.isPending ? "Salvando…" : "Salvar"}
               </Button>
             </>
-          ) : (
+          ) : canEdit ? (
             <>
               {page?.editado && (
                 <Button
@@ -119,7 +125,7 @@ export default function WikiPageView() {
                 Editar
               </Button>
             </>
-          )}
+          ) : null}
         </div>
       </div>
 

@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-011 |
-| **Versão** | 1.1 |
-| **Data de emissão** | 25/11/2026 |
+| **Versão** | 1.2 |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
 | **Próxima revisão** | 11/2027 |
@@ -37,7 +37,7 @@ Processos de execução com desconto em folha implementado ([POP-CCD-004](descon
 - SIAI Pessoal (folha dos órgãos — quadro de descontos).
 - Módulo Desconto em Folha da webapp da CCD (parcelas da resposta do órgão, retenções do SIAI Pessoal e conciliação com os créditos do FRAP — quadro de repasses).
 - Rastreio automatizado no repositório da CCD (`rastreio_verificar_frap` + geração das informações de conciliação por processo).
-- Área Restrita (marcador 5953, informações).
+- Área Restrita (marcador 5953); e-Contas (informações).
 
 ## 7. Descrição das atividades
 
@@ -72,3 +72,4 @@ Processos de execução com desconto em folha implementado ([POP-CCD-004](descon
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — POP novo (ISO 10013:2021), a partir do rastreio e das informações de conciliação em uso. |
 | 1.1 | 25/11/2026 | Quadro de repasses passa a ser levantado no módulo Desconto em Folha da webapp (alinhamento ao POP-CCD-004 v2.0). |
+| 1.2 | 26/11/2026 | Informações passam ao e-Contas; marcador segue na Área Restrita. |

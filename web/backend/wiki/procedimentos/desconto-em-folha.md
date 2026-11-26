@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-004 |
-| **Versão** | 2.0 |
-| **Data de emissão** | 25/11/2026 |
+| **Versão** | 2.1 |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
 | **Próxima revisão** | 11/2027 |
@@ -40,7 +40,7 @@ Processos de execução com multa cuja modalidade determinada pelo Relator seja 
 
 - SIAI-DP; Portal da Transparência do Governo Federal; Câmara dos Deputados; Senado Federal (verificação de vínculo).
 - Webapp da CCD: **Automação → Desconto em Folha** (geração do despacho) e módulo **Desconto em Folha** (cadastro, notificação, recebimento, resposta, valores e conciliação com o FRAP; retenções do SIAI Pessoal, inclusive pensionistas).
-- Área Restrita / e-Contas (CADINQ, despachos, marcadores).
+- e-Contas (CADINQ, despachos); Área Restrita (marcadores).
 
 ## 7. Descrição das atividades
 
@@ -82,3 +82,4 @@ Processos de execução com multa cuja modalidade determinada pelo Relator seja 
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — conversão ao formato POP (ISO 10013:2021). |
 | 2.0 | 25/11/2026 | Incorpora o módulo Desconto em Folha da webapp (cadastro, notificação/recebimento, resposta do órgão e conciliação com o FRAP); elimina as lacunas de acompanhamento do retorno e de controle dos pagamentos. |
+| 2.1 | 26/11/2026 | CADINQ e despachos no e-Contas; marcadores seguem na Área Restrita. |

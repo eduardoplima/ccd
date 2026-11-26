@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-009 |
-| **Versão** | 1.0 |
-| **Data de emissão** | 20/08/2026 |
+| **Versão** | 1.1 |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
-| **Próxima revisão** | 08/2027 |
+| **Próxima revisão** | 11/2027 |
 
 ## 1. Objetivo
 
@@ -34,7 +34,7 @@ Processos nos marcadores "Parcelamento em Curso" e "Parcelamento Inadimplentes".
 
 ## 6. Recursos e sistemas
 
-Área Restrita (aba de pendências, marcadores); alerta de "parcelamento cancelado" no módulo CCD da webapp.
+e-Contas (aba de pendências); Área Restrita (marcadores); alerta de "parcelamento cancelado" no módulo CCD da webapp.
 
 ## 7. Descrição das atividades
 
@@ -64,3 +64,4 @@ Processos nos marcadores "Parcelamento em Curso" e "Parcelamento Inadimplentes".
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — conversão ao formato POP (ISO 10013:2021). |
+| 1.1 | 26/11/2026 | Painel de pendências passa ao e-Contas; marcadores seguem na Área Restrita. |

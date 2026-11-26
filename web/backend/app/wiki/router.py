@@ -111,7 +111,10 @@ def obter_pagina(slug: str, _: Usuario = Depends(get_current_user)) -> WikiPage:
     return WikiPage(slug=slug, title=_title(content, slug), content=content, editado=editado)
 
 
-@router.put("/pages/{slug:path}", response_model=WikiPage)
+_EDITAR = [Depends(require_modulo("wiki", editar=True))]
+
+
+@router.put("/pages/{slug:path}", response_model=WikiPage, dependencies=_EDITAR)
 def salvar_pagina(
     slug: str,
     body: WikiPageUpdate,
@@ -124,7 +127,7 @@ def salvar_pagina(
     return obter_pagina(slug, _)
 
 
-@router.delete("/pages/{slug:path}/override", status_code=204)
+@router.delete("/pages/{slug:path}/override", status_code=204, dependencies=_EDITAR)
 def descartar_override(slug: str, _: Usuario = Depends(get_current_user)) -> None:
     edits = _edits_dir()
     if edits is None:

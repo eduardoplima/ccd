@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-002 |
-| **Versão** | 1.0 |
-| **Data de emissão** | 20/08/2026 |
+| **Versão** | 1.1 |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
-| **Próxima revisão** | 08/2027 |
+| **Próxima revisão** | 11/2027 |
 
 ## 1. Objetivo
 
@@ -37,7 +37,7 @@ Processos na CCD com o marcador "Instaurar Processo de Execução", cuja decisã
 
 ## 6. Recursos e sistemas
 
-Área Restrita — *Administrativo / Acompanhamento de Decisões / Instaurar Processo de Execução*.
+e-Contas — *Administrativo / Acompanhamento de Decisões / Instaurar Processo de Execução*.
 
 ## 7. Descrição das atividades
 
@@ -78,7 +78,7 @@ Processos na CCD com o marcador "Instaurar Processo de Execução", cuja decisã
 
 ## 8. Registros
 
-- Processo de execução instaurado na Área Restrita, com despacho e documentos herdados.
+- Processo de execução instaurado no e-Contas, com despacho e documentos herdados.
 - CADINQ gerado e assinado no processo de execução.
 - Despacho inserido automaticamente no processo original.
 
@@ -93,3 +93,4 @@ Processos na CCD com o marcador "Instaurar Processo de Execução", cuja decisã
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — conversão ao formato POP (ISO 10013:2021), consolidando instauração e encaminhamentos. |
+| 1.1 | 26/11/2026 | Instauração passa a ser feita no e-Contas. |

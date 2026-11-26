@@ -14,6 +14,7 @@ from app.deps import get_current_user, get_db_session
 from app.lancamentos.router import router as lancamentos_router
 from app.permissoes import pode
 from app.usuarios.router import router as usuarios_router
+from app.wiki import router as wiki_router_mod
 
 DF = "ccd.desconto-folha"
 # Sem `cpf` → 422: passou do gate de leitura e parou na validação (não toca o banco).
@@ -58,7 +59,7 @@ def _client(factory: sessionmaker[Session], usuario: FRAPUsuario) -> TestClient:
             yield s
 
     app = FastAPI()
-    for r in (desconto_folha_router, lancamentos_router, usuarios_router):
+    for r in (desconto_folha_router, lancamentos_router, usuarios_router, wiki_router_mod.router):
         app.include_router(r)
     app.dependency_overrides[get_db_session] = override_db
     app.dependency_overrides[get_current_user] = lambda: usuario
@@ -92,6 +93,20 @@ def test_visualizacao_removida_barra_o_modulo(factory: sessionmaker[Session]) ->
         assert c.get(VER_DF).status_code == 422
         assert c.post("/api/v1/ccd/desconto-folha", json={}).status_code == 403
         assert c.get("/api/v1/frap/lancamentos").status_code == 403
+
+
+def test_wiki_so_grava_com_editar(
+    factory: sessionmaker[Session], tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(wiki_router_mod, "_edits_dir", lambda: tmp_path)
+    url = "/api/v1/wiki/pages/teste-permissao"
+    with _client(factory, _usuario("user")) as c:
+        assert c.get("/api/v1/wiki/pages").status_code == 200
+        assert c.put(url, json={"content": "# x"}).status_code == 403
+        assert c.delete(f"{url}/override").status_code == 403
+    with _client(factory, _usuario("user", wiki=(True, True))) as c:
+        assert c.put(url, json={"content": "# x"}).status_code == 200
+        assert c.delete(f"{url}/override").status_code == 204
 
 
 def test_admin_substitui_matriz_do_usuario(factory: sessionmaker[Session]) -> None:

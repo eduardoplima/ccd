@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-007 |
-| **Versão** | 1.0 |
-| **Data de emissão** | 20/08/2026 |
+| **Versão** | 1.1 |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
-| **Próxima revisão** | 08/2027 |
+| **Próxima revisão** | 11/2027 |
 
 ## 1. Objetivo
 
@@ -36,24 +36,24 @@ Processos na CCD com o marcador "Antecedentes".
 ## 6. Recursos e sistemas
 
 - Pipeline automatizado do repositório da CCD (`gerar_antecedentes`: descoberta por marcador → despacho-fonte → extração dos responsáveis por LLM → débitos transitados em julgado por CPF → docx/PDF).
-- Área Restrita: distribuição, cadastro de informação digitalizada, tramitação.
+- e-Contas (<https://processos.tce.rn.gov.br>): distribuição, cadastro da informação, tramitação. Passo a passo dos comandos em `docs/runbooks/enviar-antecedentes-gaana.md`, no repositório.
 - Assinatura A3 via Web PKI (navegador).
 
 ## 7. Descrição das atividades
 
 1. **Gerar**: rodar a geração com `--dry-run` para listar os candidatos (marcador "Antecedentes" na CCD); depois gerar as informações — uma por processo, em pasta datada dedicada.
-2. **Gate de revisão** (obrigatório — os documentos vão ao gabinete de um Conselheiro): conferir responsável extraído, tabela de condenações e ausência de código cru **antes** de subir na Área Restrita.
-3. **Distribuir** os processos para o usuário — **sempre antes de cadastrar** (o cadastro de informação digitalizada só abre para processo distribuído).
-4. **Cadastrar** as informações digitalizadas em lote a partir da pasta gerada.
-5. **Assinar** com token A3 (Web PKI), em lotes de até 20; verificação: o processo sai da lista de pendentes.
-6. **Tramitar** à DIP com a providência **"ENVIO A \<gabinete\>"** (padrão "ENVIO A GAANA"); verificação: os processos saem da listagem da CCD.
+2. **Gate de revisão** (obrigatório — os documentos vão ao gabinete de um Conselheiro): conferir responsável extraído, tabela de condenações e ausência de código cru **antes** de subir no e-Contas.
+3. **Distribuir** os processos para o usuário — **sempre antes de cadastrar** (o cadastro da informação só é salvo para processo com distribuição aberta).
+4. **Cadastrar** as informações em lote a partir da pasta gerada.
+5. **Assinar** com token A3 (Web PKI), uma informação por vez (o PIN é pedido a cada uma); verificação: o processo sai da lista de pendentes.
+6. **Tramitar** à DIP escolhendo o **tipo de movimentação** (o e-Contas não tem providência livre; ex.: "Encaminhamento da Informação Técnica ao Relator"). O gabinete destinatário, se precisar constar, vai no resumo da informação. Verificação: os processos saem da listagem da CCD.
 
 Regra transversal: **cada ação irreversível (cadastro, assinatura, tramitação) tem `--dry-run` conferido antes da execução real**.
 
 ## 8. Registros
 
 - Informações de antecedentes (PDF) cadastradas e assinadas nos processos.
-- Tramitação registrada com a providência do gabinete.
+- Tramitação registrada com o tipo de movimentação escolhido.
 - Pasta datada com os documentos gerados (`output/automacao/antecedentes/`).
 
 ## 9. Pontos de controle e exceções
@@ -64,8 +64,7 @@ Armadilhas conhecidas (checar no gate de revisão):
 
 - **Despacho-fonte errado**: o pipeline pega a informação mais recente, que às vezes é um Termo de Apensamento e não a solicitação de antecedentes. Sintoma: responsável extraído é um servidor do TCE. Correção: localizar a solicitação real e regenerar.
 - **Homônimos**: nomes iguais com CPFs diferentes misturam débitos; conferir que o CPF do responsável bate com o do processo.
-- **Processos de CONTAS**: os combos de relatório de auditoria são obrigatórios no cadastro; sem preenchê-los (com "N"), a inclusão falha silenciosamente.
-- Alertas JS de data/numérico na Área Restrita são falso-positivos; confiar nas verificações reais (identificador retornado, item que sai da lista).
+- Mensagem genérica de sucesso não basta; confiar nas verificações reais (identificador retornado, item que sai da lista).
 - Antecedentes **adiciona** informação nova; não substitui informação anterior.
 
 ## 10. Histórico de revisões
@@ -73,3 +72,4 @@ Armadilhas conhecidas (checar no gate de revisão):
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — formato POP (ISO 10013:2021), incorporando o ciclo completo na Área Restrita. |
+| 1.1 | 26/11/2026 | Ciclo de distribuição, cadastro, assinatura e tramitação passa ao e-Contas: tipo de movimentação no lugar da providência, assinatura uma a uma, sem combos de auditoria no cadastro. |

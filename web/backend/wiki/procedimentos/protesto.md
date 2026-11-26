@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-005 |
-| **Versão** | 1.0 |
-| **Data de emissão** | 20/08/2026 |
+| **Versão** | 1.1 |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
-| **Próxima revisão** | 08/2027 |
+| **Próxima revisão** | 11/2027 |
 
 ## 1. Objetivo
 
@@ -35,7 +35,7 @@ Processos de execução com multa cuja modalidade seja o protesto, com responsá
 
 ## 6. Recursos e sistemas
 
-Área Restrita — *Administrativo / Protesto Extrajudicial / Envio de Remessa*; painel de pendências. Ver também [Rotinas mensais](../rotinas-mensais).
+e-Contas — *Administrativo / Protesto Extrajudicial / Envio de Remessa*; painel de pendências. Ver também [Rotinas mensais](../rotinas-mensais).
 
 ## 7. Descrição das atividades
 
@@ -60,7 +60,7 @@ Processos de execução com multa cuja modalidade seja o protesto, com responsá
 
 ## 8. Registros
 
-- Remessas enviadas e retornos no painel de pendências da Área Restrita.
+- Remessas enviadas e retornos no painel de pendências do e-Contas.
 - Marcadores refletindo o estágio de cada processo (fluxo acima).
 - Certidões de quitação; despachos de encaminhamento ao MP de Contas.
 
@@ -83,3 +83,4 @@ Problemas no retorno (marcador **"Protesto - Cancelamento e Providências"**):
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — conversão ao formato POP (ISO 10013:2021). |
+| 1.1 | 26/11/2026 | Envio de remessa e painel de pendências passam ao e-Contas. |

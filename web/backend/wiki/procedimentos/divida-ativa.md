@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-006 |
-| **Versão** | 1.0 |
-| **Data de emissão** | 20/08/2026 |
+| **Versão** | 1.1 |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
-| **Próxima revisão** | 08/2027 |
+| **Próxima revisão** | 11/2027 |
 
 ## 1. Objetivo
 
@@ -36,7 +36,7 @@ Processos de execução com ressarcimento (com ou sem multa percentual) e proces
 
 ## 6. Recursos e sistemas
 
-Área Restrita (despachos, CADINQ, tramitação).
+e-Contas (despachos, CADINQ, tramitação).
 
 ## 7. Descrição das atividades
 
@@ -67,3 +67,4 @@ Processos de execução com ressarcimento (com ou sem multa percentual) e proces
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — conversão ao formato POP (ISO 10013:2021). |
+| 1.1 | 26/11/2026 | Despachos, CADINQ e tramitação passam ao e-Contas. |

@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-010 |
-| **Versão** | 0.1 (minuta) |
-| **Data de emissão** | 20/08/2026 |
+| **Versão** | 0.2 (minuta) |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
 | **Próxima revisão** | 08/2027 |
@@ -39,7 +39,7 @@ Processos de execução com parcelamento **encerrado por inadimplência** cujo r
 
 ## 6. Recursos e sistemas
 
-- Área Restrita — gestão de dívidas e parcelamentos; Portal do Responsável (requerimento).
+- e-Contas — gestão de dívidas e parcelamentos; Portal do Responsável (requerimento).
 - Sistema de execução: `Exe_Parcelamento` (campos `JustificativaReabertura`, `DataReabertura`), `Exe_Debito` (campos `Reaberto`, `DataReabertura`, `JustificativaReabertura`, `UsuarioReabertura`), `Exe_ParcelamentoParametros` (parâmetros vigentes: nº máximo de parcelas, valor mínimo).
 
 ## 7. Descrição das atividades (fluxo proposto)
@@ -73,3 +73,4 @@ Processos de execução com parcelamento **encerrado por inadimplência** cujo r
 | Versão | Data | Alteração |
 |---|---|---|
 | 0.1 | 20/08/2026 | Minuta inicial — fluxo proposto a partir do modelo de dados; pendente de validação do coordenador. |
+| 0.2 | 26/11/2026 | Gestão de dívidas e parcelamentos passa ao e-Contas. |

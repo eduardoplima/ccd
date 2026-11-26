@@ -56,4 +56,5 @@ Candidatos já mapeados, com material-base no repositório: encaminhamento à DA
 
 - [Marcadores da CCD](marcadores) — lista completa dos marcadores usados na triagem e no controle, com instruções.
 - [Rotinas mensais](rotinas-mensais) — cadastro de índices, verificação de pendências e envio de remessa de protesto.
+- [Manual do sistema](sistema) — ambiente, deploy, permissões, manutenção da wiki e acessos a transferir na troca de responsável.
 - [Views de dados para agentes de IA](dados-agente-ccd) — dicionário das `vwCCD*` do BdDIP (débitos, determinações, extrato FRAP, desconto em folha).

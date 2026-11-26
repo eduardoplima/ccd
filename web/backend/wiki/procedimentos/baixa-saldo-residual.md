@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-012 |
-| **Versão** | 1.0 |
-| **Data de emissão** | 20/08/2026 |
+| **Versão** | 1.1 |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
-| **Próxima revisão** | 08/2027 |
+| **Próxima revisão** | 11/2027 |
 
 ## 1. Objetivo
 
@@ -35,7 +35,7 @@ Processos de execução com multa paga por desconto em folha e transferência ao
 ## 6. Recursos e sistemas
 
 - Sistema de execução: cadeia `Exe_Debito`/`IdDebitoAnterior`, histórico do débito (`Exe_HistoricoDebito` — narrativa "Desconto em folha efetuado em \<mês\> ... Transferência para o FRAP verificada"), extrato do FRAP (nº da OB, datas de emissão e crédito).
-- Área Restrita (informações, tramitação).
+- e-Contas (informações, tramitação).
 - Geração automatizada das informações no repositório da CCD (modelo `nereu_baixa`).
 
 ## 7. Descrição das atividades
@@ -69,3 +69,4 @@ Processos de execução com multa paga por desconto em folha e transferência ao
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — POP novo (ISO 10013:2021), a partir do fluxo de baixa em uso. |
+| 1.1 | 26/11/2026 | Informações e tramitação passam ao e-Contas. |

@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | **Código** | POP-CCD-003 |
-| **Versão** | 1.0 |
-| **Data de emissão** | 20/08/2026 |
+| **Versão** | 1.1 |
+| **Data de emissão** | 26/11/2026 |
 | **Elaborado por** | CCD |
 | **Aprovado por** | _pendente de aprovação_ |
-| **Próxima revisão** | 08/2027 |
+| **Próxima revisão** | 11/2027 |
 
 ## 1. Objetivo
 
@@ -32,7 +32,7 @@ Todos os processos de execução da CCD. O CADINQ é verificado como pré-requis
 
 ## 6. Recursos e sistemas
 
-Área Restrita:
+e-Contas:
 
 - Geração automática na instauração da execução.
 - *Administrativo / Acompanhamento de Decisões / Gerenciar Dívidas (Multas e Devoluções)* — cancelamentos.
@@ -42,10 +42,10 @@ Todos os processos de execução da CCD. O CADINQ é verificado como pré-requis
 ### 7.1 Ciclo de vida
 
 - **Cadastro:** automático durante a [instauração do processo de execução](instaurar-execucao).
-- **Consulta:** dentro da Área Restrita.
+- **Consulta:** dentro do e-Contas.
 - **Renovação/Atualização:** inserir os dados dos processos e substituir a certidão anterior pela atual.
-- **Relatório:** dentro da Área Restrita.
-- **Cancelamento:** dentro da Área Restrita.
+- **Relatório:** dentro do e-Contas.
+- **Cancelamento:** dentro do e-Contas.
 
 ### 7.2 Cancelamento de CADINQ e de dívidas por prescrição ou decisão judicial
 
@@ -64,10 +64,11 @@ Caminho: *Administrativo / Acompanhamento de Decisões / Gerenciar Dívidas (Mul
 
 ## 9. Pontos de controle e exceções
 
-> **Limitação do sistema:** a consulta e o relatório do CADINQ na Área Restrita são ineficientes sem fragmentação das informações.
+> **Limitação do sistema:** a consulta e o relatório do CADINQ no e-Contas são ineficientes sem fragmentação das informações.
 
 ## 10. Histórico de revisões
 
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 20/08/2026 | Versão inicial — conversão ao formato POP (ISO 10013:2021). |
+| 1.1 | 26/11/2026 | Cadastro, consulta, relatório e cancelamento passam ao e-Contas. |
