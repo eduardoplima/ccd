@@ -17,7 +17,7 @@ Uso:
   uv run --with paramiko python deploy/deploy_remote.py upload
   uv run --with paramiko python deploy/deploy_remote.py build
   uv run --with paramiko python deploy/deploy_remote.py status
-  uv run --with paramiko python deploy/deploy_remote.py seed --login eduardo --email x@y.z --nome "Eduardo" --senha SENHA
+  uv run --with paramiko python deploy/deploy_remote.py seed --login fulano --email x@y.z --nome "Fulano" --senha SENHA
 
 Env necessário (em scripts/.env e/ou web/.env, carregados ambos):
   SSH_HOST, SSH_USER, SSH_PASS
@@ -117,7 +117,7 @@ def _prod_env_text() -> str:
         f"AZURE_OPENAI_API_KEY={g('AZURE_OPENAI_API_KEY', '')}",
         f"OPENAI_API_VERSION={g('OPENAI_API_VERSION', '')}",
         f"AZURE_OPENAI_ENDPOINT={g('AZURE_OPENAI_ENDPOINT', '')}",
-        f"AZURE_OPENAI_DEPLOYMENT={g('AZURE_OPENAI_DEPLOYMENT', 'gpt-4o')}",
+        f"AZURE_OPENAI_DEPLOYMENT={g('AZURE_OPENAI_DEPLOYMENT', 'DeepSeek-V4-Flash')}",
         # Share de PDFs (CIFS) usado pela geração de Antecedentes
         "CCD_INFORMACOES_DIR=/mnt/tce/Informacoes_PDF",
         f"SHARE_USER={g('SHARE_USER', '')}",
